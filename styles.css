@@ -1,0 +1,51 @@
+:root {
+  color-scheme: light;
+  font-family: "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  display: grid;
+  place-items: center;
+  background: linear-gradient(180deg, #d9f4e8 0%, #f7f4dd 100%);
+  color: #2f3a2f;
+}
+
+.app {
+  width: min(92vw, 860px);
+  text-align: center;
+}
+
+h1 {
+  margin-bottom: 0.25rem;
+}
+
+.subtitle {
+  margin-top: 0;
+  opacity: 0.8;
+}
+
+#gameCanvas {
+  width: 100%;
+  max-width: 800px;
+  height: auto;
+  border: 3px solid #698c5b;
+  border-radius: 14px;
+  background: #a7d8ff;
+  box-shadow: 0 14px 35px rgba(0, 0, 0, 0.15);
+}
+
+.hint {
+  margin-top: 0.8rem;
+  font-size: 0.95rem;
+  opacity: 0.8;
+}
+
+kbd {
+  border: 1px solid #87a37a;
+  border-bottom-width: 2px;
+  border-radius: 4px;
+  padding: 0.05rem 0.35rem;
+  background: #f8fff1;
+}
