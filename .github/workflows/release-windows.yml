@@ -28,3 +28,29 @@ jobs:
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         run: npm run release:win
+
+      - name: Upload build artifacts to Actions
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-release-${{ github.ref_name }}
+          path: |
+            release/*-portable.exe
+            release/*-nsis.exe
+            release/latest.yml
+          if-no-files-found: error
+          retention-days: 14
+
+      - name: Create or update GitHub Release and upload assets
+        uses: ncipollo/release-action@v1
+        with:
+          tag: ${{ github.ref_name }}
+          name: ${{ github.ref_name }}
+          artifacts: |
+            release/*-portable.exe
+            release/*-nsis.exe
+            release/latest.yml
+          artifactErrorsFailBuild: true
+          allowUpdates: true
+          replacesArtifacts: true
+          makeLatest: true
+          token: ${{ secrets.GITHUB_TOKEN }}
