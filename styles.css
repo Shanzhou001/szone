@@ -23,6 +23,7 @@ h1 {
 
 .subtitle {
   margin-top: 0;
+  margin-bottom: 0.85rem;
   opacity: 0.8;
 }
 
@@ -39,7 +40,7 @@ h1 {
 .hint {
   margin-top: 0.8rem;
   font-size: 0.95rem;
-  opacity: 0.8;
+  opacity: 0.82;
 }
 
 kbd {
