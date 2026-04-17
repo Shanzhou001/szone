@@ -3,17 +3,29 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>温馨小镇原型</title>
+    <title>温馨小镇</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="app">
-      <h1>温馨小镇（阶段2最小可玩版）</h1>
-      <p class="subtitle">原创单机 2D 原型：移动、互动、收集与 HUD</p>
-      <canvas id="gameCanvas" width="800" height="450" aria-label="游戏画布"></canvas>
-      <p class="hint">按 <kbd>Enter</kbd> 进入游戏，使用 <kbd>WASD</kbd>/<kbd>方向键</kbd> 移动，按 <kbd>E</kbd> 互动。</p>
+      <h1>🌿 温馨小镇</h1>
+      <p class="subtitle">动物森友会风格 2D 小游戏 · 探索 · 收集 · 钓鱼 · 交友</p>
+      <canvas id="gameCanvas" width="800" height="480" aria-label="游戏画布"></canvas>
+      <p class="hint">
+        <kbd>Enter</kbd> 开始 &nbsp;
+        <kbd>WASD</kbd>/<kbd>方向键</kbd> 移动 &nbsp;
+        <kbd>E</kbd> 互动/对话 &nbsp;
+        <kbd>I</kbd> 背包 &nbsp;
+        <kbd>空格</kbd> 钓鱼 &nbsp;
+        <kbd>Tab</kbd> 商店切换 &nbsp;
+        <kbd>F5</kbd> 存档
+      </p>
     </main>
-
-    <script type="module" src="src/main.js"></script>
+    <script type="module">
+      import { CozyPrototypeGame } from "./game.js";
+      const canvas = document.getElementById("gameCanvas");
+      const game = new CozyPrototypeGame(canvas);
+      game.start();
+    </script>
   </body>
 </html>
