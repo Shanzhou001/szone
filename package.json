@@ -41,11 +41,13 @@
       }
     ],
     "win": {
-      "target": [
-        "portable",
-        "nsis"
-      ],
-      "artifactName": "${productName}-${version}-${arch}-${target}.${ext}"
-    }
+        "target": ["portable", "nsis"]
+      },
+      "portable": {
+          "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
+        },
+        "nsis": {
+            "artifactName": "${productName}-${version}-${arch}-nsis.${ext}"
+          }
   }
 }
