@@ -7,7 +7,8 @@
     "dev": "electron .",
     "start": "electron .",
     "pack": "electron-builder --dir",
-    "dist:win": "electron-builder --win"
+    "dist:win": "electron-builder --win portable nsis",
+    "release:win": "electron-builder --win portable nsis --publish always"
   },
   "keywords": [
     "electron",
@@ -33,10 +34,18 @@
       "electron/**/*",
       "package.json"
     ],
+    "publish": [
+      {
+        "provider": "github",
+        "releaseType": "release"
+      }
+    ],
     "win": {
       "target": [
+        "portable",
         "nsis"
-      ]
+      ],
+      "artifactName": "${productName}-${version}-${arch}-${target}.${ext}"
     }
   }
 }

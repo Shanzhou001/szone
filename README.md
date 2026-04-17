@@ -1,108 +1,87 @@
 # 温馨小镇（Cozy Town）
 
-> 一个受“温馨生活模拟”设计方向启发、但完全原创内容的单机 2D 游戏原型。当前已在原生浏览器版基础上，新增 **Electron Windows 桌面版封装**。
+> 基于 `HTML + CSS + JavaScript + Canvas` 的原创单机 2D 游戏原型。当前仓库已支持 **Electron Windows 桌面封装 + GitHub Actions 自动打包发布**。
 
-当前进度：**阶段 2（最小可玩版）+ Windows 桌面原型**
-
----
-
-## 本次新增：Electron 桌面版封装
-
-本次改造目标是“尽量复用现有前端代码，不重写游戏逻辑”，因此保留了原有：
-
-- `index.html`
-- `styles.css`
-- `src/main.js`
-- `src/game.js`
-
-仅新增最少必要的 Electron 入口、配置与打包脚本，让项目可以：
-
-1. 作为桌面应用启动（开发模式）
-2. 具备后续生成 Windows `exe` 安装包的基础
+当前进度：**阶段 2（最小可玩版）+ Windows 桌面发布流程**
 
 ---
 
-## 当前目录结构
+## 1. 项目结构
 
 ```text
 .
-├── .gitignore
-├── README.md
-├── index.html
-├── styles.css
-├── package.json
+├── .github/
+│   └── workflows/
+│       └── release-windows.yml
 ├── electron/
 │   ├── main.js
 │   └── preload.js
-└── src/
-    ├── game.js
-    └── main.js
+├── src/
+│   ├── game.js
+│   └── main.js
+├── index.html
+├── styles.css
+├── package.json
+└── README.md
 ```
 
 ---
 
-## 新增/变更文件说明
+## 2. Electron 桌面封装说明
 
-### 新增文件
+当前桌面版方案遵循“**尽量复用现有前端代码，不重写游戏逻辑**”：
 
-- `package.json`
-  - 增加 Electron 与 electron-builder 依赖
-  - 增加桌面运行脚本与 Windows 打包脚本
-  - 增加 `build` 配置（输出目录、打包内容、win target）
+- Electron 主进程入口：`electron/main.js`
+- 渲染内容直接加载：`index.html`
+- 原有游戏逻辑保持在：`src/game.js`、`src/main.js`
+- 预加载脚本：`electron/preload.js`（当前作为安全扩展预留）
 
-- `electron/main.js`
-  - Electron 主进程入口
-  - 创建 `BrowserWindow`
-  - 加载现有 `index.html`（复用前端）
-
-- `electron/preload.js`
-  - 预留 preload（当前不注入业务逻辑，仅保留安全扩展位）
-
-- `.gitignore`
-  - 忽略 `node_modules/`、`release/` 等构建产物
-
-### 保持不变（核心玩法逻辑）
-
-- `src/game.js`
-- `src/main.js`
-
-> 即：阶段 2 的移动、互动、收集、HUD 逻辑无需重写，直接运行在 Electron 渲染进程。
+因此浏览器版和桌面版共享同一套游戏代码。
 
 ---
 
-## 开发运行（桌面版）
+## 3. 本地开发与运行
 
-> 下面命令在 Windows PowerShell / CMD（安装 Node.js 18+）中均可使用。
+> 建议 Node.js 20（最低 Node.js 18+ 也可尝试）。
 
-### 1) 安装依赖
+### 3.1 安装依赖
 
 ```bash
 npm install
 ```
 
-### 2) 启动 Electron 桌面应用
+### 3.2 启动桌面应用（开发模式）
 
 ```bash
 npm run dev
 ```
 
-启动后将打开桌面窗口并加载当前游戏页面。
+或：
+
+```bash
+npm start
+```
 
 ---
 
-## 打包（Windows）
+## 4. 本地打包（Windows）
 
-### 1) 生成可分发目录（不打安装包）
+### 4.1 生成 unpacked 目录（调试打包产物）
 
 ```bash
 npm run pack
 ```
 
-### 2) 生成 Windows 安装包（exe）
+### 4.2 生成 Windows 可分发文件
 
 ```bash
 npm run dist:win
 ```
+
+当前 `electron-builder` 会生成以下目标：
+
+- `portable`（可直接运行的 `.exe`，优先）
+- `nsis`（安装程序 `.exe`）
 
 默认输出目录：
 
@@ -110,21 +89,68 @@ npm run dist:win
 release/
 ```
 
-`dist:win` 成功后，会在 `release/` 下生成 `.exe` 安装包（NSIS 目标）。
+---
+
+## 5. GitHub Actions 自动构建 + 发布 Releases
+
+仓库已包含工作流：
+
+- `.github/workflows/release-windows.yml`
+
+触发条件：
+
+- 推送符合 `v*` 的 tag（例如 `v0.1.0`）
+
+运行环境：
+
+- `windows-latest`
+
+工作流执行步骤：
+
+1. 检出代码
+2. 安装 Node.js 20
+3. `npm install` 安装依赖
+4. 运行 `npm run release:win`（electron-builder）
+5. 使用 `GH_TOKEN=${{ secrets.GITHUB_TOKEN }}` 自动上传产物到 GitHub Releases
 
 ---
 
-## 浏览器版运行方式（保留）
+## 6. 如何触发一次正式发布
 
-如需继续以浏览器模式运行：
+在本地完成代码合并后，执行：
 
-### 1) 启动本地静态服务器
+```bash
+git tag v0.1.0
+git push origin v0.1.0
+```
+
+随后 GitHub Actions 会自动开始构建并发布。
+
+> 如果要发布下一个版本，按语义化版本号递增，例如：`v0.1.1`、`v0.2.0`。
+
+---
+
+## 7. 发布后会产出什么文件
+
+在对应 tag 的 GitHub Release 中，预期至少包含：
+
+- `CozyTownPrototype-<version>-x64-portable.exe`（便携版）
+- `CozyTownPrototype-<version>-x64-nsis.exe`（安装版）
+- `latest.yml` 及相关元数据（electron-builder 自动生成）
+
+文件名中的 `<version>` 来自 `package.json` 的 `version` 字段。
+
+---
+
+## 8. 浏览器版运行方式（保留）
+
+如需浏览器运行：
 
 ```bash
 python3 -m http.server 8000
 ```
 
-### 2) 打开浏览器
+打开：
 
 ```text
 http://localhost:8000
@@ -132,31 +158,8 @@ http://localhost:8000
 
 ---
 
-## 操作说明（阶段 2）
+## 9. 阶段 2 操作说明（桌面版同样适用）
 
 - `Enter`：从标题界面进入游戏
 - `WASD` 或 `方向键`：移动角色
 - `E`：与附近物体互动 / 收集
-
----
-
-## 验证方式（Done Checklist）
-
-按以下步骤手动验证：
-
-1. 执行 `npm run dev`，桌面窗口可正常打开。
-2. 进入标题界面后按 `Enter` 能进入游戏。
-3. 角色可用 `WASD`/方向键移动。
-4. 走到小树、圆石、木屋附近会出现互动提示。
-5. 按 `E` 可触发互动文本。
-6. 与可收集物体互动后，左上角 HUD 计数会增加。
-
-若以上都满足，则“桌面封装 + 阶段 2玩法可运行”完成。
-
----
-
-## 技术约束（保持不变）
-
-- 仍使用原生 `HTML + CSS + JavaScript + Canvas`
-- 不引入 Phaser、React 等大型游戏/前端框架
-- 仅增加 Electron 最小入口与打包配置，便于后续迭代为正式桌面版
