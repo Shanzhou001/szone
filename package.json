@@ -1,0 +1,42 @@
+{
+  "name": "cozy-town-desktop",
+  "version": "0.1.0",
+  "description": "温馨小镇阶段 2 的 Electron Windows 桌面版原型",
+  "main": "electron/main.js",
+  "scripts": {
+    "dev": "electron .",
+    "start": "electron .",
+    "pack": "electron-builder --dir",
+    "dist:win": "electron-builder --win"
+  },
+  "keywords": [
+    "electron",
+    "canvas",
+    "game"
+  ],
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^35.2.0",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "com.cozytown.prototype",
+    "productName": "CozyTownPrototype",
+    "directories": {
+      "output": "release"
+    },
+    "files": [
+      "index.html",
+      "styles.css",
+      "src/**/*",
+      "electron/**/*",
+      "package.json"
+    ],
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}
