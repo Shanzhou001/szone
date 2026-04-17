@@ -111,7 +111,10 @@ release/
 2. 安装 Node.js 20
 3. `npm install` 安装依赖
 4. 运行 `npm run release:win`（electron-builder）
-5. 使用 `GH_TOKEN=${{ secrets.GITHUB_TOKEN }}` 自动上传产物到 GitHub Releases
+5. 显式上传构建产物到 Actions Artifacts（便于每次运行直接下载）
+6. 显式创建/更新对应 tag 的 GitHub Release，并上传附件（不只依赖 electron-builder 的隐式 publish）
+
+> 对于同一个 tag：若 Release 不存在会自动创建；若已存在会自动更新并覆盖同名附件。
 
 ---
 
@@ -132,11 +135,16 @@ git push origin v0.1.0
 
 ## 7. 发布后会产出什么文件
 
-在对应 tag 的 GitHub Release 中，预期至少包含：
+推送 `v*` tag（如 `v0.1.4`）后，可在两个位置下载 Windows 构建产物：
+
+1. **GitHub Actions > 对应 workflow run > Artifacts**
+2. **GitHub Releases > 对应 tag 的 Release Assets**
+
+两处都应至少包含：
 
 - `CozyTownPrototype-<version>-x64-portable.exe`（便携版）
 - `CozyTownPrototype-<version>-x64-nsis.exe`（安装版）
-- `latest.yml` 及相关元数据（electron-builder 自动生成）
+- `latest.yml`（electron-builder 自动生成，用于更新元数据）
 
 文件名中的 `<version>` 来自 `package.json` 的 `version` 字段。
 
