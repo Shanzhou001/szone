@@ -7,29 +7,66 @@
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <main class="app">
-      <h1>🌿 温馨小镇</h1>
-      <p class="subtitle">更完整的像素生活模拟：天气、委托、料理、技能与集市日</p>
-      <canvas id="gameCanvas" width="800" height="480" aria-label="游戏画布"></canvas>
-      <p class="hint">
-        <kbd>Enter</kbd> 开始 &nbsp;
-        <kbd>WASD</kbd>/<kbd>方向键</kbd> 移动 &nbsp;
-        <kbd>E</kbd> 互动/对话 &nbsp;
-        <kbd>Q</kbd> 切种子 &nbsp;
-        <kbd>G</kbd> 送礼 &nbsp;
-        <kbd>I</kbd> 背包 &nbsp;
-        <kbd>空格</kbd> 钓鱼 &nbsp;
-        <kbd>Tab</kbd> 商店切换 &nbsp;
-        <kbd>F5</kbd> 存档
-        <br />
-        公告牌可交每日委托，小屋里可以做料理和休息到次日。
-      </p>
+    <main class="app-shell">
+      <header class="topbar">
+        <div class="brand">
+          <p class="eyebrow">Pastoral Life Sim</p>
+          <h1>温馨小镇</h1>
+          <p class="subtitle">多区域探索、生活经营与慢节奏成长</p>
+        </div>
+        <button id="helpToggle" class="help-toggle" type="button" aria-expanded="false" aria-controls="helpPanel">
+          帮助
+        </button>
+      </header>
+
+      <section class="stage-card">
+        <div class="stage-decor stage-decor-left" aria-hidden="true"></div>
+        <div class="stage-decor stage-decor-right" aria-hidden="true"></div>
+        <canvas id="gameCanvas" width="800" height="480" aria-label="游戏画布"></canvas>
+      </section>
+
+      <aside id="helpPanel" class="help-panel" hidden>
+        <div class="help-panel__header">
+          <div>
+            <p class="help-panel__eyebrow">Help</p>
+            <h2>游玩说明</h2>
+          </div>
+          <button id="helpClose" class="help-close" type="button" aria-label="关闭帮助面板">×</button>
+        </div>
+
+        <section class="help-section">
+          <h3>核心目标</h3>
+          <p>白天安排种田、采集、跑委托和卖货，晚上钓鱼或回家做料理，逐步升级小屋、农场与镇子繁荣度。</p>
+        </section>
+
+        <section class="help-section">
+          <h3>按键</h3>
+          <p><kbd>Enter</kbd> 开始</p>
+          <p><kbd>WASD</kbd> / <kbd>方向键</kbd> 移动</p>
+          <p><kbd>E</kbd> 互动 / 对话 / 进入建筑</p>
+          <p><kbd>Q</kbd> 切换种子</p>
+          <p><kbd>G</kbd> 赠礼</p>
+          <p><kbd>I</kbd> 背包</p>
+          <p><kbd>空格</kbd> 钓鱼操作</p>
+          <p><kbd>Tab</kbd> 商店分页</p>
+          <p><kbd>F5</kbd> 保存</p>
+        </section>
+
+        <section class="help-section">
+          <h3>区域</h3>
+          <p>晨露镇：农场、商店、公告牌和主要居民。</p>
+          <p>雾林：香草、蘑菇和林间池塘更丰富。</p>
+          <p>月湾：更适合跑鱼货和捡珊瑚。</p>
+          <p>风岬高地：后期开启，晶石和稀有鱼收益更高。</p>
+        </section>
+
+        <section class="help-section">
+          <h3>生活节奏</h3>
+          <p>天气、体力、料理增益和集市日都会影响你当天最划算的行动。公告牌会刷新每日委托，小屋可以休息到次日。</p>
+        </section>
+      </aside>
     </main>
-    <script type="module">
-      import { CozyPrototypeGame } from "./src/game.js";
-      const canvas = document.getElementById("gameCanvas");
-      const game = new CozyPrototypeGame(canvas);
-      game.start();
-    </script>
+
+    <script type="module" src="./src/main.js"></script>
   </body>
 </html>

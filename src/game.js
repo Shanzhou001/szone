@@ -40,6 +40,13 @@ const MAP_W = 30;
 const MAP_H = 26;
 const TIME_SPEED = 0.6;
 
+const WORLD_INFO = {
+  town: { id: "town", name: "晨露镇", accent: "#7ccf72", short: "镇" },
+  forest: { id: "forest", name: "雾林", accent: "#5eaf6a", short: "林" },
+  harbor: { id: "harbor", name: "月湾", accent: "#68b6e7", short: "湾" },
+  highlands: { id: "highlands", name: "风岬高地", accent: "#d9a560", short: "高" },
+};
+
 const SKY_COLORS = [
   { hour: 0, color: "#1a1a3a" },
   { hour: 5, color: "#2d1b4e" },
@@ -78,7 +85,7 @@ const RECIPES = [
   {
     id: "heartyStew",
     name: "丰收炖菜",
-    ingredients: { mushroom: 1, potato: 1 },
+    ingredients: { mushroom: 1, potato: 1, herb: 1 },
     energy: 32,
     effect: "harvest",
     amount: 0.22,
@@ -87,11 +94,20 @@ const RECIPES = [
   {
     id: "seaSnack",
     name: "海风小食",
-    ingredients: { fish: 1, shell: 1 },
+    ingredients: { fish: 1, coral: 1 },
     energy: 28,
     effect: "fishing",
     amount: 0.18,
     desc: "恢复 28 体力，钓鱼进度更快、稀有鱼略多",
+  },
+  {
+    id: "mountainPlate",
+    name: "高地拼盘",
+    ingredients: { crystal: 1, herb: 1, mushroom: 1 },
+    energy: 40,
+    effect: "social",
+    amount: 3,
+    desc: "恢复 40 体力，今日聊天额外 +3 好感",
   },
 ];
 
@@ -104,7 +120,10 @@ const REQUEST_TEMPLATES = [
   { id: "mushroom-soup", requester: "npc-zhuang", item: "mushroom", amount: [2, 3], gold: 78, favor: 6, minRank: 2 },
   { id: "blueberry-jam", requester: "npc-lingling", item: "blueberry", amount: [2, 3], gold: 126, favor: 8, minRank: 2 },
   { id: "night-catch", requester: "npc-maomao", item: "nightFish", amount: [1, 2], gold: 138, favor: 8, minRank: 2 },
+  { id: "forest-herbs", requester: "npc-ye", item: "herb", amount: [2, 4], gold: 104, favor: 7, minRank: 2 },
+  { id: "harbor-coral", requester: "npc-lan", item: "coral", amount: [1, 2], gold: 132, favor: 8, minRank: 2 },
   { id: "corn-stock", requester: "npc-chen", item: "corn", amount: [2, 3], gold: 148, favor: 8, minRank: 3 },
+  { id: "crystal-study", requester: "npc-chen", item: "crystal", amount: [1, 2], gold: 176, favor: 9, minRank: 3 },
   { id: "gold-koi", requester: "npc-maomao", item: "goldKoi", amount: [1, 1], gold: 220, favor: 12, minRank: 3 },
   { id: "melon-feast", requester: "npc-zhuang", item: "melon", amount: [1, 2], gold: 188, favor: 10, minRank: 4 },
 ];
@@ -117,9 +136,12 @@ const ITEMS = {
   silverFish: { name: "银鳞鱼", icon: "🐠", sellPrice: 26, buyPrice: 0, desc: "雨天更容易钓到" },
   goldKoi: { name: "锦鲤", icon: "🐡", sellPrice: 74, buyPrice: 0, desc: "很少见的漂亮鱼" },
   flower: { name: "花", icon: "🌸", sellPrice: 8, buyPrice: 0, desc: "野花" },
+  herb: { name: "香草", icon: "🌿", sellPrice: 16, buyPrice: 0, desc: "林地里采来的香草" },
   stone: { name: "石头", icon: "🪨", sellPrice: 5, buyPrice: 14, desc: "坚硬石材" },
+  crystal: { name: "晶石", icon: "💎", sellPrice: 46, buyPrice: 0, desc: "高地闪亮矿晶" },
   mushroom: { name: "蘑菇", icon: "🍄", sellPrice: 14, buyPrice: 0, desc: "林地采集物" },
   shell: { name: "贝壳", icon: "🐚", sellPrice: 12, buyPrice: 0, desc: "海滩采集物" },
+  coral: { name: "珊瑚", icon: "🪸", sellPrice: 34, buyPrice: 0, desc: "月湾的稀有拾取物" },
   turnip: { name: "萝卜", icon: "🥕", sellPrice: 18, buyPrice: 0, desc: "短周期作物" },
   potato: { name: "土豆", icon: "🥔", sellPrice: 30, buyPrice: 0, desc: "中期作物" },
   blueberry: { name: "蓝莓", icon: "🫐", sellPrice: 48, buyPrice: 0, desc: "高价值作物" },
@@ -144,10 +166,12 @@ const CROPS = {
 };
 
 const NPCS = [
-  { id: "npc-lingling", name: "小玲", baseX: 450, baseY: 300, color: "#e888aa", hatColor: "#ff6688", likes: ["flower", "blueberry", "melon"] },
-  { id: "npc-chen", name: "老陈", baseX: 870, baseY: 280, color: "#8855aa", hatColor: "#aa44cc", likes: ["potato", "wood", "corn"] },
-  { id: "npc-maomao", name: "毛毛", baseX: 300, baseY: 620, color: "#f0c040", hatColor: "#e0a020", likes: ["fish", "nightFish", "goldKoi"] },
-  { id: "npc-zhuang", name: "阿壮", baseX: 700, baseY: 650, color: "#55aa55", hatColor: "#339933", likes: ["pumpkin", "mushroom", "melon"] },
+  { id: "npc-lingling", name: "小玲", mapId: "town", baseX: 450, baseY: 300, color: "#e888aa", hatColor: "#ff6688", likes: ["flower", "blueberry", "melon"] },
+  { id: "npc-chen", name: "老陈", mapId: "town", baseX: 870, baseY: 280, color: "#8855aa", hatColor: "#aa44cc", likes: ["potato", "wood", "corn", "crystal"] },
+  { id: "npc-maomao", name: "毛毛", mapId: "town", baseX: 300, baseY: 620, color: "#f0c040", hatColor: "#e0a020", likes: ["fish", "nightFish", "goldKoi", "coral"] },
+  { id: "npc-zhuang", name: "阿壮", mapId: "town", baseX: 700, baseY: 650, color: "#55aa55", hatColor: "#339933", likes: ["pumpkin", "mushroom", "melon", "herb"] },
+  { id: "npc-ye", name: "阿叶", mapId: "forest", baseX: 396, baseY: 316, color: "#78b665", hatColor: "#3d7d3a", likes: ["herb", "mushroom", "flower"] },
+  { id: "npc-lan", name: "小岚", mapId: "harbor", baseX: 964, baseY: 360, color: "#73c6ec", hatColor: "#357ba1", likes: ["fish", "silverFish", "coral"] },
 ];
 
 function lerpColor(c1, c2, t) {
@@ -212,8 +236,10 @@ export class CozyPrototypeGame {
     this.skills = this.createSkills();
     this.dayStats = this.createDayStats();
 
-    this.tileMap = this.createTileMap();
-    this.interactables = this.createInteractables();
+    this.worlds = this.createWorlds();
+    this.currentMapId = "town";
+    this.tileMap = this.worlds[this.currentMapId].tileMap;
+    this.interactables = this.worlds[this.currentMapId].interactables;
     this.npcs = this.createNpcs();
     this.farmPlots = this.createFarmPlots();
 
@@ -274,6 +300,83 @@ export class CozyPrototypeGame {
     ];
   }
 
+  createWorlds() {
+    return {
+      town: {
+        ...WORLD_INFO.town,
+        tileMap: this.createTileMap(),
+        interactables: this.createInteractables(),
+      },
+      forest: {
+        ...WORLD_INFO.forest,
+        tileMap: this.createForestTileMap(),
+        interactables: this.createForestInteractables(),
+      },
+      harbor: {
+        ...WORLD_INFO.harbor,
+        tileMap: this.createHarborTileMap(),
+        interactables: this.createHarborInteractables(),
+      },
+      highlands: {
+        ...WORLD_INFO.highlands,
+        tileMap: this.createHighlandsTileMap(),
+        interactables: this.createHighlandsInteractables(),
+      },
+    };
+  }
+
+  createBlankMap(fill = TILE.GRASS) {
+    return Array.from({ length: MAP_H }, () => Array(MAP_W).fill(fill));
+  }
+
+  paintRect(map, x1, y1, x2, y2, tile) {
+    for (let y = y1; y <= y2; y++) {
+      for (let x = x1; x <= x2; x++) {
+        if (map[y]?.[x] !== undefined) map[y][x] = tile;
+      }
+    }
+  }
+
+  createForestTileMap() {
+    const map = this.createBlankMap(TILE.DARK_GRASS);
+    this.paintRect(map, 0, 10, 29, 14, TILE.PATH);
+    this.paintRect(map, 0, 0, 4, 25, TILE.GRASS);
+    this.paintRect(map, 0, 4, 2, 17, TILE.PATH);
+    this.paintRect(map, 9, 7, 14, 11, TILE.WATER);
+    this.paintRect(map, 18, 1, 24, 5, TILE.GRASS);
+    this.paintRect(map, 18, 0, 20, 2, TILE.PATH);
+    this.paintRect(map, 20, 13, 29, 20, TILE.GRASS);
+    this.paintRect(map, 24, 10, 29, 14, TILE.PATH);
+    this.paintRect(map, 23, 14, 27, 18, TILE.PATH);
+    this.paintRect(map, 5, 18, 12, 24, TILE.GRASS);
+    return map;
+  }
+
+  createHarborTileMap() {
+    const map = this.createBlankMap(TILE.SAND);
+    this.paintRect(map, 0, 0, 29, 8, TILE.GRASS);
+    this.paintRect(map, 0, 9, 29, 11, TILE.PATH);
+    this.paintRect(map, 18, 0, 29, 25, TILE.WATER);
+    this.paintRect(map, 14, 8, 18, 25, TILE.WOOD_FLOOR);
+    this.paintRect(map, 8, 11, 13, 18, TILE.GRASS);
+    this.paintRect(map, 1, 8, 4, 14, TILE.PATH);
+    this.paintRect(map, 0, 12, 6, 25, TILE.SAND);
+    return map;
+  }
+
+  createHighlandsTileMap() {
+    const map = this.createBlankMap(TILE.DARK_GRASS);
+    this.paintRect(map, 0, 11, 29, 14, TILE.PATH);
+    this.paintRect(map, 0, 0, 5, 25, TILE.GRASS);
+    this.paintRect(map, 7, 2, 13, 7, TILE.SAND);
+    this.paintRect(map, 17, 3, 22, 8, TILE.WATER);
+    this.paintRect(map, 17, 15, 28, 23, TILE.SAND);
+    this.paintRect(map, 23, 10, 29, 14, TILE.PATH);
+    this.paintRect(map, 1, 10, 3, 14, TILE.PATH);
+    this.paintRect(map, 9, 17, 15, 23, TILE.GRASS);
+    return map;
+  }
+
   createFarmPlots() {
     const plots = [];
     const startX = 92;
@@ -312,6 +415,55 @@ export class CozyPrototypeGame {
       { id:"shop-1",type:"shop",x:820,y:130,w:160,h:140,name:"老陈的商店" },
       { id:"sign-1",type:"sign",x:400,y:530,w:30,h:44,name:"公告牌",text:"公告牌会刷新每日委托；小屋里可以做料理和休息。" },
       { id:"bridge-1",type:"bridge",x:1018,y:520,w:110,h:54,name:"旧桥" },
+      { id:"warp-town-forest",type:"warp",x:18,y:550,w:56,h:84,name:"林间小径",label:"去雾林",targetMap:"forest",targetX:1290,targetY:610 },
+      { id:"warp-town-harbor",type:"warp",x:136,y:438,w:84,h:48,name:"通往月湾",label:"去月湾",targetMap:"harbor",targetX:178,targetY:590 },
+      { id:"warp-town-highlands",type:"warp",x:1296,y:232,w:52,h:88,name:"高地坡道",label:"去高地",targetMap:"highlands",targetX:170,targetY:610,requiresBridge:true,requiresTownRank:3,lockReason:"修桥后并把镇级提升到 3 才能前往高地。" },
+    ];
+  }
+
+  createForestInteractables() {
+    return [
+      { id:"warp-forest-town",type:"warp",x:1304,y:560,w:56,h:88,name:"返回镇子",label:"回晨露镇",targetMap:"town",targetX:126,targetY:590 },
+      { id:"warp-forest-highlands",type:"warp",x:930,y:44,w:72,h:50,name:"山间栈道",label:"上高地",targetMap:"highlands",targetX:1030,targetY:790,requiresTownRank:3,lockReason:"再多积累些名望，山道才会开放。" },
+      { id:"forest-tree-1",type:"tree",x:214,y:150,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:58000,name:"老杉树" },
+      { id:"forest-tree-2",type:"tree",x:586,y:182,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:64000,name:"浓荫树" },
+      { id:"forest-tree-3",type:"tree",x:1018,y:290,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"苔木" },
+      { id:"forest-mush-1",type:"mushroom",x:474,y:690,w:36,h:36,item:"mushroom",amount:2,collected:false,regrowTimer:0,regrowTime:88000,name:"林地蘑菇" },
+      { id:"forest-mush-2",type:"mushroom",x:822,y:864,w:36,h:36,item:"mushroom",amount:2,collected:false,regrowTimer:0,regrowTime:92000,name:"厚伞菇" },
+      { id:"forest-herb-1",type:"herb",x:356,y:806,w:34,h:34,item:"herb",amount:1,collected:false,regrowTimer:0,regrowTime:76000,name:"清香草" },
+      { id:"forest-herb-2",type:"herb",x:1080,y:730,w:34,h:34,item:"herb",amount:1,collected:false,regrowTimer:0,regrowTime:76000,name:"山风草" },
+      { id:"forest-flower-1",type:"flower",x:640,y:568,w:32,h:32,item:"flower",amount:2,collected:false,regrowTimer:0,regrowTime:52000,name:"林间花簇" },
+      { id:"forest-fish-1",type:"fishspot",x:564,y:400,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"林间池塘" },
+      { id:"forest-stone-1",type:"stone",x:1040,y:930,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:110000,name:"山脚岩石" },
+    ];
+  }
+
+  createHarborInteractables() {
+    return [
+      { id:"warp-harbor-town",type:"warp",x:74,y:530,w:64,h:96,name:"返镇栈桥",label:"回晨露镇",targetMap:"town",targetX:236,targetY:520 },
+      { id:"harbor-fish-1",type:"fishspot",x:1102,y:226,w:44,h:44,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"港湾深水" },
+      { id:"harbor-fish-2",type:"fishspot",x:1020,y:596,w:44,h:44,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"潮汐鱼群" },
+      { id:"harbor-shell-1",type:"shell",x:324,y:836,w:28,h:20,item:"shell",amount:2,collected:false,regrowTimer:0,regrowTime:50000,name:"浅滩贝壳" },
+      { id:"harbor-shell-2",type:"shell",x:512,y:1028,w:28,h:20,item:"shell",amount:2,collected:false,regrowTimer:0,regrowTime:50000,name:"海沫贝壳" },
+      { id:"harbor-coral-1",type:"coral",x:658,y:972,w:38,h:32,item:"coral",amount:1,collected:false,regrowTimer:0,regrowTime:93000,name:"赤珊瑚" },
+      { id:"harbor-coral-2",type:"coral",x:874,y:884,w:38,h:32,item:"coral",amount:1,collected:false,regrowTimer:0,regrowTime:93000,name:"蓝珊瑚" },
+      { id:"harbor-bush-1",type:"bush",x:402,y:314,w:58,h:42,item:"fruit",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"湾边果丛" },
+      { id:"harbor-stone-1",type:"stone",x:612,y:280,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:110000,name:"潮石" },
+    ];
+  }
+
+  createHighlandsInteractables() {
+    return [
+      { id:"warp-highlands-town",type:"warp",x:36,y:514,w:64,h:98,name:"下山坡道",label:"回晨露镇",targetMap:"town",targetX:1220,targetY:284 },
+      { id:"warp-highlands-forest",type:"warp",x:1144,y:590,w:78,h:54,name:"穿林山道",label:"去雾林",targetMap:"forest",targetX:934,targetY:112 },
+      { id:"high-tree-1",type:"tree",x:218,y:194,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"山松" },
+      { id:"high-tree-2",type:"tree",x:462,y:808,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"岬角树" },
+      { id:"high-crystal-1",type:"crystal",x:580,y:200,w:42,h:42,item:"crystal",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"风晶簇" },
+      { id:"high-crystal-2",type:"crystal",x:1170,y:892,w:42,h:42,item:"crystal",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"崖晶石" },
+      { id:"high-herb-1",type:"herb",x:378,y:986,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"高地香草" },
+      { id:"high-herb-2",type:"herb",x:1076,y:334,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"清冽香草" },
+      { id:"high-stone-1",type:"stone",x:914,y:962,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:120000,name:"高地岩石" },
+      { id:"high-fish-1",type:"fishspot",x:916,y:220,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"山顶清潭" },
     ];
   }
 
@@ -320,6 +472,38 @@ export class CozyPrototypeGame {
       this.relationship[n.id] = 0;
       return { ...n, size: 26, x: n.baseX, y: n.baseY, moveTimer: 0, vx: 0, vy: 0 };
     });
+  }
+
+  getCurrentWorld() {
+    return this.worlds[this.currentMapId];
+  }
+
+  getCurrentMapName() {
+    return this.getCurrentWorld()?.name || "未知区域";
+  }
+
+  getAllInteractables() {
+    return Object.values(this.worlds).flatMap((world) => world.interactables);
+  }
+
+  switchMap(mapId, x, y, message) {
+    const world = this.worlds[mapId];
+    if (!world) return;
+    this.currentMapId = mapId;
+    this.tileMap = world.tileMap;
+    this.interactables = world.interactables;
+    if (typeof x === "number") this.player.x = x;
+    if (typeof y === "number") this.player.y = y;
+    this.camera.x = Math.max(0, Math.min(MAP_W * TILE_SIZE - this.canvas.width, this.player.x - this.canvas.width / 2));
+    this.camera.y = Math.max(0, Math.min(MAP_H * TILE_SIZE - this.canvas.height, this.player.y - this.canvas.height / 2));
+    if (message !== null) this.showMessage(message || `来到 ${world.name}`, 2200);
+  }
+
+  getInteractableBlockReason(obj) {
+    if (obj.eastOnly && !this.progress.eastUnlocked) return "东区还没有开放。";
+    if (obj.requiresBridge && !this.progress.bridgeRepaired) return obj.lockReason || "需要先修好旧桥。";
+    if (obj.requiresTownRank && this.progress.townRank < obj.requiresTownRank) return obj.lockReason || `镇级达到 ${obj.requiresTownRank} 才能前往。`;
+    return "";
   }
 
   createQuests() {
@@ -392,11 +576,12 @@ export class CozyPrototypeGame {
       inventory: this.inventory,
       gameDay: this.gameDay,
       gameMinutes: this.gameMinutes,
+      currentMapId: this.currentMapId,
       weather: this.weather,
       tomorrowWeather: this.tomorrowWeather,
       currentBuff: this.currentBuff,
       player: { x: this.player.x, y: this.player.y },
-      interactables: this.interactables.map(o => ({ id: o.id, collected: o.collected, regrowTimer: o.regrowTimer || 0 })),
+      interactables: this.getAllInteractables().map(o => ({ id: o.id, collected: o.collected, regrowTimer: o.regrowTimer || 0 })),
       farmPlots: this.farmPlots,
       progress: this.progress,
       relationship: this.relationship,
@@ -417,13 +602,14 @@ export class CozyPrototypeGame {
       this.inventory = data.inventory ?? this.inventory;
       this.gameDay = data.gameDay ?? this.gameDay;
       this.gameMinutes = data.gameMinutes ?? this.gameMinutes;
+      this.currentMapId = data.currentMapId || this.currentMapId;
       this.weather = data.weather || this.weather;
       this.tomorrowWeather = data.tomorrowWeather || this.tomorrowWeather;
       this.currentBuff = data.currentBuff && data.currentBuff.day === this.gameDay ? data.currentBuff : null;
       if (data.player) Object.assign(this.player, data.player);
       if (data.interactables) {
         data.interactables.forEach((saved) => {
-          const obj = this.interactables.find(o => o.id === saved.id);
+          const obj = this.getAllInteractables().find(o => o.id === saved.id);
           if (obj) {
             obj.collected = saved.collected;
             obj.regrowTimer = saved.regrowTimer || 0;
@@ -442,11 +628,13 @@ export class CozyPrototypeGame {
       if (Array.isArray(data.dailyRequests) && data.dailyRequests.length) this.dailyRequests = data.dailyRequests;
       this.applyProgressDerivedStats();
       if (!this.dailyRequests?.length) this.dailyRequests = this.createDailyRequests();
+      this.switchMap(this.currentMapId, this.player.x, this.player.y, null);
     } catch (e) {}
   }
 
   bindEvents() {
     window.addEventListener("keydown", (e) => {
+      if (typeof document !== "undefined" && document.body?.classList.contains("help-open")) return;
       const key = e.key.toLowerCase();
       if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","e","escape","enter"," ","i","tab","q","g","r"].includes(key)) e.preventDefault();
       this.keys.add(key);
@@ -548,7 +736,7 @@ export class CozyPrototypeGame {
         p.wateredDays += 1;
       }
     });
-    this.interactables.forEach((o) => {
+    this.getAllInteractables().forEach((o) => {
       if (o.collected && o.regrowTime > 0) {
         o.collected = false;
         o.regrowTimer = 0;
@@ -791,7 +979,7 @@ export class CozyPrototypeGame {
   }
 
   updateInteractables(dt) {
-    this.interactables.forEach((o) => {
+    this.getAllInteractables().forEach((o) => {
       if (o.collected && o.regrowTime > 0) {
         o.regrowTimer += dt;
         if (o.regrowTimer >= o.regrowTime) {
@@ -804,7 +992,7 @@ export class CozyPrototypeGame {
 
   updateNpcs(dt) {
     const hour = this.gameMinutes / 60;
-    this.npcs.forEach((npc) => {
+    this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
       const target = this.getNpcScheduleTarget(npc, hour);
       const dx = target.x - npc.x;
       const dy = target.y - npc.y;
@@ -831,6 +1019,16 @@ export class CozyPrototypeGame {
   }
 
   getNpcScheduleTarget(npc, hour) {
+    if (npc.mapId === "forest") {
+      if (hour < 12) return { x: 392, y: 312 };
+      if (hour < 18) return { x: 670, y: 566 };
+      return { x: 300, y: 840 };
+    }
+    if (npc.mapId === "harbor") {
+      if (hour < 12) return { x: 954, y: 358 };
+      if (hour < 18) return { x: 742, y: 924 };
+      return { x: 1080, y: 520 };
+    }
     if (this.isMarketDay() && hour >= 12 && hour < 20) {
       if (npc.id === "npc-chen") return { x: 500, y: 548 };
       if (npc.id === "npc-lingling") return { x: 430, y: 560 };
@@ -881,7 +1079,7 @@ export class CozyPrototypeGame {
   }
 
   canStandAt(x, y, size) {
-    if (!this.progress.bridgeRepaired && x > 1060 && y > 460 && y < 620) return false;
+    if (this.currentMapId === "town" && !this.progress.bridgeRepaired && x > 1060 && y > 460 && y < 620) return false;
     const half = (size || this.player.size) / 2;
     const corners = [[x - half, y - half], [x + half, y - half], [x - half, y + half], [x + half, y + half]];
     return corners.every(([px, py]) => {
@@ -924,6 +1122,7 @@ export class CozyPrototypeGame {
   }
 
   getNearestPlot() {
+    if (this.currentMapId !== "town") return null;
     let best = null, minD = 72;
     this.farmPlots.forEach((plot) => {
       if (plot.lockedLevel > this.progress.farmLevel) return;
@@ -1003,7 +1202,7 @@ export class CozyPrototypeGame {
 
   getNearestNpc() {
     let best = null, minD = INTERACT_DISTANCE;
-    this.npcs.forEach((npc) => {
+    this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
       const d = Math.hypot(npc.x - this.player.x, npc.y - this.player.y);
       if (d < minD) { minD = d; best = npc; }
     });
@@ -1013,7 +1212,6 @@ export class CozyPrototypeGame {
   getNearestInteractable() {
     let best = null, minD = INTERACT_DISTANCE;
     this.interactables.forEach((obj) => {
-      if (obj.eastOnly && !this.progress.eastUnlocked) return;
       const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
       const d = Math.hypot(cx - this.player.x, cy - this.player.y);
       if (d < minD) { minD = d; best = obj; }
@@ -1022,9 +1220,18 @@ export class CozyPrototypeGame {
   }
 
   interactWith(obj) {
+    const blockReason = this.getInteractableBlockReason(obj);
+    if (blockReason) {
+      this.showMessage(blockReason, 2200);
+      return;
+    }
     if (obj.type === "house") {
       this.houseSelection = 0;
       this.scene = SCENE.INDOOR;
+      return;
+    }
+    if (obj.type === "warp") {
+      this.switchMap(obj.targetMap, obj.targetX, obj.targetY, `来到 ${this.worlds[obj.targetMap].name}`);
       return;
     }
     if (obj.type === "shop") {
@@ -1153,7 +1360,11 @@ export class CozyPrototypeGame {
     const favor = this.relationship[npc.id] || 0;
     const pages = [];
     pages.push(`${npc.name}（好感 ${favor}/100）`);
-    if (h < 12) pages.push("早上先看农田是个好习惯，浇水会决定今天收成。");
+    if (npc.mapId === "forest") {
+      pages.push(h < 16 ? "雾林里的香草和蘑菇更丰富，雨后更容易跑出好东西。" : "傍晚的雾林会安静下来，记得带着体力再继续深入。");
+    } else if (npc.mapId === "harbor") {
+      pages.push(h < 18 ? "月湾白天更适合钓鱼和捡珊瑚，深水点常有惊喜。" : "晚上海风会更冷，但夜钓收益往往也更漂亮。");
+    } else if (h < 12) pages.push("早上先看农田是个好习惯，浇水会决定今天收成。");
     else if (h < 18) pages.push("下午适合跑商和采集，别忘了商店晚上八点关门。");
     else pages.push("晚上钓鱼收益更高，还能和大家聊聊今天过得怎么样。");
 
@@ -1163,6 +1374,8 @@ export class CozyPrototypeGame {
     if (npc.id === "npc-lingling" && this.progress.harvestCount >= 10) pages.push("你已经是靠谱农夫了！继续提升农场等级吧。");
     if (npc.id === "npc-maomao") pages.push("按 G 可以送礼物，送鱼给我加好感会更快喵！");
     if (npc.id === "npc-zhuang" && this.progress.bridgeRepaired) pages.push("东区开了，资源更多，建设速度会明显提升。");
+    if (npc.id === "npc-ye") pages.push("高地的入口在雾林北边，等镇子更繁荣一些就会彻底开放。");
+    if (npc.id === "npc-lan") pages.push("月湾和镇子之间来回很快，缺钱时来这里跑一圈通常不会空手。");
     if (this.weather === "rain") pages.push("下雨天真省心，作物会自己喝饱水。");
     if (this.isMarketDay()) pages.push("今天是集市日，卖货价格会更漂亮。");
     const request = this.getPendingRequests().find((entry) => entry.requester === npc.id);
@@ -1299,7 +1512,18 @@ export class CozyPrototypeGame {
     const night = hour >= 19 || hour < 5;
     const rareChance = this.getRareFishChance();
     let key = "fish";
-    if (Math.random() < rareChance) key = "goldKoi";
+    if (this.currentMapId === "harbor") {
+      if (Math.random() < rareChance + 0.08) key = "goldKoi";
+      else if (night && Math.random() < 0.45) key = "nightFish";
+      else if (Math.random() < 0.48 || this.weather === "rain") key = "silverFish";
+    } else if (this.currentMapId === "highlands") {
+      if (Math.random() < rareChance + 0.12) key = "goldKoi";
+      else if (Math.random() < 0.28) key = "silverFish";
+      else if (night && Math.random() < 0.34) key = "nightFish";
+    } else if (this.currentMapId === "forest") {
+      if (night && Math.random() < 0.5) key = "nightFish";
+      else if ((this.weather === "rain" || this.weather === "mist") && Math.random() < 0.36) key = "silverFish";
+    } else if (Math.random() < rareChance) key = "goldKoi";
     else if (night && Math.random() < 0.55) key = "nightFish";
     else if ((this.weather === "rain" || this.weather === "mist") && Math.random() < 0.32) key = "silverFish";
     this.addItem(key, 1);
@@ -1357,7 +1581,7 @@ export class CozyPrototypeGame {
     ctx.save();
     ctx.translate(-Math.round(this.camera.x), -Math.round(this.camera.y));
     this.renderTileMap();
-    this.renderFarmPlots();
+    if (this.currentMapId === "town") this.renderFarmPlots();
     this.renderInteractables();
     this.renderNpcs();
     this.renderPlayer();
@@ -1435,18 +1659,21 @@ export class CozyPrototypeGame {
   renderInteractables() {
     const { ctx } = this;
     this.interactables.forEach((obj) => {
-      if (obj.eastOnly && !this.progress.eastUnlocked) return;
       if (obj.type === "tree") this.drawTree(obj);
       else if (obj.type === "bush") this.drawBush(obj);
       else if (obj.type === "flower") this.drawFlower(obj);
+      else if (obj.type === "herb") this.drawHerb(obj);
       else if (obj.type === "mushroom") this.drawMushroom(obj);
       else if (obj.type === "stone") this.drawStone(obj);
+      else if (obj.type === "crystal") this.drawCrystal(obj);
+      else if (obj.type === "coral") this.drawCoral(obj);
       else if (obj.type === "fishspot") this.drawFishspot(obj);
       else if (obj.type === "house") this.drawHouse(obj);
       else if (obj.type === "shop") this.drawShop(obj);
       else if (obj.type === "sign") this.drawSign(obj);
       else if (obj.type === "shell") this.drawShell(obj);
       else if (obj.type === "bridge") this.drawBridge(obj);
+      else if (obj.type === "warp") this.drawWarp(obj);
 
       if (obj.type === "sign" && this.getPendingRequests().some((request) => (this.inventory[request.item] || 0) >= request.amount)) {
         ctx.fillStyle = "#ffd86b";
@@ -1462,7 +1689,7 @@ export class CozyPrototypeGame {
         ctx.fillStyle = "#333";
         ctx.font = "11px sans-serif";
         ctx.textAlign = "center";
-        ctx.fillText("[E]", obj.x + obj.w / 2, obj.y - 10);
+        ctx.fillText(this.getInteractableBlockReason(obj) ? "锁定" : "[E]", obj.x + obj.w / 2, obj.y - 10);
         ctx.textAlign = "left";
       }
     });
@@ -1471,18 +1698,22 @@ export class CozyPrototypeGame {
   drawTree(obj){const {ctx}=this;ctx.fillStyle="#7a5c3a";ctx.fillRect(obj.x+24,obj.y+34,16,44);ctx.fillStyle=obj.collected?"#93b78d":"#52b840";ctx.beginPath();ctx.arc(obj.x+32,obj.y+28,32,0,Math.PI*2);ctx.fill();}
   drawBush(obj){const {ctx}=this;ctx.fillStyle="#4e853a";ctx.beginPath();ctx.ellipse(obj.x+30,obj.y+24,28,20,0,0,Math.PI*2);ctx.fill();ctx.fillStyle=obj.collected?"#9acb82":"#d44d62";for(let i=0;i<4;i++){ctx.beginPath();ctx.arc(obj.x+14+i*10,obj.y+18+(i%2)*8,4,0,Math.PI*2);ctx.fill();}}
   drawFlower(obj){const {ctx}=this;if(obj.collected){ctx.fillStyle="#8eca66";ctx.fillRect(obj.x,obj.y,32,32);return;}ctx.fillStyle="#ff66aa";ctx.beginPath();ctx.arc(obj.x+16,obj.y+16,10,0,Math.PI*2);ctx.fill();}
+  drawHerb(obj){const {ctx}=this;ctx.fillStyle=obj.collected?"#9bb48d":"#6ec56d";for(let i=0;i<4;i++){ctx.fillRect(obj.x+8+i*5,obj.y+8+(i%2)*4,4,18);}}
   drawMushroom(obj){const {ctx}=this;ctx.fillStyle=obj.collected?"#c8a088":"#d04020";ctx.beginPath();ctx.arc(obj.x+18,obj.y+14,18,Math.PI,0);ctx.fill();ctx.fillStyle="#f0e8d0";ctx.fillRect(obj.x+12,obj.y+14,12,16);}
   drawStone(obj){const {ctx}=this;ctx.fillStyle=obj.collected?"#b0b8c0":"#7e8e9a";ctx.beginPath();ctx.ellipse(obj.x+29,obj.y+26,28,20,0,0,Math.PI*2);ctx.fill();}
+  drawCrystal(obj){const {ctx}=this;ctx.fillStyle=obj.collected?"#b6c0d6":"#7bd3ff";ctx.beginPath();ctx.moveTo(obj.x+20,obj.y);ctx.lineTo(obj.x+38,obj.y+16);ctx.lineTo(obj.x+28,obj.y+40);ctx.lineTo(obj.x+8,obj.y+34);ctx.lineTo(obj.x+6,obj.y+14);ctx.closePath();ctx.fill();}
+  drawCoral(obj){const {ctx}=this;ctx.strokeStyle=obj.collected?"#bba097":"#ff8a7f";ctx.lineWidth=5;ctx.beginPath();ctx.moveTo(obj.x+18,obj.y+28);ctx.lineTo(obj.x+18,obj.y+8);ctx.moveTo(obj.x+18,obj.y+16);ctx.lineTo(obj.x+8,obj.y+6);ctx.moveTo(obj.x+18,obj.y+16);ctx.lineTo(obj.x+28,obj.y+6);ctx.moveTo(obj.x+18,obj.y+24);ctx.lineTo(obj.x+8,obj.y+14);ctx.moveTo(obj.x+18,obj.y+24);ctx.lineTo(obj.x+30,obj.y+14);ctx.stroke();}
   drawFishspot(obj){const {ctx}=this;ctx.strokeStyle="rgba(255,255,255,0.6)";ctx.beginPath();ctx.arc(obj.x+20,obj.y+20,15,0,Math.PI*2);ctx.stroke();ctx.fillText("🎣",obj.x+7,obj.y+30);} 
   drawHouse(obj){const {ctx}=this;ctx.fillStyle="#f4e8c0";ctx.fillRect(obj.x,obj.y+50,obj.w,obj.h-50);ctx.fillStyle="#d05030";ctx.beginPath();ctx.moveTo(obj.x-10,obj.y+50);ctx.lineTo(obj.x+obj.w/2,obj.y+5);ctx.lineTo(obj.x+obj.w+10,obj.y+50);ctx.closePath();ctx.fill();ctx.fillStyle="#8a5020";ctx.fillRect(obj.x+66,obj.y+95,38,55);} 
   drawShop(obj){const {ctx}=this;ctx.fillStyle="#dce8f8";ctx.fillRect(obj.x,obj.y+40,obj.w,obj.h-40);ctx.fillStyle="#5588cc";ctx.fillRect(obj.x,obj.y,obj.w,44);ctx.fillStyle="#fff176";ctx.fillRect(obj.x+30,obj.y+6,100,28);ctx.fillStyle="#333";ctx.font="bold 14px sans-serif";ctx.textAlign="center";ctx.fillText("老陈商店",obj.x+obj.w/2,obj.y+25);ctx.textAlign="left";} 
   drawSign(obj){const {ctx}=this;ctx.fillStyle="#a07840";ctx.fillRect(obj.x+12,obj.y,6,30);ctx.fillStyle="#c8a060";ctx.fillRect(obj.x,obj.y,30,22);} 
   drawShell(obj){const {ctx}=this;ctx.fillStyle=obj.collected?"#e8d8c0":"#f4a868";ctx.beginPath();ctx.ellipse(obj.x+14,obj.y+10,13,9,0,0,Math.PI*2);ctx.fill();}
   drawBridge(obj){const {ctx}=this;ctx.fillStyle=this.progress.bridgeRepaired?"#aa7a42":"#6a5040";ctx.fillRect(obj.x,obj.y,obj.w,obj.h);ctx.fillStyle="#d7b078";for(let i=0;i<5;i++)ctx.fillRect(obj.x+10+i*20,obj.y+8,12,obj.h-16);} 
+  drawWarp(obj){const {ctx}=this;const blocked=!!this.getInteractableBlockReason(obj);ctx.fillStyle=blocked?"rgba(130,100,90,0.2)":"rgba(255,246,180,0.2)";ctx.fillRect(obj.x,obj.y,obj.w,obj.h);ctx.strokeStyle=blocked?"#d29b88":"#f7ef9f";ctx.lineWidth=3;ctx.strokeRect(obj.x+2,obj.y+2,obj.w-4,obj.h-4);ctx.fillStyle=blocked?"#f7cfbf":"#fff6c7";ctx.font="12px sans-serif";ctx.textAlign="center";ctx.fillText(obj.label || "前往", obj.x + obj.w / 2, obj.y + obj.h / 2 + 4);ctx.textAlign="left";} 
 
   renderNpcs() {
     const { ctx } = this;
-    this.npcs.forEach((npc) => {
+    this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
       const size = npc.size;
       const favor = this.relationship[npc.id] || 0;
       ctx.fillStyle = npc.color;
@@ -1568,6 +1799,49 @@ export class CozyPrototypeGame {
     }
   }
 
+  drawHudPanel(x, y, w, h, accent) {
+    const { ctx } = this;
+    ctx.fillStyle = "rgba(16,24,20,0.8)";
+    ctx.fillRect(x, y, w, h);
+    ctx.fillStyle = accent;
+    ctx.fillRect(x, y, w, 4);
+    ctx.strokeStyle = "rgba(255,255,255,0.14)";
+    ctx.strokeRect(x, y, w, h);
+  }
+
+  renderMiniMap(x, y, w, h) {
+    const { ctx } = this;
+    const mapW = this.tileMap[0]?.length || MAP_W;
+    const mapH = this.tileMap.length || MAP_H;
+    const cell = Math.min((w - 18) / mapW, (h - 18) / mapH);
+    const drawW = mapW * cell;
+    const drawH = mapH * cell;
+    const ox = x + (w - drawW) / 2;
+    const oy = y + (h - drawH) / 2;
+
+    ctx.fillStyle = "rgba(255,255,255,0.05)";
+    ctx.fillRect(ox - 4, oy - 4, drawW + 8, drawH + 8);
+
+    for (let ty = 0; ty < mapH; ty++) {
+      for (let tx = 0; tx < mapW; tx++) {
+        const tile = this.tileMap[ty][tx];
+        ctx.fillStyle = TILE_COLORS[tile] || "#7ec850";
+        ctx.fillRect(ox + tx * cell, oy + ty * cell, Math.ceil(cell), Math.ceil(cell));
+      }
+    }
+
+    this.interactables.filter((obj) => obj.type === "warp").forEach((obj) => {
+      const blocked = !!this.getInteractableBlockReason(obj);
+      ctx.fillStyle = blocked ? "#d58e70" : "#fff3a8";
+      ctx.fillRect(ox + (obj.x / TILE_SIZE) * cell, oy + (obj.y / TILE_SIZE) * cell, Math.max(3, cell * 1.1), Math.max(3, cell * 1.1));
+    });
+
+    ctx.fillStyle = "#ffffff";
+    ctx.beginPath();
+    ctx.arc(ox + (this.player.x / TILE_SIZE) * cell, oy + (this.player.y / TILE_SIZE) * cell, Math.max(3, cell * 0.9), 0, Math.PI * 2);
+    ctx.fill();
+  }
+
   renderHud() {
     const { ctx, canvas } = this;
     const hour = Math.floor(this.gameMinutes / 60);
@@ -1578,46 +1852,50 @@ export class CozyPrototypeGame {
     const weather = this.getWeatherConfig();
     const forecast = WEATHER[this.tomorrowWeather] || WEATHER.sunny;
     const energyRatio = this.maxEnergy > 0 ? this.energy / this.maxEnergy : 0;
+    const world = this.getCurrentWorld();
+    const accent = world?.accent || "#88cc88";
+    const exits = this.interactables.filter((obj) => obj.type === "warp").slice(0, 3);
 
-    ctx.fillStyle = "rgba(20,36,20,0.82)";
-    ctx.fillRect(10, 10, 356, 156);
+    this.drawHudPanel(12, 12, 336, 194, accent);
     ctx.fillStyle = "#f0d040";
     ctx.font = "bold 16px sans-serif";
-    ctx.fillText(`💰 ${this.gold} 金币`, 22, 34);
+    ctx.fillText(`${world?.short || "地"} ${this.getCurrentMapName()}`, 26, 36);
     ctx.fillStyle = "#c8f0ff";
     ctx.font = "14px sans-serif";
-    ctx.fillText(`⏰ 第${this.gameDay}天  ${timeStr}`, 22, 54);
-    ctx.fillText(`🏠小屋Lv${this.progress.houseLevel}  🚜农场Lv${this.progress.farmLevel}  ⭐镇级${this.progress.townRank}`, 22, 74);
-    ctx.fillText(`${weather.icon} ${weather.name}  明日 ${forecast.icon} ${forecast.name}`, 22, 94);
-    ctx.fillStyle = "rgba(255,255,255,0.15)";
-    ctx.fillRect(22, 105, 180, 12);
+    ctx.fillText(`第${this.gameDay}天  ${timeStr}  ${weather.icon}${weather.name}`, 26, 58);
+    ctx.fillText(`💰 ${this.gold}    ⭐ 镇级 ${this.progress.townRank}    ${this.isMarketDay() ? "🧺 集市日" : "🌙 日常经营"}`, 26, 80);
+    ctx.fillText(`🏠 小屋Lv${this.progress.houseLevel}    🚜 农场Lv${this.progress.farmLevel}    🔭 明日 ${forecast.icon}${forecast.name}`, 26, 102);
+    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.fillRect(26, 118, 190, 12);
     ctx.fillStyle = energyRatio > 0.35 ? "#77e07d" : "#ffb45c";
-    ctx.fillRect(22, 105, 180 * energyRatio, 12);
+    ctx.fillRect(26, 118, 190 * energyRatio, 12);
     ctx.strokeStyle = "rgba(255,255,255,0.2)";
-    ctx.strokeRect(22, 105, 180, 12);
+    ctx.strokeRect(26, 118, 190, 12);
     ctx.fillStyle = "#eaf7de";
-    ctx.fillText(`⚡ 体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 210, 116);
+    ctx.fillText(`⚡ 体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 224, 129);
     ctx.fillStyle = "#c8f0ff";
-    ctx.fillText(`🌾收获:${this.progress.harvestCount}  🌿采集:${this.progress.forageCount}  📈累计赚:${this.progress.totalEarned}`, 22, 136);
+    ctx.fillText(`🌾收获 ${this.progress.harvestCount}    🌿采集 ${this.progress.forageCount}    🎣钓鱼 ${this.progress.fishCaught}`, 26, 150);
     ctx.fillStyle = "#b8f0b8";
-    ctx.fillText(activeSeed ? `Q切换种子：${ITEMS[activeSeed].icon}${ITEMS[activeSeed].name}(${this.inventory[activeSeed]})` : "当前无种子（去商店购买）", 22, 154);
-
-    ctx.fillStyle = "rgba(10,20,10,0.65)";
-    ctx.fillRect(canvas.width - 292, 10, 282, 156);
-    ctx.fillStyle = "#c8e8c8";
-    ctx.font = "12px sans-serif";
-    [
-      "WASD 移动 / E 互动",
-      "农地：翻地→播种→浇水→收获",
-      "Q 切种子 / G 送礼 / I 背包",
-      "公告牌能交每日委托",
-      "小屋里可做料理和休息",
-      this.isMarketDay() ? "今日集市日：卖货有加成" : "Tab 商店分页 / F5 存档",
-    ].forEach((line, i) => ctx.fillText(line, canvas.width - 278, 30 + i * 22));
+    ctx.fillText(activeSeed ? `当前种子：${ITEMS[activeSeed].icon} ${ITEMS[activeSeed].name} x${this.inventory[activeSeed]}` : "当前没有携带种子", 26, 170);
     if (this.currentBuff) {
       ctx.fillStyle = "#ffe48f";
-      ctx.fillText(`🍲 当前状态：${this.currentBuff.label}`, canvas.width - 278, 162);
+      ctx.fillText(`料理增益：${this.currentBuff.label}`, 26, 188);
     }
+
+    this.drawHudPanel(canvas.width - 218, 12, 206, 194, accent);
+    ctx.fillStyle = "#f7f2bd";
+    ctx.font = "bold 15px sans-serif";
+    ctx.fillText("小地图", canvas.width - 204, 34);
+    ctx.fillStyle = "#cde7ef";
+    ctx.font = "12px sans-serif";
+    ctx.fillText(this.getCurrentMapName(), canvas.width - 204, 54);
+    this.renderMiniMap(canvas.width - 206, 62, 182, 104);
+    ctx.fillStyle = "#bfdcc7";
+    exits.forEach((warp, index) => {
+      const blocked = this.getInteractableBlockReason(warp);
+      const label = `${blocked ? "🔒" : "→"} ${this.worlds[warp.targetMap]?.name || warp.targetMap}`;
+      ctx.fillText(label, canvas.width - 204, 170 + index * 14);
+    });
   }
 
   renderQuestTracker() {
@@ -1625,8 +1903,7 @@ export class CozyPrototypeGame {
     const active = this.quests.filter(q => !q.done).slice(0, 2);
     const requests = this.getPendingRequests().slice(0, 2);
     const x = 10, y = canvas.height - 158;
-    ctx.fillStyle = "rgba(20,36,20,0.82)";
-    ctx.fillRect(x, y, 386, 148);
+    this.drawHudPanel(x, y, 386, 148, this.getCurrentWorld()?.accent || "#88cc88");
     ctx.fillStyle = "#f0d060";
     ctx.font = "bold 13px sans-serif";
     ctx.fillText("📋 长期目标", x + 12, y + 20);
@@ -1656,10 +1933,9 @@ export class CozyPrototypeGame {
 
   renderSkillPanel() {
     const { ctx, canvas } = this;
-    const x = canvas.width - 292;
+    const x = canvas.width - 224;
     const y = canvas.height - 122;
-    ctx.fillStyle = "rgba(18,28,18,0.82)";
-    ctx.fillRect(x, y, 282, 112);
+    this.drawHudPanel(x, y, 212, 112, this.getCurrentWorld()?.accent || "#88cc88");
     ctx.fillStyle = "#f0d060";
     ctx.font = "bold 13px sans-serif";
     ctx.fillText("📚 生活技能", x + 12, y + 20);
@@ -1673,51 +1949,66 @@ export class CozyPrototypeGame {
       ctx.font = "11px sans-serif";
       ctx.fillText(`${info.icon} ${info.label} Lv${skill.level}`, x + 12, rowY);
       ctx.fillStyle = "rgba(255,255,255,0.14)";
-      ctx.fillRect(x + 112, rowY - 9, 148, 8);
+      ctx.fillRect(x + 92, rowY - 9, 104, 8);
       ctx.fillStyle = info.color;
-      ctx.fillRect(x + 112, rowY - 9, 148 * ratio, 8);
+      ctx.fillRect(x + 92, rowY - 9, 104 * ratio, 8);
     });
   }
 
   renderMessage() {
     const { ctx, canvas } = this;
     if (!this.interactionMessage) return;
+    const maxW = canvas.width - 72;
     const text = this.interactionMessage;
-    const w = Math.min(ctx.measureText(text).width + 40, canvas.width - 40);
+    ctx.font = "14px sans-serif";
+    const lines = [];
+    let current = "";
+    for (const char of text) {
+      const next = current + char;
+      if (ctx.measureText(next).width > maxW - 34 && current) {
+        lines.push(current);
+        current = char;
+      } else current = next;
+    }
+    if (current) lines.push(current);
+    const renderLines = lines.slice(0, 3);
+    const w = maxW;
+    const h = 18 + renderLines.length * 20;
     const x = (canvas.width - w) / 2;
-    const y = canvas.height - 56;
+    const y = canvas.height - h - 14;
     ctx.fillStyle = "rgba(10,20,10,0.9)";
-    ctx.fillRect(x, y, w, 34);
+    ctx.fillRect(x, y, w, h);
     ctx.strokeStyle = "#88cc88";
-    ctx.strokeRect(x, y, w, 34);
+    ctx.strokeRect(x, y, w, h);
     ctx.fillStyle = "#f0ffe0";
     ctx.font = "14px sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText(text, canvas.width / 2, y + 22);
+    renderLines.forEach((line, index) => ctx.fillText(line, canvas.width / 2, y + 22 + index * 20));
     ctx.textAlign = "left";
   }
 
   renderTitle() {
     const { ctx, canvas } = this;
     const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, "#9fd8ff");
-    grad.addColorStop(1, "#c8f0b0");
+    grad.addColorStop(0, "#98d7ff");
+    grad.addColorStop(0.58, "#c8efb1");
+    grad.addColorStop(1, "#f4ddb0");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "rgba(255,255,255,0.8)";
-    ctx.fillRect(160, 40, 560, 160);
+    ctx.fillStyle = "rgba(255,255,255,0.76)";
+    ctx.fillRect(132, 44, 536, 176);
     ctx.strokeStyle = "#88aa66";
-    ctx.strokeRect(160, 40, 560, 160);
+    ctx.strokeRect(132, 44, 536, 176);
     ctx.fillStyle = "#2d5a1e";
-    ctx.font = "bold 46px 'PingFang SC', sans-serif";
+    ctx.font = "bold 48px 'PingFang SC', sans-serif";
     ctx.textAlign = "center";
-    ctx.fillText("🌿 温馨小镇：生活模拟版 🌿", canvas.width / 2, 100);
+    ctx.fillText("温馨小镇", canvas.width / 2, 102);
     ctx.font = "18px sans-serif";
-    ctx.fillText("种田、采集、钓鱼、交易、社交、料理与委托，推进长期成长", canvas.width / 2, 138);
+    ctx.fillText("在晨露镇、雾林、月湾与风岬高地之间安排你的慢生活", canvas.width / 2, 142);
     ctx.font = "16px sans-serif";
-    ctx.fillText("核心循环：收菜→补种→跑委托→赚钱→投资升级→解锁内容", canvas.width / 2, 170);
+    ctx.fillText("种田、跑委托、探索新地图、钓鱼、做料理，慢慢把镇子经营起来", canvas.width / 2, 174);
     ctx.font = "14px sans-serif";
-    ctx.fillText("天气、技能、集市日和屋内菜单都会影响你的每日节奏", canvas.width / 2, 194);
+    ctx.fillText("主界面的说明已经收进右上角帮助按钮，进入后可以专心玩", canvas.width / 2, 200);
     if (Math.floor(this.lastTime / 500) % 2 === 0) {
       ctx.font = "bold 22px sans-serif";
       ctx.fillStyle = "#ffffff";
