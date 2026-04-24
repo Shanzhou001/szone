@@ -42,18 +42,18 @@ const MAP_H = 26;
 const TIME_SPEED = 0.6;
 
 const UI = {
-  ink: "#20342f",
-  inkSoft: "#5d706a",
-  paper: "rgba(248, 244, 230, 0.92)",
-  paperDim: "rgba(239, 231, 211, 0.82)",
-  glass: "rgba(31, 42, 38, 0.76)",
-  glassSoft: "rgba(31, 42, 38, 0.58)",
-  cream: "#f8f1d8",
-  gold: "#d7b86d",
-  green: "#76a46a",
-  blue: "#6ea9c4",
-  red: "#be6f64",
-  shadow: "rgba(30, 43, 39, 0.22)",
+  ink: "#1d2e2a",
+  inkSoft: "#61716a",
+  paper: "rgba(249, 244, 231, 0.94)",
+  paperDim: "rgba(232, 222, 202, 0.86)",
+  glass: "rgba(25, 36, 33, 0.82)",
+  glassSoft: "rgba(25, 36, 33, 0.62)",
+  cream: "#f9efd1",
+  gold: "#d9b96f",
+  green: "#779d6b",
+  blue: "#6a9bb4",
+  red: "#bd756a",
+  shadow: "rgba(20, 31, 28, 0.30)",
 };
 
 const SEASONS = [
@@ -2096,11 +2096,26 @@ export class CozyPrototypeGame {
     if (options.accent) {
       this.fillRoundRect(x + 10, y + 8, 4, h - 16, 3, options.accent);
     }
+    if (options.gloss !== false) {
+      ctx.save();
+      ctx.strokeStyle = options.light || "rgba(255,255,255,0.18)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + (options.radius ?? 12), y + 1.5);
+      ctx.lineTo(x + w - (options.radius ?? 12), y + 1.5);
+      ctx.stroke();
+      ctx.restore();
+    }
   }
 
   drawBar(x, y, w, h, ratio, color, back = "rgba(32,52,47,0.12)") {
-    this.fillRoundRect(x, y, w, h, h / 2, back);
-    this.fillRoundRect(x, y, Math.max(h, w * Math.max(0, Math.min(1, ratio))), h, h / 2, color);
+    const { ctx } = this;
+    this.fillRoundRect(x, y, w, h, h / 2, back, "rgba(255,255,255,0.10)");
+    const fillW = Math.max(h, w * Math.max(0, Math.min(1, ratio)));
+    this.fillRoundRect(x, y, fillW, h, h / 2, color);
+    ctx.fillStyle = "rgba(255,255,255,0.20)";
+    this.roundedRect(x + 2, y + 2, Math.max(0, fillW - 4), Math.max(1, h * 0.32), h / 2);
+    ctx.fill();
   }
 
   wrapText(text, maxWidth, font) {
@@ -2121,6 +2136,129 @@ export class CozyPrototypeGame {
     return lines;
   }
 
+  noise(tx, ty, salt = 0) {
+    const n = Math.sin(tx * 127.1 + ty * 311.7 + salt * 74.7) * 43758.5453;
+    return n - Math.floor(n);
+  }
+
+  drawGroundShadow(x, y, w, h, alpha = 0.22) {
+    const { ctx } = this;
+    ctx.save();
+    ctx.fillStyle = `rgba(31, 38, 33, ${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+
+  getTilePalette(tile) {
+    const seasonId = this.getSeasonInfo().id;
+    const grass = seasonId === "autumn" ? ["#9fb76f", "#789b59", "#d2aa69"] : seasonId === "winter" ? ["#9eb9ad", "#7f9d92", "#dce7dd"] : ["#91bd78", "#6fa061", "#c9d79a"];
+    const darkGrass = seasonId === "autumn" ? ["#738c54", "#566f47", "#b68256"] : seasonId === "winter" ? ["#77998e", "#5e7d75", "#d9e6de"] : ["#6f9b63", "#4f7a4a", "#b7cf85"];
+    const palettes = {
+      [TILE.GRASS]: grass,
+      [TILE.FLOWER]: grass,
+      [TILE.DARK_GRASS]: darkGrass,
+      [TILE.PATH]: ["#dcc9a5", "#c8ae82", "#f0dfbd"],
+      [TILE.SAND]: ["#e5d7af", "#cfbd8d", "#f4e7bf"],
+      [TILE.WATER]: ["#79b4cc", "#4d8eaa", "#c4e5ea"],
+      [TILE.WOOD_FLOOR]: ["#bc9260", "#9f744a", "#ddba83"],
+      [TILE.FARM_SOIL]: ["#8a6650", "#654635", "#b18866"],
+    };
+    return palettes[tile] || palettes[TILE.GRASS];
+  }
+
+  drawTileSurface(tile, px, py, tx, ty) {
+    const { ctx } = this;
+    const [light, base, highlight] = this.getTilePalette(tile);
+    const grad = ctx.createLinearGradient(px, py, px + TILE_SIZE, py + TILE_SIZE);
+    grad.addColorStop(0, light);
+    grad.addColorStop(0.58, base);
+    grad.addColorStop(1, light);
+    ctx.fillStyle = grad;
+    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+
+    ctx.fillStyle = "rgba(28,35,31,0.055)";
+    ctx.fillRect(px, py + TILE_SIZE - 1, TILE_SIZE, 1);
+    ctx.fillStyle = "rgba(255,255,255,0.06)";
+    ctx.fillRect(px, py, TILE_SIZE, 1);
+
+    const seed = this.noise(tx, ty, 1);
+    if (tile === TILE.GRASS || tile === TILE.DARK_GRASS || tile === TILE.FLOWER) {
+      ctx.strokeStyle = tile === TILE.DARK_GRASS ? "rgba(232,241,203,0.16)" : "rgba(37,83,45,0.16)";
+      ctx.lineWidth = 1.2;
+      for (let i = 0; i < 4; i++) {
+        const bx = px + 7 + ((seed * 91 + i * 11) % 34);
+        const by = py + 10 + ((seed * 67 + i * 7) % 30);
+        ctx.beginPath();
+        ctx.moveTo(bx, by + 5);
+        ctx.quadraticCurveTo(bx + 2, by, bx + 5, by + 3);
+        ctx.stroke();
+      }
+      if (tile === TILE.FLOWER || seed > 0.72) {
+        ctx.fillStyle = tile === TILE.FLOWER ? "rgba(232,166,157,0.72)" : "rgba(246,226,156,0.38)";
+        ctx.beginPath();
+        ctx.arc(px + 14 + (seed * 19) % 22, py + 14 + (seed * 29) % 18, 2.4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (tile === TILE.PATH || tile === TILE.SAND || tile === TILE.FARM_SOIL) {
+      ctx.fillStyle = tile === TILE.FARM_SOIL ? "rgba(63,39,28,0.16)" : "rgba(98,76,52,0.10)";
+      for (let i = 0; i < 5; i++) {
+        const sx = px + 6 + ((seed * 101 + i * 13) % 36);
+        const sy = py + 8 + ((seed * 83 + i * 9) % 31);
+        ctx.fillRect(sx, sy, 5 + (i % 2) * 3, 1.5);
+      }
+      if (tile === TILE.FARM_SOIL) {
+        ctx.strokeStyle = "rgba(43,27,20,0.18)";
+        for (let i = 1; i < 4; i++) {
+          ctx.beginPath();
+          ctx.moveTo(px + 5, py + i * 12);
+          ctx.lineTo(px + TILE_SIZE - 5, py + i * 12 + 2);
+          ctx.stroke();
+        }
+      }
+    }
+
+    if (tile === TILE.WATER) {
+      const water = ctx.createLinearGradient(px, py, px, py + TILE_SIZE);
+      water.addColorStop(0, "rgba(255,255,255,0.20)");
+      water.addColorStop(0.55, "rgba(89,163,190,0.22)");
+      water.addColorStop(1, "rgba(28,72,96,0.18)");
+      ctx.fillStyle = water;
+      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
+      ctx.strokeStyle = "rgba(232,248,246,0.42)";
+      ctx.lineWidth = 1.4;
+      for (let i = 0; i < 2; i++) {
+        const wave = Math.sin((tx + ty + this.gameMinutes * 0.05 + i * 2) * 0.8) * 2;
+        ctx.beginPath();
+        ctx.moveTo(px + 7, py + 17 + i * 14 + wave);
+        ctx.bezierCurveTo(px + 18, py + 12 + i * 14 + wave, px + 29, py + 24 + i * 14 + wave, px + 42, py + 18 + i * 14 + wave);
+        ctx.stroke();
+      }
+    }
+
+    if (tile === TILE.WOOD_FLOOR) {
+      ctx.strokeStyle = "rgba(68,45,29,0.22)";
+      for (let i = 1; i < 4; i++) {
+        ctx.beginPath();
+        ctx.moveTo(px, py + i * 12);
+        ctx.lineTo(px + TILE_SIZE, py + i * 12);
+        ctx.stroke();
+      }
+      ctx.fillStyle = "rgba(255,238,190,0.10)";
+      ctx.fillRect(px + 6, py + 7, 24, 2);
+    }
+
+    ctx.fillStyle = "rgba(255,255,255,0.045)";
+    ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, 1);
+    if (highlight && this.noise(tx, ty, 3) > 0.88 && tile !== TILE.WATER) {
+      ctx.fillStyle = `${highlight}55`;
+      ctx.fillRect(px + 8, py + 8, 8, 2);
+    }
+  }
+
   render() {
     const { ctx, canvas } = this;
     ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -2136,8 +2274,7 @@ export class CozyPrototypeGame {
 
   renderGame() {
     const { ctx } = this;
-    ctx.fillStyle = getSkyColor(this.gameMinutes / 60);
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    this.renderSkyBackdrop();
 
     ctx.save();
     ctx.translate(-Math.round(this.camera.x), -Math.round(this.camera.y));
@@ -2151,10 +2288,61 @@ export class CozyPrototypeGame {
 
     this.renderNightOverlay();
     this.renderWeatherEffects();
+    this.renderCinematicVignette();
     this.renderHud();
     this.renderQuestTracker();
     this.renderSkillPanel();
     this.renderMessage();
+  }
+
+  renderSkyBackdrop() {
+    const { ctx, canvas } = this;
+    const hour = this.gameMinutes / 60;
+    const base = getSkyColor(hour);
+    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    grad.addColorStop(0, base);
+    grad.addColorStop(0.58, hour >= 18 || hour < 6 ? "#2d4050" : "#bdd3cf");
+    grad.addColorStop(1, hour >= 18 || hour < 6 ? "#26352f" : "#cfd7bd");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    ctx.save();
+    const celestialX = ((hour - 5) / 18) * canvas.width;
+    const celestialY = hour >= 18 || hour < 6 ? 72 : 58;
+    const glow = ctx.createRadialGradient(celestialX, celestialY, 4, celestialX, celestialY, 120);
+    glow.addColorStop(0, hour >= 18 || hour < 6 ? "rgba(225,232,214,0.34)" : "rgba(255,231,158,0.38)");
+    glow.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = glow;
+    ctx.beginPath();
+    ctx.arc(celestialX, celestialY, 120, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = hour >= 18 || hour < 6 ? "rgba(235,240,219,0.78)" : "rgba(255,224,142,0.90)";
+    ctx.beginPath();
+    ctx.arc(celestialX, celestialY, hour >= 18 || hour < 6 ? 11 : 16, 0, Math.PI * 2);
+    ctx.fill();
+
+    const hillY = canvas.height - 76;
+    ctx.fillStyle = "rgba(48,78,64,0.18)";
+    ctx.beginPath();
+    ctx.moveTo(0, hillY + 28);
+    for (let x = 0; x <= canvas.width + 80; x += 80) {
+      ctx.quadraticCurveTo(x + 36, hillY - 28 + Math.sin(x * 0.03) * 12, x + 80, hillY + 20);
+    }
+    ctx.lineTo(canvas.width, canvas.height);
+    ctx.lineTo(0, canvas.height);
+    ctx.closePath();
+    ctx.fill();
+    ctx.restore();
+  }
+
+  renderCinematicVignette() {
+    const { ctx, canvas } = this;
+    const vignette = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width * 0.24, canvas.width / 2, canvas.height / 2, canvas.width * 0.72);
+    vignette.addColorStop(0, "rgba(255,255,255,0)");
+    vignette.addColorStop(0.72, "rgba(31,38,33,0.04)");
+    vignette.addColorStop(1, "rgba(16,24,22,0.22)");
+    ctx.fillStyle = vignette;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
   }
 
   renderTileMap() {
@@ -2169,43 +2357,7 @@ export class CozyPrototypeGame {
         if (ty < 0 || ty >= MAP_H || tx < 0 || tx >= MAP_W) continue;
         const tile = this.tileMap[ty][tx];
         const px = tx * TILE_SIZE, py = ty * TILE_SIZE;
-        ctx.fillStyle = TILE_COLORS[tile] || TILE_COLORS[TILE.GRASS];
-        ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-
-        if (tile === TILE.GRASS || tile === TILE.DARK_GRASS || tile === TILE.FLOWER) {
-          ctx.fillStyle = tile === TILE.DARK_GRASS ? "rgba(242,246,218,0.08)" : "rgba(30,68,42,0.06)";
-          const seed = (tx * 17 + ty * 31) % 19;
-          ctx.fillRect(px + 8 + seed, py + 14, 10, 2);
-          ctx.fillRect(px + 24, py + 30 + (seed % 5), 8, 2);
-          if (tile === TILE.FLOWER && seed % 2 === 0) {
-            ctx.fillStyle = "rgba(245,219,173,0.55)";
-            ctx.beginPath();
-            ctx.arc(px + 28, py + 18, 3, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        }
-
-        if (tile === TILE.PATH || tile === TILE.SAND || tile === TILE.FARM_SOIL) {
-          ctx.fillStyle = "rgba(255,255,255,0.08)";
-          ctx.fillRect(px, py, TILE_SIZE, 1);
-          ctx.fillStyle = "rgba(57,44,31,0.04)";
-          ctx.fillRect(px + 12, py + 22, 16, 2);
-        }
-
-        if (tile === TILE.WATER) {
-          const wave = Math.sin((tx + ty + this.gameMinutes * 0.05) * 0.8) * 2;
-          const waterGlow = ctx.createLinearGradient(px, py, px, py + TILE_SIZE);
-          waterGlow.addColorStop(0, "rgba(255,255,255,0.12)");
-          waterGlow.addColorStop(1, "rgba(40,86,112,0.12)");
-          ctx.fillStyle = waterGlow;
-          ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-          ctx.strokeStyle = "rgba(255,255,255,0.26)";
-          ctx.lineWidth = 1.5;
-          ctx.beginPath();
-          ctx.moveTo(px + 6, py + 20 + wave);
-          ctx.lineTo(px + 42, py + 20 + wave);
-          ctx.stroke();
-        }
+        this.drawTileSurface(tile, px, py, tx, ty);
       }
     }
   }
@@ -2214,7 +2366,19 @@ export class CozyPrototypeGame {
     const { ctx } = this;
     this.farmPlots.forEach((p) => {
       const unlocked = p.lockedLevel <= this.progress.farmLevel;
-      this.fillRoundRect(p.x, p.y, p.w, p.h, 8, unlocked ? (p.tilled ? "#87664f" : "rgba(86,126,68,0.72)") : "rgba(40,45,42,0.55)", "rgba(255,255,255,0.16)");
+      const plotGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
+      if (unlocked && p.tilled) {
+        plotGrad.addColorStop(0, "#9a7358");
+        plotGrad.addColorStop(1, "#634534");
+      } else if (unlocked) {
+        plotGrad.addColorStop(0, "rgba(103,142,76,0.86)");
+        plotGrad.addColorStop(1, "rgba(67,102,58,0.86)");
+      } else {
+        plotGrad.addColorStop(0, "rgba(62,68,62,0.62)");
+        plotGrad.addColorStop(1, "rgba(32,38,35,0.62)");
+      }
+      this.drawGroundShadow(p.x + p.w / 2, p.y + p.h - 1, p.w * 0.42, 4, 0.10);
+      this.fillRoundRect(p.x, p.y, p.w, p.h, 8, plotGrad, "rgba(255,255,255,0.18)");
       if (!unlocked) {
         ctx.fillStyle = "rgba(248,241,216,0.86)";
         ctx.font = "12px sans-serif";
@@ -2249,14 +2413,17 @@ export class CozyPrototypeGame {
         ctx.fill();
       }
       if (p.watered) {
-        this.fillRoundRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6, 7, "rgba(116,171,206,0.26)");
+        const water = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
+        water.addColorStop(0, "rgba(155,205,231,0.34)");
+        water.addColorStop(1, "rgba(83,141,181,0.20)");
+        this.fillRoundRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6, 7, water);
       }
     });
   }
 
   renderInteractables() {
     const { ctx } = this;
-    this.interactables.forEach((obj) => {
+    [...this.interactables].sort((a, b) => (a.y + a.h) - (b.y + b.h)).forEach((obj) => {
       if (obj.type === "tree") this.drawTree(obj);
       else if (obj.type === "bush") this.drawBush(obj);
       else if (obj.type === "flower") this.drawFlower(obj);
@@ -2305,22 +2472,32 @@ export class CozyPrototypeGame {
 
   drawTree(obj) {
     const { ctx } = this;
-    ctx.fillStyle = "#7a5e43";
-    this.fillRoundRect(obj.x + 25, obj.y + 34, 15, 45, 5, "#7a5e43");
-    const crown = obj.collected ? "#9ab18b" : "#5f9a62";
-    ctx.fillStyle = crown;
+    this.drawGroundShadow(obj.x + 34, obj.y + 78, 34, 9, 0.20);
+    this.fillRoundRect(obj.x + 24, obj.y + 32, 17, 48, 5, "#70533b");
+    ctx.fillStyle = "rgba(255,229,177,0.16)";
+    ctx.fillRect(obj.x + 28, obj.y + 38, 4, 34);
+    const crown = obj.collected ? ["#9ab18b", "#829b78"] : ["#6aa965", "#487d4c"];
+    const grad = ctx.createRadialGradient(obj.x + 20, obj.y + 18, 6, obj.x + 34, obj.y + 34, 42);
+    grad.addColorStop(0, crown[0]);
+    grad.addColorStop(1, crown[1]);
+    ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.ellipse(obj.x + 32, obj.y + 32, 34, 27, 0, 0, Math.PI * 2);
+    ctx.ellipse(obj.x + 32, obj.y + 32, 35, 28, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.12)";
+    ctx.fillStyle = "rgba(255,255,255,0.16)";
     ctx.beginPath();
-    ctx.ellipse(obj.x + 20, obj.y + 20, 12, 8, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(obj.x + 20, obj.y + 19, 13, 8, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(obj.x + 45, obj.y + 27, 9, 6, 0.2, 0, Math.PI * 2);
     ctx.fill();
   }
 
   drawBush(obj) {
     const { ctx } = this;
-    ctx.fillStyle = obj.collected ? "#86a978" : "#5d9360";
+    this.drawGroundShadow(obj.x + 30, obj.y + 42, 26, 7, 0.16);
+    const grad = ctx.createLinearGradient(obj.x, obj.y, obj.x, obj.y + 44);
+    grad.addColorStop(0, obj.collected ? "#9eb78e" : "#6ca464");
+    grad.addColorStop(1, obj.collected ? "#758f6d" : "#4c7f4b");
+    ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.ellipse(obj.x + 30, obj.y + 24, 29, 20, 0, 0, Math.PI * 2);
     ctx.fill();
@@ -2381,7 +2558,12 @@ export class CozyPrototypeGame {
 
   drawStone(obj) {
     const { ctx } = this;
-    ctx.fillStyle = obj.collected ? "#aeb5ad" : "#7d8b8c";
+    this.drawGroundShadow(obj.x + 30, obj.y + 42, 25, 6, 0.15);
+    const grad = ctx.createLinearGradient(obj.x + 6, obj.y + 5, obj.x + 52, obj.y + 42);
+    grad.addColorStop(0, obj.collected ? "#c1c8c1" : "#9aa7a7");
+    grad.addColorStop(0.55, obj.collected ? "#a7b0aa" : "#7d8b8c");
+    grad.addColorStop(1, obj.collected ? "#8c9991" : "#58686c");
+    ctx.fillStyle = grad;
     ctx.beginPath();
     ctx.ellipse(obj.x + 29, obj.y + 26, 28, 19, -0.08, 0, Math.PI * 2);
     ctx.fill();
@@ -2393,6 +2575,7 @@ export class CozyPrototypeGame {
 
   drawCrystal(obj) {
     const { ctx } = this;
+    this.drawGroundShadow(obj.x + 22, obj.y + 42, 18, 5, 0.14);
     const grad = ctx.createLinearGradient(obj.x, obj.y, obj.x + 40, obj.y + 40);
     grad.addColorStop(0, obj.collected ? "#b4bec3" : "#d3f2ef");
     grad.addColorStop(1, obj.collected ? "#899da5" : "#6fb8c6");
@@ -2454,12 +2637,26 @@ export class CozyPrototypeGame {
 
   drawHouse(obj) {
     const { ctx } = this;
-    this.fillRoundRect(obj.x + 8, obj.y + 50, obj.w - 16, obj.h - 50, 8, "#eadfca", "rgba(81,63,46,0.18)");
-    ctx.fillStyle = "#a45d4d";
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 4, obj.w * 0.46, 15, 0.22);
+    const wall = ctx.createLinearGradient(obj.x, obj.y + 44, obj.x, obj.y + obj.h);
+    wall.addColorStop(0, "#f2e8d3");
+    wall.addColorStop(1, "#d7c5a8");
+    this.fillRoundRect(obj.x + 8, obj.y + 50, obj.w - 16, obj.h - 50, 8, wall, "rgba(81,63,46,0.20)");
+    const roof = ctx.createLinearGradient(obj.x, obj.y + 4, obj.x, obj.y + 58);
+    roof.addColorStop(0, "#c87860");
+    roof.addColorStop(1, "#8d4c43");
+    ctx.fillStyle = roof;
     ctx.beginPath();
     ctx.moveTo(obj.x - 4, obj.y + 52);
     ctx.lineTo(obj.x + obj.w / 2, obj.y + 10);
     ctx.lineTo(obj.x + obj.w + 4, obj.y + 52);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,230,180,0.22)";
+    ctx.beginPath();
+    ctx.moveTo(obj.x + obj.w / 2, obj.y + 10);
+    ctx.lineTo(obj.x + obj.w + 4, obj.y + 52);
+    ctx.lineTo(obj.x + obj.w - 24, obj.y + 52);
     ctx.closePath();
     ctx.fill();
     this.fillRoundRect(obj.x + 66, obj.y + 94, 38, 56, 5, "#74533d");
@@ -2469,8 +2666,15 @@ export class CozyPrototypeGame {
 
   drawShop(obj) {
     const { ctx } = this;
-    this.fillRoundRect(obj.x, obj.y + 42, obj.w, obj.h - 42, 8, "#dbe2dc", "rgba(47,64,58,0.16)");
-    this.fillRoundRect(obj.x + 6, obj.y + 8, obj.w - 12, 45, 8, "#5f7f8f");
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 3, obj.w * 0.45, 14, 0.20);
+    const wall = ctx.createLinearGradient(obj.x, obj.y + 42, obj.x, obj.y + obj.h);
+    wall.addColorStop(0, "#e8eee8");
+    wall.addColorStop(1, "#c8d3cc");
+    this.fillRoundRect(obj.x, obj.y + 42, obj.w, obj.h - 42, 8, wall, "rgba(47,64,58,0.18)");
+    const awning = ctx.createLinearGradient(obj.x, obj.y + 8, obj.x, obj.y + 54);
+    awning.addColorStop(0, "#7697a5");
+    awning.addColorStop(1, "#46697d");
+    this.fillRoundRect(obj.x + 6, obj.y + 8, obj.w - 12, 45, 8, awning);
     this.fillRoundRect(obj.x + 32, obj.y + 15, 96, 24, 6, "#f0dfac");
     ctx.fillStyle = UI.ink;
     ctx.font = "bold 13px sans-serif";
@@ -2491,8 +2695,15 @@ export class CozyPrototypeGame {
   drawRanch(obj) {
     const { ctx } = this;
     const active = this.progress.ranchLevel > 0;
-    this.fillRoundRect(obj.x, obj.y + 24, obj.w, obj.h - 24, 10, active ? "#d7c3a1" : "rgba(95,86,73,0.55)", "rgba(66,49,34,0.18)");
-    ctx.fillStyle = active ? "#8d6650" : "#6f665b";
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 2, obj.w * 0.42, 13, 0.18);
+    const barnWall = ctx.createLinearGradient(obj.x, obj.y + 24, obj.x, obj.y + obj.h);
+    barnWall.addColorStop(0, active ? "#e0cba8" : "rgba(120,110,96,0.70)");
+    barnWall.addColorStop(1, active ? "#b99b76" : "rgba(82,75,67,0.70)");
+    this.fillRoundRect(obj.x, obj.y + 24, obj.w, obj.h - 24, 10, barnWall, "rgba(66,49,34,0.20)");
+    const barnRoof = ctx.createLinearGradient(obj.x, obj.y, obj.x, obj.y + 36);
+    barnRoof.addColorStop(0, active ? "#9d7460" : "#70675c");
+    barnRoof.addColorStop(1, active ? "#735142" : "#585047");
+    ctx.fillStyle = barnRoof;
     ctx.beginPath();
     ctx.moveTo(obj.x - 4, obj.y + 30);
     ctx.lineTo(obj.x + obj.w / 2, obj.y + 2);
@@ -2721,52 +2932,66 @@ export class CozyPrototypeGame {
     const accent = season?.accent || world?.accent || UI.green;
     const exits = this.interactables.filter((obj) => obj.type === "warp").slice(0, 3);
 
-    this.drawSoftPanel(14, 12, canvas.width - 28, 66, { fill: "rgba(248,244,230,0.90)", accent, blur: 14, offsetY: 5 });
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 16px 'Noto Sans SC', sans-serif";
-    ctx.fillText(`${world?.short || "地"} ${this.getCurrentMapName()}`, 34, 36);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`${season.name}${this.getSeasonDay()}日  第${this.gameDay}天  ${timeStr}`, 34, 58);
+    const topGrad = ctx.createLinearGradient(14, 12, 14, 82);
+    topGrad.addColorStop(0, "rgba(33,49,45,0.94)");
+    topGrad.addColorStop(1, "rgba(20,31,29,0.90)");
+    this.drawSoftPanel(14, 12, canvas.width - 28, 72, { fill: topGrad, stroke: "rgba(249,239,209,0.18)", accent, blur: 20, offsetY: 8, radius: 14 });
 
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 14px sans-serif";
-    ctx.fillText(`${weather.icon} ${weather.name}`, 206, 36);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`明日 ${forecast.icon}${forecast.name}${festival ? `  ·  ${festival.name}` : ""}`, 206, 58);
-
-    this.drawBar(416, 30, 132, 10, energyRatio, energyRatio > 0.35 ? UI.green : "#c98754");
-    ctx.fillStyle = UI.ink;
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 416, 58);
-
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 14px sans-serif";
-    ctx.fillText(`${this.gold} 金`, 574, 36);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`镇${this.progress.townRank} · 屋${this.progress.houseLevel} 农${this.progress.farmLevel} 牧${this.progress.ranchLevel} 工${this.progress.workshopLevel}`, 574, 58);
-
-    ctx.fillStyle = activeSeed ? UI.ink : UI.inkSoft;
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText(activeSeed ? `${ITEMS[activeSeed].icon} ${ITEMS[activeSeed].name} x${this.inventory[activeSeed]}` : "无种子", canvas.width - 28, 36);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.fillText(`工具${this.progress.toolLevel} 鱼竿${this.progress.rodLevel} · I/J`, canvas.width - 28, 58);
+    this.fillRoundRect(34, 25, 40, 40, 12, "rgba(249,239,209,0.12)", "rgba(249,239,209,0.16)");
+    ctx.fillStyle = accent;
+    ctx.font = "bold 18px 'Noto Sans SC', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(world?.short || "地", 54, 52);
     ctx.textAlign = "left";
 
-    this.drawSoftPanel(canvas.width - 182, 90, 168, 116, { fill: "rgba(32,42,38,0.66)", accent, blur: 12, offsetY: 4 });
+    ctx.fillStyle = UI.cream;
+    ctx.font = "bold 16px 'Noto Sans SC', sans-serif";
+    ctx.fillText(this.getCurrentMapName(), 86, 37);
+    ctx.fillStyle = "rgba(249,239,209,0.68)";
+    ctx.font = "12px sans-serif";
+    ctx.fillText(`${season.name}${this.getSeasonDay()}日 · 第${this.gameDay}天 · ${timeStr}`, 86, 59);
+
+    this.fillRoundRect(258, 25, 176, 40, 10, "rgba(249,239,209,0.08)", "rgba(249,239,209,0.10)");
+    ctx.fillStyle = UI.cream;
+    ctx.font = "bold 13px sans-serif";
+    ctx.fillText(`${weather.icon} ${weather.name}`, 274, 42);
+    ctx.fillStyle = "rgba(249,239,209,0.62)";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(`明日 ${forecast.icon}${forecast.name}${festival ? ` · ${festival.name}` : ""}`, 274, 59);
+
+    this.fillRoundRect(452, 25, 166, 40, 10, "rgba(249,239,209,0.08)", "rgba(249,239,209,0.10)");
+    this.drawBar(468, 36, 104, 9, energyRatio, energyRatio > 0.35 ? "#8fbf73" : "#c98754", "rgba(249,239,209,0.14)");
+    ctx.fillStyle = "rgba(249,239,209,0.72)";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(`体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 468, 59);
+
+    this.fillRoundRect(638, 25, 184, 40, 10, "rgba(249,239,209,0.08)", "rgba(249,239,209,0.10)");
+    ctx.fillStyle = UI.gold;
+    ctx.font = "bold 14px sans-serif";
+    ctx.fillText(`${this.gold} 金`, 654, 42);
+    ctx.fillStyle = "rgba(249,239,209,0.62)";
+    ctx.font = "11px sans-serif";
+    ctx.fillText(`镇${this.progress.townRank} 屋${this.progress.houseLevel} 农${this.progress.farmLevel} 牧${this.progress.ranchLevel} 工${this.progress.workshopLevel}`, 654, 59);
+
+    ctx.fillStyle = activeSeed ? UI.cream : "rgba(249,239,209,0.58)";
+    ctx.font = "12px sans-serif";
+    ctx.textAlign = "right";
+    ctx.fillText(activeSeed ? `${ITEMS[activeSeed].icon} ${ITEMS[activeSeed].name} x${this.inventory[activeSeed]}` : "无种子", canvas.width - 30, 39);
+    ctx.fillStyle = "rgba(249,239,209,0.58)";
+    ctx.fillText(`工具${this.progress.toolLevel} 鱼竿${this.progress.rodLevel} · I/J`, canvas.width - 30, 60);
+    ctx.textAlign = "left";
+
+    this.drawSoftPanel(canvas.width - 184, 96, 170, 120, { fill: "rgba(23,34,32,0.74)", stroke: "rgba(249,239,209,0.14)", accent, blur: 16, offsetY: 6, radius: 12 });
     ctx.fillStyle = UI.cream;
     ctx.font = "bold 12px sans-serif";
-    ctx.fillText("小地图", canvas.width - 160, 110);
-    this.renderMiniMap(canvas.width - 174, 116, 152, 64);
+    ctx.fillText("小地图", canvas.width - 160, 117);
+    this.renderMiniMap(canvas.width - 176, 124, 154, 66);
     ctx.fillStyle = "rgba(248,241,216,0.78)";
     ctx.font = "11px sans-serif";
     exits.forEach((warp, index) => {
       const blocked = this.getInteractableBlockReason(warp);
       const label = `${blocked ? "🔒" : "→"} ${this.worlds[warp.targetMap]?.name || warp.targetMap}`;
-      ctx.fillText(label, canvas.width - 160, 188 + index * 12);
+      ctx.fillText(label, canvas.width - 160, 198 + index * 12);
     });
   }
 
@@ -2775,17 +3000,17 @@ export class CozyPrototypeGame {
     const active = this.quests.find(q => !q.done);
     const request = this.getPendingRequests()[0];
     const x = 14, y = canvas.height - 112;
-    this.drawSoftPanel(x, y, 344, 98, { fill: "rgba(248,244,230,0.88)", accent: this.getSeasonInfo().accent, blur: 14, offsetY: 5 });
-    ctx.fillStyle = UI.ink;
+    this.drawSoftPanel(x, y, 378, 98, { fill: "rgba(24,35,32,0.76)", stroke: "rgba(249,239,209,0.14)", accent: this.getSeasonInfo().accent, blur: 18, offsetY: 6, radius: 14 });
+    ctx.fillStyle = UI.cream;
     ctx.font = "bold 13px sans-serif";
     ctx.fillText("今日节奏", x + 24, y + 25);
-    ctx.fillStyle = UI.inkSoft;
+    ctx.fillStyle = "rgba(249,239,209,0.66)";
     ctx.font = "12px sans-serif";
     if (active) {
       ctx.fillText(`目标 · ${active.title}`, x + 24, y + 49);
       ctx.fillText(active.desc, x + 24, y + 68);
     }
-    ctx.fillStyle = UI.ink;
+    ctx.fillStyle = "rgba(249,239,209,0.88)";
     if (request) {
       const item = ITEMS[request.item];
       ctx.fillText(`委托 · ${this.getNpcName(request.requester)}要 ${item.icon} ${item.name}x${request.amount}，${request.gold}金`, x + 24, y + 87);
@@ -2796,9 +3021,9 @@ export class CozyPrototypeGame {
 
   renderSkillPanel() {
     const { ctx, canvas } = this;
-    const x = canvas.width - 318;
+    const x = canvas.width - 338;
     const y = canvas.height - 96;
-    this.drawSoftPanel(x, y, 304, 82, { fill: "rgba(31,42,38,0.68)", accent: this.getSeasonInfo().accent, blur: 14, offsetY: 5 });
+    this.drawSoftPanel(x, y, 324, 82, { fill: "rgba(22,32,30,0.78)", stroke: "rgba(249,239,209,0.14)", accent: this.getSeasonInfo().accent, blur: 18, offsetY: 6, radius: 14 });
     ctx.fillStyle = UI.cream;
     ctx.font = "bold 12px sans-serif";
     ctx.fillText("技能", x + 20, y + 24);
@@ -2807,14 +3032,14 @@ export class CozyPrototypeGame {
       const skill = this.skills[key];
       const col = i % 3;
       const row = Math.floor(i / 3);
-      const rowX = x + 20 + col * 92;
+      const rowX = x + 20 + col * 100;
       const rowY = y + 46 + row * 20;
       const need = this.getSkillXpNeed(skill.level);
       const ratio = need > 0 ? skill.xp / need : 0;
       ctx.fillStyle = "rgba(248,241,216,0.88)";
       ctx.font = "11px sans-serif";
       ctx.fillText(`${info.icon} ${info.label} ${skill.level}`, rowX, rowY);
-      this.drawBar(rowX, rowY + 4, 72, 4, ratio, info.color, "rgba(255,255,255,0.16)");
+      this.drawBar(rowX, rowY + 4, 78, 4, ratio, info.color, "rgba(255,255,255,0.16)");
     });
   }
 
