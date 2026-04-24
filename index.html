@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>温馨小镇</title>
+    <title>晨露小镇</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
@@ -11,8 +11,8 @@
       <header class="topbar">
         <div class="brand">
           <p class="eyebrow">Pastoral Life Sim</p>
-          <h1>温馨小镇</h1>
-          <p class="subtitle">多区域探索、生活经营与慢节奏成长</p>
+          <h1>晨露小镇</h1>
+          <p class="subtitle">四季、农场、牧场、加工坊与小镇关系</p>
         </div>
         <button id="helpToggle" class="help-toggle" type="button" aria-expanded="false" aria-controls="helpPanel">
           帮助
@@ -20,8 +20,6 @@
       </header>
 
       <section class="stage-card">
-        <div class="stage-decor stage-decor-left" aria-hidden="true"></div>
-        <div class="stage-decor stage-decor-right" aria-hidden="true"></div>
         <canvas id="gameCanvas" width="800" height="480" aria-label="游戏画布"></canvas>
       </section>
 
@@ -36,7 +34,7 @@
 
         <section class="help-section">
           <h3>核心目标</h3>
-          <p>白天安排种田、采集、跑委托和卖货，晚上钓鱼或回家做料理，逐步升级小屋、农场与镇子繁荣度。</p>
+          <p>安排每日体力：种植、采集、照料牧场、加工商品、出货、跑委托和社交，逐步提升镇级并完成小镇工程。</p>
         </section>
 
         <section class="help-section">
@@ -47,6 +45,7 @@
           <p><kbd>Q</kbd> 切换种子</p>
           <p><kbd>G</kbd> 赠礼</p>
           <p><kbd>I</kbd> 背包</p>
+          <p><kbd>J</kbd> 生活日志</p>
           <p><kbd>空格</kbd> 钓鱼操作</p>
           <p><kbd>Tab</kbd> 商店分页</p>
           <p><kbd>F5</kbd> 保存</p>
@@ -57,12 +56,18 @@
           <p>晨露镇：农场、商店、公告牌和主要居民。</p>
           <p>雾林：香草、蘑菇和林间池塘更丰富。</p>
           <p>月湾：更适合跑鱼货和捡珊瑚。</p>
-          <p>风岬高地：后期开启，晶石和稀有鱼收益更高。</p>
+          <p>风岬高地：后期开启，晶石、矿石和稀有鱼收益更高。</p>
+        </section>
+
+        <section class="help-section">
+          <h3>新增系统</h3>
+          <p>季节和节日会影响售价与社交；牧场动物需要干草，成熟后产出蛋奶羊毛；加工坊可把原料、矿石做成高价商品。</p>
+          <p>镇务工程可捐献物资换取水渠、鱼档、摊位等长期解锁；出货箱会批量出售商品并保留建设材料。</p>
         </section>
 
         <section class="help-section">
           <h3>生活节奏</h3>
-          <p>天气、体力、料理增益和集市日都会影响你当天最划算的行动。公告牌会刷新每日委托，小屋可以休息到次日。</p>
+          <p>天气、体力、料理增益、集市日和节日都会影响当天最划算的行动。小屋可休息到次日，也能制作料理与加工品。</p>
         </section>
       </aside>
     </main>

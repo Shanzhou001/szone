@@ -1,7 +1,7 @@
 {
   "name": "cozy-town-desktop",
   "version": "0.1.0",
-  "description": "温馨小镇阶段 2 的 Electron Windows 桌面版原型",
+  "description": "晨露小镇长线生活模拟游戏原型",
   "main": "electron/main.js",
   "scripts": {
     "dev": "electron .",
