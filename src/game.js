@@ -39,7 +39,7 @@ const TILE_SIZE = 48;
 const INTERACT_DISTANCE = 90;
 const MAP_W = 30;
 const MAP_H = 26;
-const TIME_SPEED = 0.6;
+const TIME_SPEED = 0.03;
 
 const UI = {
   ink: "#1d2e2a",
@@ -123,6 +123,13 @@ const PROJECTS = [
     desc: "帮月湾建立鱼档，夜钓与稀有鱼收益会更好。",
     requirements: { fish: 4, silverFish: 2, shell: 3, coral: 1 },
     reward: { gold: 260, rodLevel: 1 },
+  },
+  {
+    id: "forestStation",
+    name: "雾林林务站",
+    desc: "修整林道和采集台，雾林会成为稳定的草药、蜂蜜和松脂来源。",
+    requirements: { wood: 18, fern: 4, resin: 3, wildHoney: 1 },
+    reward: { gold: 340, item: "seed_tea", amount: 5 },
   },
   {
     id: "irrigation",
@@ -220,6 +227,15 @@ const RECIPES = [
     amount: 4,
     desc: "恢复 38 体力，今日社交额外 +4 好感",
   },
+  {
+    id: "forestSalad",
+    name: "雾林冷盘",
+    ingredients: { fern: 1, herb: 1, wildHoney: 1 },
+    energy: 36,
+    effect: "foraging",
+    amount: 0.18,
+    desc: "恢复 36 体力，今日采集额外收获概率提升",
+  },
 ];
 
 const WORKSHOP_RECIPES = [
@@ -229,6 +245,7 @@ const WORKSHOP_RECIPES = [
   { id: "ingot", name: "金属锭", icon: "🔩", ingredients: { ore: 3, stone: 1 }, result: "ingot", amount: 1, xp: 5, desc: "高地矿石熔成建设材料" },
   { id: "cloth", name: "布料", icon: "🧶", ingredients: { wool: 1 }, result: "cloth", amount: 1, xp: 6, desc: "小屋和镇子升级会用到" },
   { id: "flowerHoney", name: "花蜜", icon: "🍯", ingredients: { flower: 2 }, result: "honey", amount: 1, xp: 3, desc: "料理和赠礼都很受欢迎" },
+  { id: "forestWax", name: "林脂蜡", icon: "🕯️", ingredients: { resin: 1, wildHoney: 1 }, result: "forestWax", amount: 1, xp: 6, desc: "雾林材料加工成高价手作" },
 ];
 
 const REQUEST_TEMPLATES = [
@@ -256,7 +273,28 @@ const REQUEST_TEMPLATES = [
   { id: "fine-wool", requester: "npc-ye", item: "fineWool", amount: [1, 1], gold: 320, favor: 12, minRank: 5 },
   { id: "ore-sample", requester: "npc-chen", item: "ore", amount: [3, 5], gold: 178, favor: 8, minRank: 3 },
   { id: "ingot-order", requester: "npc-su", item: "ingot", amount: [1, 2], gold: 260, favor: 11, minRank: 4 },
+  { id: "forest-fern", requester: "npc-ye", item: "fern", amount: [2, 4], gold: 118, favor: 8, minRank: 2 },
+  { id: "forest-resin", requester: "npc-chen", item: "resin", amount: [1, 2], gold: 132, favor: 7, minRank: 2 },
+  { id: "wild-honey", requester: "npc-mei", item: "wildHoney", amount: [1, 2], gold: 168, favor: 9, minRank: 2 },
+  { id: "firefly-study", requester: "npc-ye", item: "fireflyJar", amount: [1, 1], gold: 190, favor: 10, minRank: 3 },
+  { id: "forest-wax", requester: "npc-mei", item: "forestWax", amount: [1, 2], gold: 238, favor: 11, minRank: 4 },
 ];
+
+const AREA_TASK_TEMPLATES = {
+  forest: [
+    { id: "forest-herb-kit", title: "雾林草药包", desc: "阿叶要整理林务站的常备药草。", requirements: { herb: 2, mushroom: 1 }, gold: 126, favor: "npc-ye", favorGain: 7, xp: { foraging: 8 }, reward: { item: "seed_tea", amount: 2 }, minRank: 1 },
+    { id: "forest-trail-repair", title: "林道维护", desc: "修补湿滑木阶，让雾林路线更安全。", requirements: { wood: 5, resin: 1 }, gold: 154, favor: "npc-ye", favorGain: 6, xp: { foraging: 7 }, reward: { item: "hay", amount: 5 }, minRank: 1 },
+    { id: "forest-glow-study", title: "萤火观测", desc: "收集夜间萤光样本，记录雾林生态。", requirements: { fireflyJar: 1, fern: 2 }, gold: 196, favor: "npc-ye", favorGain: 9, xp: { foraging: 10 }, reward: { item: "wildHoney", amount: 1 }, minRank: 2 },
+  ],
+  harbor: [
+    { id: "harbor-tide-basket", title: "潮汐篮", desc: "小岚需要贝壳和珊瑚补齐渔具装饰。", requirements: { shell: 3, coral: 1 }, gold: 172, favor: "npc-lan", favorGain: 7, xp: { fishing: 6 }, reward: { item: "fish", amount: 1 }, minRank: 1 },
+    { id: "harbor-smoke-fish", title: "海风鱼货", desc: "把当天能卖的鱼货集中交给码头。", requirements: { fish: 2, silverFish: 1 }, gold: 218, favor: "npc-lan", favorGain: 8, xp: { fishing: 9 }, reward: { item: "coral", amount: 1 }, minRank: 2 },
+  ],
+  highlands: [
+    { id: "highland-survey", title: "高地勘探", desc: "记录晶石和矿脉，让山道工程更稳。", requirements: { ore: 3, crystal: 1 }, gold: 236, favor: "npc-chen", favorGain: 8, xp: { foraging: 7, crafting: 4 }, reward: { item: "stone", amount: 5 }, minRank: 3 },
+    { id: "highland-forge-stock", title: "炉料补给", desc: "为工坊储备高地矿料。", requirements: { ore: 4, stone: 4 }, gold: 260, favor: "npc-su", favorGain: 8, xp: { crafting: 9 }, reward: { item: "ingot", amount: 1 }, minRank: 4 },
+  ],
+};
 
 const ITEMS = {
   wood: { name: "木材", icon: "🪵", sellPrice: 6, buyPrice: 18, desc: "建造材料" },
@@ -267,6 +305,11 @@ const ITEMS = {
   goldKoi: { name: "锦鲤", icon: "🐡", sellPrice: 74, buyPrice: 0, desc: "很少见的漂亮鱼" },
   flower: { name: "花", icon: "🌸", sellPrice: 8, buyPrice: 0, desc: "野花" },
   herb: { name: "香草", icon: "🌿", sellPrice: 16, buyPrice: 0, desc: "林地里采来的香草" },
+  fern: { name: "林蕨", icon: "🌿", sellPrice: 18, buyPrice: 0, desc: "雾林深处的清香嫩蕨" },
+  resin: { name: "松脂", icon: "🟠", sellPrice: 24, buyPrice: 0, desc: "修补和加工都用得上的树脂" },
+  wildHoney: { name: "野蜂蜜", icon: "🍯", sellPrice: 58, buyPrice: 0, desc: "雾林蜂箱里的浓香蜂蜜" },
+  fireflyJar: { name: "萤火瓶", icon: "✨", sellPrice: 64, buyPrice: 0, desc: "夜晚在雾林收集的微光样本" },
+  relicShard: { name: "遗迹碎片", icon: "🔹", sellPrice: 92, buyPrice: 0, desc: "林中旧遗迹留下的蓝色碎片" },
   stone: { name: "石头", icon: "🪨", sellPrice: 5, buyPrice: 14, desc: "坚硬石材" },
   crystal: { name: "晶石", icon: "💎", sellPrice: 46, buyPrice: 0, desc: "高地闪亮矿晶" },
   mushroom: { name: "蘑菇", icon: "🍄", sellPrice: 14, buyPrice: 0, desc: "林地采集物" },
@@ -296,6 +339,7 @@ const ITEMS = {
   jam: { name: "果酱", icon: "🍯", sellPrice: 88, buyPrice: 0, desc: "加工坊产物" },
   cloth: { name: "布料", icon: "🧵", sellPrice: 132, buyPrice: 0, desc: "高级建设材料" },
   honey: { name: "蜂蜜", icon: "🍯", sellPrice: 86, buyPrice: 0, desc: "可料理也可出售" },
+  forestWax: { name: "林脂蜡", icon: "🕯️", sellPrice: 118, buyPrice: 0, desc: "松脂和蜂蜜加工成的高级手作品" },
   seed_turnip: { name: "萝卜种子", icon: "🌱", sellPrice: 2, buyPrice: 14, desc: "2天成熟" },
   seed_potato: { name: "土豆种子", icon: "🌾", sellPrice: 3, buyPrice: 24, desc: "3天成熟" },
   seed_blueberry: { name: "蓝莓种子", icon: "🫐", sellPrice: 4, buyPrice: 34, desc: "4天成熟" },
@@ -359,6 +403,8 @@ export class CozyPrototypeGame {
     this.camera = { x: 0, y: 0 };
     this.interactionMessage = "";
     this.messageTimer = 0;
+    this.actionAnimation = null;
+    this.footstepTimer = 0;
 
     this.gameMinutes = 8 * 60;
     this.gameDay = 1;
@@ -401,6 +447,14 @@ export class CozyPrototypeGame {
       projectsCompleted: 0,
       completedProjects: [],
       festivalVisits: 0,
+      areaTasksCompleted: 0,
+      forestRenown: 0,
+      harborRenown: 0,
+      highlandRenown: 0,
+      forestRelics: 0,
+      forestShrineBlessings: 0,
+      forestShrineDay: 0,
+      forestSpringDay: 0,
     };
 
     this.relationship = {};
@@ -434,6 +488,7 @@ export class CozyPrototypeGame {
 
     this.quests = this.createQuests();
     this.dailyRequests = this.createDailyRequests();
+    this.areaTasks = this.createAreaTasks();
     this.particles = [];
     this.houseSelection = 0;
     this.journalTab = 0;
@@ -523,6 +578,12 @@ export class CozyPrototypeGame {
     this.paintRect(map, 24, 10, 29, 14, TILE.PATH);
     this.paintRect(map, 23, 14, 27, 18, TILE.PATH);
     this.paintRect(map, 5, 18, 12, 24, TILE.GRASS);
+    this.paintRect(map, 5, 4, 8, 7, TILE.FLOWER);
+    this.paintRect(map, 15, 15, 18, 18, TILE.FLOWER);
+    this.paintRect(map, 6, 20, 9, 22, TILE.FLOWER);
+    this.paintRect(map, 13, 19, 16, 22, TILE.PATH);
+    this.paintRect(map, 3, 15, 7, 17, TILE.PATH);
+    this.paintRect(map, 21, 6, 24, 9, TILE.DARK_GRASS);
     return map;
   }
 
@@ -602,6 +663,16 @@ export class CozyPrototypeGame {
     return [
       { id:"warp-forest-town",type:"warp",x:1304,y:560,w:56,h:88,name:"返回镇子",label:"回晨露镇",targetMap:"town",targetX:126,targetY:590 },
       { id:"warp-forest-highlands",type:"warp",x:930,y:44,w:72,h:50,name:"山间栈道",label:"上高地",targetMap:"highlands",targetX:1030,targetY:790,requiresTownRank:3,lockReason:"再多积累些名望，山道才会开放。" },
+      { id:"forest-board",type:"trailboard",x:1222,y:612,w:46,h:58,name:"雾林林务站",areaId:"forest" },
+      { id:"forest-shrine",type:"shrine",x:690,y:342,w:54,h:64,name:"苔石祭台" },
+      { id:"forest-spring",type:"spring",x:606,y:442,w:58,h:42,name:"林间泉眼" },
+      { id:"forest-ruin-1",type:"ruin",x:760,y:520,w:74,h:54,item:"relicShard",amount:1,collected:false,regrowTimer:0,regrowTime:160000,name:"苔痕遗迹" },
+      { id:"forest-logjam",type:"logjam",x:248,y:646,w:86,h:38,item:"wood",amount:4,collected:false,regrowTimer:0,regrowTime:0,name:"倒伏木障" },
+      { id:"forest-bee-1",type:"beehive",x:706,y:188,w:36,h:42,item:"wildHoney",amount:1,collected:false,regrowTimer:0,regrowTime:96000,name:"野蜂箱",extraItem:"honey" },
+      { id:"forest-resin-1",type:"resinTap",x:302,y:240,w:36,h:46,item:"resin",amount:1,collected:false,regrowTimer:0,regrowTime:84000,name:"松脂采集罐" },
+      { id:"forest-fern-1",type:"wildPatch",x:292,y:744,w:42,h:38,item:"fern",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"林蕨丛",extraItem:"herb" },
+      { id:"forest-fern-2",type:"wildPatch",x:946,y:704,w:42,h:38,item:"fern",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"湿地林蕨" },
+      { id:"forest-firefly-1",type:"firefly",x:528,y:520,w:44,h:44,item:"fireflyJar",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"萤火群" },
       { id:"forest-tree-1",type:"tree",x:214,y:150,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:58000,name:"老杉树" },
       { id:"forest-tree-2",type:"tree",x:586,y:182,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:64000,name:"浓荫树" },
       { id:"forest-tree-3",type:"tree",x:1018,y:290,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"苔木" },
@@ -618,6 +689,7 @@ export class CozyPrototypeGame {
   createHarborInteractables() {
     return [
       { id:"warp-harbor-town",type:"warp",x:74,y:530,w:64,h:96,name:"返镇栈桥",label:"回晨露镇",targetMap:"town",targetX:236,targetY:520 },
+      { id:"harbor-board",type:"trailboard",x:230,y:516,w:46,h:58,name:"月湾告示牌",areaId:"harbor" },
       { id:"harbor-fish-1",type:"fishspot",x:1102,y:226,w:44,h:44,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"港湾深水" },
       { id:"harbor-fish-2",type:"fishspot",x:1020,y:596,w:44,h:44,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"潮汐鱼群" },
       { id:"harbor-shell-1",type:"shell",x:324,y:836,w:28,h:20,item:"shell",amount:2,collected:false,regrowTimer:0,regrowTime:50000,name:"浅滩贝壳" },
@@ -633,6 +705,7 @@ export class CozyPrototypeGame {
     return [
       { id:"warp-highlands-town",type:"warp",x:36,y:514,w:64,h:98,name:"下山坡道",label:"回晨露镇",targetMap:"town",targetX:1220,targetY:284 },
       { id:"warp-highlands-forest",type:"warp",x:1144,y:590,w:78,h:54,name:"穿林山道",label:"去雾林",targetMap:"forest",targetX:934,targetY:112 },
+      { id:"highlands-board",type:"trailboard",x:156,y:524,w:46,h:58,name:"高地勘探牌",areaId:"highlands" },
       { id:"high-tree-1",type:"tree",x:218,y:194,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"山松" },
       { id:"high-tree-2",type:"tree",x:462,y:808,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"岬角树" },
       { id:"high-crystal-1",type:"crystal",x:580,y:200,w:42,h:42,item:"crystal",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"风晶簇" },
@@ -705,6 +778,8 @@ export class CozyPrototypeGame {
       { id: "shipping", title: "出货达人", desc: "通过出货箱累计收入 1200 金", done: false, check: () => this.progress.shippingValue >= 1200, reward: { gold: 220 } },
       { id: "projects", title: "小镇工程师", desc: "完成 3 个镇务工程", done: false, check: () => this.progress.projectsCompleted >= 3, reward: { item: "ingot", amount: 2 } },
       { id: "tools", title: "好工具省力气", desc: "将工具组升级到 3 级", done: false, check: () => this.progress.toolLevel >= 3, reward: { gold: 260 } },
+      { id: "forest-ranger", title: "雾林巡护员", desc: "完成 3 个区域委托", done: false, check: () => this.progress.areaTasksCompleted >= 3, reward: { item: "wildHoney", amount: 2 } },
+      { id: "forest-ruins", title: "苔痕秘藏", desc: "在雾林遗迹找到 3 块遗迹碎片", done: false, check: () => this.progress.forestRelics >= 3, reward: { gold: 340 } },
     ];
   }
 
@@ -743,6 +818,70 @@ export class CozyPrototypeGame {
     };
   }
 
+  createAreaTasks() {
+    return Object.fromEntries(Object.entries(AREA_TASK_TEMPLATES).map(([areaId, templates]) => {
+      const available = templates.filter((task) => task.minRank <= this.progress.townRank + 1);
+      const pool = available.length ? available : templates;
+      const index = Math.floor(Math.random() * pool.length);
+      return [areaId, { ...pool[index], done: false }];
+    }));
+  }
+
+  getAreaTask(areaId = this.currentMapId) {
+    return this.areaTasks?.[areaId] || null;
+  }
+
+  getAreaRenownKey(areaId) {
+    if (areaId === "forest") return "forestRenown";
+    if (areaId === "harbor") return "harborRenown";
+    if (areaId === "highlands") return "highlandRenown";
+    return "";
+  }
+
+  canCompleteAreaTask(task) {
+    return !!task && !task.done && Object.entries(task.requirements || {}).every(([key, amount]) => (this.inventory[key] || 0) >= amount);
+  }
+
+  formatAreaTaskProgress(task) {
+    if (!task) return "";
+    return Object.entries(task.requirements || {})
+      .map(([key, amount]) => `${ITEMS[key]?.name || key}${this.inventory[key] || 0}/${amount}`)
+      .join(" / ");
+  }
+
+  tryCompleteAreaTask(areaId = this.currentMapId) {
+    const task = this.getAreaTask(areaId);
+    if (!task) {
+      this.showMessage("这里今天没有区域委托。", 1600);
+      return false;
+    }
+    if (task.done) {
+      this.showMessage(`${task.title} 今天已经完成了，明天会刷新新的委托。`, 2200);
+      return true;
+    }
+    if (!this.canCompleteAreaTask(task)) {
+      this.showMessage(`${task.title}：${task.desc} 需要 ${this.formatAreaTaskProgress(task)}`, 4200);
+      return false;
+    }
+
+    Object.entries(task.requirements || {}).forEach(([key, amount]) => this.removeItem(key, amount));
+    if (task.gold) {
+      this.gold += task.gold;
+      this.progress.totalEarned += task.gold;
+    }
+    if (task.reward?.item) this.addItem(task.reward.item, task.reward.amount || 1);
+    if (task.favor) this.relationship[task.favor] = Math.min(100, (this.relationship[task.favor] || 0) + (task.favorGain || 4));
+    Object.entries(task.xp || {}).forEach(([skill, amount]) => this.gainSkillXp(skill, amount));
+    const renownKey = this.getAreaRenownKey(areaId);
+    if (renownKey) this.progress[renownKey] = (this.progress[renownKey] || 0) + 1;
+    this.progress.areaTasksCompleted = (this.progress.areaTasksCompleted || 0) + 1;
+    task.done = true;
+    this.startAction("deliver", { duration: 640 });
+    const rewardText = task.reward?.item ? `，获得 ${ITEMS[task.reward.item].name}x${task.reward.amount || 1}` : "";
+    this.showMessage(`完成区域委托：${task.title}，获得 ${task.gold || 0} 金${rewardText}`, 3200);
+    return true;
+  }
+
   applyProgressDerivedStats() {
     this.player.speed = this.baseMoveSpeed + (this.progress.houseLevel - 1) * 6;
     this.maxEnergy = this.baseEnergy + (this.progress.houseLevel - 1) * 14;
@@ -777,6 +916,7 @@ export class CozyPrototypeGame {
       relationship: this.relationship,
       skills: this.skills,
       dailyRequests: this.dailyRequests,
+      areaTasks: this.areaTasks,
       ranch: this.ranch,
     };
     try { localStorage.setItem("cozytown_save", JSON.stringify(data)); } catch (e) {}
@@ -820,10 +960,12 @@ export class CozyPrototypeGame {
         ]));
       }
       if (Array.isArray(data.dailyRequests) && data.dailyRequests.length) this.dailyRequests = data.dailyRequests;
+      if (data.areaTasks) this.areaTasks = { ...this.areaTasks, ...data.areaTasks };
       if (data.ranch?.animals) this.ranch = { ...this.createRanch(), ...data.ranch };
       Object.keys(this.inventory).forEach((key) => { if ((this.inventory[key] || 0) > 0) this.collections.items[key] = true; });
       this.applyProgressDerivedStats();
       if (!this.dailyRequests?.length) this.dailyRequests = this.createDailyRequests();
+      if (!this.areaTasks) this.areaTasks = this.createAreaTasks();
       this.switchMap(this.currentMapId, this.player.x, this.player.y, null);
     } catch (e) {}
   }
@@ -901,6 +1043,7 @@ export class CozyPrototypeGame {
     }
 
     this.updateMessage(dt);
+    this.updateActionAnimation(dt);
     this.updateParticles(dt);
     this.updateInteractables(dt);
     this.updateFarm(deltaGameMinutes);
@@ -928,6 +1071,7 @@ export class CozyPrototypeGame {
     this.weather = this.tomorrowWeather || this.rollWeather(this.gameDay);
     this.tomorrowWeather = this.rollWeather(this.gameDay + 1);
     this.dailyRequests = this.createDailyRequests();
+    this.areaTasks = this.createAreaTasks();
     let irrigated = 0;
     this.farmPlots.forEach((p) => {
       p.watered = false;
@@ -980,7 +1124,8 @@ export class CozyPrototypeGame {
   updateTownRank() {
     const relationScore = Object.values(this.relationship).reduce((a, b) => a + b, 0) / 14;
     const skillScore = Object.values(this.skills).reduce((sum, skill) => sum + (skill.level - 1), 0) * 1.5;
-    const score = this.progress.harvestCount + this.progress.forageCount + Math.floor(this.progress.totalEarned / 250) + Math.floor(this.progress.shippingValue / 300) + relationScore + this.progress.houseLevel * 2 + this.progress.farmLevel * 3 + this.progress.ranchLevel * 3 + this.progress.workshopLevel * 4 + this.progress.irrigationLevel * 3 + this.progress.projectsCompleted * 4 + this.progress.animalsRaised * 1.8 + this.progress.artisanMade * 1.2 + this.progress.requestsCompleted * 2 + this.progress.mealsCooked + skillScore + (this.progress.bridgeRepaired ? 4 : 0);
+    const areaScore = (this.progress.areaTasksCompleted || 0) * 2 + (this.progress.forestRenown || 0) + (this.progress.harborRenown || 0) + (this.progress.highlandRenown || 0) + (this.progress.forestRelics || 0);
+    const score = this.progress.harvestCount + this.progress.forageCount + Math.floor(this.progress.totalEarned / 250) + Math.floor(this.progress.shippingValue / 300) + relationScore + this.progress.houseLevel * 2 + this.progress.farmLevel * 3 + this.progress.ranchLevel * 3 + this.progress.workshopLevel * 4 + this.progress.irrigationLevel * 3 + this.progress.projectsCompleted * 4 + this.progress.animalsRaised * 1.8 + this.progress.artisanMade * 1.2 + this.progress.requestsCompleted * 2 + this.progress.mealsCooked + skillScore + areaScore + (this.progress.bridgeRepaired ? 4 : 0);
     this.progress.townRank = Math.max(1, Math.min(6, Math.floor(score / 8) + 1));
   }
 
@@ -1019,7 +1164,7 @@ export class CozyPrototypeGame {
     if ((itemKey === "fish" || itemKey === "nightFish" || itemKey === "silverFish" || itemKey === "goldKoi") && hour >= 18) multiplier += 0.18;
     if (cropKey && season.cropBonus.includes(cropKey)) multiplier += 0.12;
     if (festival?.name === "潮声夜市" && hour >= 18 && ITEMS[itemKey]?.sellPrice) multiplier += 0.12;
-    if (festival?.name === "丰收评鉴" && (cropKey || ["mayonnaise", "cheese", "jam", "honey"].includes(itemKey))) multiplier += 0.15;
+    if (festival?.name === "丰收评鉴" && (cropKey || ["mayonnaise", "cheese", "jam", "honey", "wildHoney", "forestWax"].includes(itemKey))) multiplier += 0.15;
     return multiplier;
   }
 
@@ -1228,7 +1373,7 @@ export class CozyPrototypeGame {
 
   getForageBonusChance() {
     const winterBonus = this.getSeasonInfo().id === "winter" ? 0.04 : 0;
-    return Math.min(0.85, 0.12 * (this.getSkillLevel("foraging") - 1) + this.getWeatherConfig().forageBonus + winterBonus);
+    return Math.min(0.85, 0.12 * (this.getSkillLevel("foraging") - 1) + this.getWeatherConfig().forageBonus + winterBonus + this.getBuffValue("foraging"));
   }
 
   getTalkBonus() {
@@ -1269,6 +1414,81 @@ export class CozyPrototypeGame {
 
   restoreEnergy(amount) {
     this.energy = Math.min(this.maxEnergy, this.energy + amount);
+  }
+
+  useForestShrine(obj) {
+    if (this.progress.forestShrineDay === this.gameDay) {
+      this.showMessage("苔石祭台今天已经回应过你了。明天再带供品来。", 2200);
+      return;
+    }
+    const offering = ["wildHoney", "flower", "herb", "mushroom", "relicShard"].find((key) => (this.inventory[key] || 0) > 0);
+    if (!offering) {
+      this.showMessage("苔石祭台需要供品：野蜂蜜、花、香草、蘑菇或遗迹碎片。", 3200);
+      return;
+    }
+    this.removeItem(offering, 1);
+    this.progress.forestShrineDay = this.gameDay;
+    this.progress.forestShrineBlessings = (this.progress.forestShrineBlessings || 0) + 1;
+    this.currentBuff = { id: "forestBlessing", effect: "foraging", amount: 0.18 + Math.min(0.12, (this.progress.forestRenown || 0) * 0.01), label: "雾林祝福", day: this.gameDay };
+    this.restoreEnergy(12);
+    this.relationship["npc-ye"] = Math.min(100, (this.relationship["npc-ye"] || 0) + 2);
+    const levelUps = this.gainSkillXp("foraging", 5);
+    this.startAction("gift", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, item: offering, faceTarget: true, duration: 760 });
+    this.spawnParticles(obj.x + obj.w / 2, obj.y + 8, "#b7e3a2", 14);
+    this.showMessage(`献上 ${ITEMS[offering].name}，获得雾林祝福：今日采集更容易额外收获。${this.formatLevelUps(levelUps)}`, 3600);
+  }
+
+  drinkForestSpring(obj) {
+    if (this.progress.forestSpringDay === this.gameDay) {
+      this.showMessage("泉眼今天已经被取用过，水面正慢慢恢复清澈。", 2000);
+      return;
+    }
+    this.progress.forestSpringDay = this.gameDay;
+    const amount = 18 + Math.min(12, (this.progress.forestRenown || 0) * 2);
+    this.restoreEnergy(amount);
+    this.startAction("water", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 620 });
+    this.spawnParticles(obj.x + obj.w / 2, obj.y + obj.h / 2, "#7cc7df", 14);
+    this.showMessage(`喝下清泉，恢复 ${amount} 体力。`, 2200);
+  }
+
+  searchForestRuin(obj) {
+    if (obj.collected) {
+      const timeLeft = Math.ceil((obj.regrowTime - obj.regrowTimer) / 1000);
+      this.showMessage(`遗迹已经翻找过了，${Math.max(0, timeLeft)} 秒后雾气会带来新的线索。`, 1800);
+      return;
+    }
+    if (!this.consumeEnergy(4, "体力不足，翻找遗迹需要更专注一点。")) return;
+    obj.collected = true;
+    obj.regrowTimer = 0;
+    const bonus = Math.random() < this.getForageBonusChance();
+    const extra = bonus ? "crystal" : Math.random() < 0.45 ? "fern" : "stone";
+    this.addItem("relicShard", 1);
+    this.addItem(extra, 1);
+    this.progress.forestRelics = (this.progress.forestRelics || 0) + 1;
+    this.progress.forageCount += 2;
+    this.dayStats.foraged += 2;
+    const levelUps = this.gainSkillXp("foraging", bonus ? 11 : 8);
+    this.startAction("forage", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 820 });
+    this.spawnParticles(obj.x + obj.w / 2, obj.y + 12, "#9cc8ff", 12);
+    this.showMessage(`在遗迹里找到 ${ITEMS.relicShard.name} 和 ${ITEMS[extra].name}。${this.formatLevelUps(levelUps)}`, 2600);
+  }
+
+  clearLogjam(obj) {
+    if (obj.collected) {
+      this.showMessage("倒伏木障已经清理，林道宽敞多了。", 1600);
+      return;
+    }
+    if (!this.consumeEnergy(5, "体力不足，清理倒伏木需要斧头劲儿。")) return;
+    obj.collected = true;
+    const amount = obj.amount || 3;
+    this.addItem("wood", amount);
+    this.progress.forestRenown = (this.progress.forestRenown || 0) + 1;
+    this.progress.forageCount += amount;
+    this.dayStats.foraged += amount;
+    const levelUps = this.gainSkillXp("foraging", 7);
+    this.startAction("axe", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 760 });
+    this.spawnParticles(obj.x + obj.w / 2, obj.y + obj.h / 2, "#c08a52", 12);
+    this.showMessage(`清理木障，获得 木材x${amount}。雾林声望 +1${this.formatLevelUps(levelUps)}`, 2600);
   }
 
   getNpcName(id) {
@@ -1334,11 +1554,13 @@ export class CozyPrototypeGame {
   performHouseAction(action) {
     if (!action) return;
     if (action.type === "rest") {
+      this.startAction("sleep", { duration: 700 });
       this.advanceToNextDay(true);
       this.scene = SCENE.PLAYING;
       return;
     }
     if (action.type === "save") {
+      this.startAction("write", { duration: 560 });
       this.saveGame();
       return;
     }
@@ -1353,6 +1575,7 @@ export class CozyPrototypeGame {
       this.showMessage(`材料不足：${ITEMS[missing[0]].name} x${missing[1]}`, 1700);
       return;
     }
+    this.startAction("cook", { duration: 820, item: recipe.id });
     Object.entries(recipe.ingredients).forEach(([key, count]) => this.removeItem(key, count));
     this.restoreEnergy(recipe.energy);
     this.currentBuff = { id: recipe.id, effect: recipe.effect, amount: recipe.amount, label: recipe.name, day: this.gameDay };
@@ -1377,6 +1600,7 @@ export class CozyPrototypeGame {
       return;
     }
     if (!this.consumeEnergy(2, "体力不足，明天再来加工吧。")) return;
+    this.startAction("craft", { duration: 820, item: recipe.result });
     Object.entries(recipe.ingredients).forEach(([key, count]) => this.removeItem(key, count));
     this.addItem(recipe.result, recipe.amount || 1);
     this.progress.artisanMade += recipe.amount || 1;
@@ -1410,6 +1634,7 @@ export class CozyPrototypeGame {
     });
 
     const levelUps = this.gainSkillXp("social", ready.length * 4);
+    this.startAction("deliver", { duration: 620 });
     this.showMessage(`提交 ${ready.length} 份委托，获得 ${totalGold} 金${this.formatLevelUps(levelUps)}`, 2600);
     return true;
   }
@@ -1422,6 +1647,38 @@ export class CozyPrototypeGame {
         this.messageTimer = 0;
       }
     }
+  }
+
+  startAction(type, options = {}) {
+    const duration = options.duration || 520;
+    this.actionAnimation = {
+      type,
+      elapsed: 0,
+      duration,
+      target: options.target || null,
+      item: options.item || null,
+      color: options.color || null,
+      label: options.label || "",
+    };
+    if (options.faceTarget && options.target) this.faceToward(options.target.x, options.target.y);
+  }
+
+  updateActionAnimation(dt) {
+    if (!this.actionAnimation) return;
+    this.actionAnimation.elapsed += dt;
+    if (this.actionAnimation.elapsed >= this.actionAnimation.duration) this.actionAnimation = null;
+  }
+
+  getActionProgress() {
+    if (!this.actionAnimation) return 0;
+    return Math.max(0, Math.min(1, this.actionAnimation.elapsed / this.actionAnimation.duration));
+  }
+
+  faceToward(x, y) {
+    const dx = x - this.player.x;
+    const dy = y - this.player.y;
+    if (Math.abs(dx) > Math.abs(dy)) this.player.facing = dx >= 0 ? "right" : "left";
+    else this.player.facing = dy >= 0 ? "down" : "up";
   }
 
   updateParticles(dt) {
@@ -1440,6 +1697,15 @@ export class CozyPrototypeGame {
       const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
       const speed = 60 + Math.random() * 80;
       this.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 60, color, life: 600, maxLife: 600, alpha: 1, size: 4 + Math.random() * 4 });
+    }
+  }
+
+  spawnDirectedParticles(x, y, color, count = 8, direction = { x: 0, y: 1 }, spread = 0.8) {
+    const base = Math.atan2(direction.y, direction.x);
+    for (let i = 0; i < count; i++) {
+      const angle = base + (Math.random() - 0.5) * spread;
+      const speed = 70 + Math.random() * 120;
+      this.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, color, life: 480, maxLife: 480, alpha: 1, size: 2.5 + Math.random() * 3.5 });
     }
   }
 
@@ -1538,6 +1804,8 @@ export class CozyPrototypeGame {
     if (this.canStandAt(this.player.x, ny, this.player.size)) this.player.y = ny;
     this.player.x = Math.max(16, Math.min(MAP_W * TILE_SIZE - 16, this.player.x));
     this.player.y = Math.max(16, Math.min(MAP_H * TILE_SIZE - 16, this.player.y));
+    this.footstepTimer += ds * speed;
+    if (this.footstepTimer > 54) this.footstepTimer = 0;
   }
 
   updateCamera() {
@@ -1607,6 +1875,7 @@ export class CozyPrototypeGame {
   interactFarmPlot(plot) {
     if (!plot.tilled) {
       if (!this.consumeEnergy(4)) return;
+      this.startAction("hoe", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, faceTarget: true, duration: 620 });
       plot.tilled = true;
       const levelUps = this.gainSkillXp("farming", 2);
       this.showMessage(`你翻松了土地。${this.formatLevelUps(levelUps)}`, 1500);
@@ -1615,8 +1884,10 @@ export class CozyPrototypeGame {
     if (plot.cropKey && !plot.ready) {
       if (!plot.watered) {
         if (!this.consumeEnergy(2)) return;
+        this.startAction("water", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, faceTarget: true, duration: 760 });
         plot.watered = true;
         plot.wateredDays += 1;
+        this.spawnDirectedParticles(this.player.x, this.player.y, "#67b6ff", 12, { x: plot.x + plot.w / 2 - this.player.x, y: plot.y + plot.h / 2 - this.player.y }, 0.55);
         this.spawnParticles(plot.x + 20, plot.y + 20, "#67b6ff", 6);
         const levelUps = this.gainSkillXp("farming", 1);
         this.showMessage(`已浇水，作物今日会继续生长。${this.formatLevelUps(levelUps)}`, 1500);
@@ -1627,6 +1898,7 @@ export class CozyPrototypeGame {
     }
     if (plot.ready && plot.cropKey) {
       if (!this.consumeEnergy(2)) return;
+      this.startAction("harvest", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, faceTarget: true, duration: 620 });
       const crop = CROPS[plot.cropKey];
       let amount = crop.yield[0] + Math.floor(Math.random() * (crop.yield[1] - crop.yield[0] + 1));
       let bonusText = "";
@@ -1659,6 +1931,7 @@ export class CozyPrototypeGame {
       const cropKey = Object.keys(CROPS).find(k => CROPS[k].seed === seedKey);
       if (!cropKey) return;
       if (!this.consumeEnergy(1)) return;
+      this.startAction("plant", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, item: seedKey, faceTarget: true, duration: 560 });
       this.removeItem(seedKey, 1);
       plot.cropKey = cropKey;
       plot.stage = 0;
@@ -1697,11 +1970,13 @@ export class CozyPrototypeGame {
       return;
     }
     if (obj.type === "house") {
+      this.startAction("enter", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 420 });
       this.houseSelection = 0;
       this.scene = SCENE.INDOOR;
       return;
     }
     if (obj.type === "warp") {
+      this.startAction("walk", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 360 });
       this.switchMap(obj.targetMap, obj.targetX, obj.targetY, `来到 ${this.worlds[obj.targetMap].name}`);
       return;
     }
@@ -1712,12 +1987,14 @@ export class CozyPrototypeGame {
         this.showMessage(`商店营业时间 08:00 - ${String(closeHour).padStart(2, "0")}:00。`, 1800);
         return;
       }
+      this.startAction("shop", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 420 });
       this.scene = SCENE.SHOP;
       this.shopMode = "buy";
       this.shopSelection = 0;
       return;
     }
     if (obj.type === "sign") {
+      this.startAction("read", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 520 });
       if (this.tryCompleteRequests()) return;
       const pending = this.getPendingRequests();
       if (!pending.length) {
@@ -1728,20 +2005,45 @@ export class CozyPrototypeGame {
       this.showMessage(`公告牌：${preview}`, 3600);
       return;
     }
+    if (obj.type === "trailboard") {
+      this.startAction("read", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 520 });
+      this.tryCompleteAreaTask(obj.areaId || this.currentMapId);
+      return;
+    }
+    if (obj.type === "shrine") {
+      this.useForestShrine(obj);
+      return;
+    }
+    if (obj.type === "spring") {
+      this.drinkForestSpring(obj);
+      return;
+    }
+    if (obj.type === "ruin") {
+      this.searchForestRuin(obj);
+      return;
+    }
+    if (obj.type === "logjam") {
+      this.clearLogjam(obj);
+      return;
+    }
     if (obj.type === "ranch") {
+      this.startAction("feed", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 680 });
       this.careForRanch();
       return;
     }
     if (obj.type === "shipping") {
+      this.startAction("ship", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 660 });
       this.shipAllSellables();
       return;
     }
     if (obj.type === "project") {
+      this.startAction("build", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 700 });
       if (!this.tryCompleteProject()) this.showProjectPreview();
       return;
     }
     if (obj.type === "fishspot") {
       if (!this.consumeEnergy(4, "体力不足，钓鱼前先回家歇会儿。")) return;
+      this.startAction("cast", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 820 });
       this.scene = SCENE.FISHING;
       this.fishingState = "casting";
       this.fishingTimer = 1200 + Math.random() * 2400;
@@ -1761,12 +2063,20 @@ export class CozyPrototypeGame {
         return;
       }
       this.gold -= 450;
+      this.startAction("build", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 780 });
       this.removeItem("wood", 20);
       this.removeItem("stone", 14);
       this.progress.bridgeRepaired = true;
       this.progress.eastUnlocked = true;
       this.showMessage("旧桥修复完成！东区解锁。", 2600);
       return;
+    }
+    if (obj.type === "firefly") {
+      const hour = this.gameMinutes / 60;
+      if (hour < 18 && hour > 5) {
+        this.showMessage("萤火群要到傍晚以后才会亮起来。", 1800);
+        return;
+      }
     }
 
     if (obj.collected) {
@@ -1776,6 +2086,8 @@ export class CozyPrototypeGame {
     }
 
     if (!this.consumeEnergy(2)) return;
+    const actionType = obj.type === "tree" || obj.type === "resinTap" ? "axe" : obj.type === "stone" || obj.type === "crystal" || obj.type === "ore" ? "pickaxe" : "forage";
+    this.startAction(actionType, { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: actionType === "forage" ? 560 : 720 });
     obj.collected = true;
     obj.regrowTimer = 0;
     let totalAmount = 0;
@@ -1825,6 +2137,7 @@ export class CozyPrototypeGame {
       this.showMessage("背包里没有可赠送物品。", 1500);
       return;
     }
+    this.startAction("gift", { target: { x: npc.x, y: npc.y }, item: candidate, faceTarget: true, duration: 650 });
     this.removeItem(candidate, 1);
     const likeBonus = this.getGiftBonus(npc.likes.includes(candidate));
     this.relationship[npc.id] = Math.min(100, (this.relationship[npc.id] || 0) + likeBonus);
@@ -1834,6 +2147,7 @@ export class CozyPrototypeGame {
   }
 
   startDialogue(npc) {
+    this.startAction("talk", { target: { x: npc.x, y: npc.y }, faceTarget: true, duration: 540 });
     let talkLevelUps = [];
     if (this.dailyActions.talked[npc.id] !== this.gameDay) {
       this.relationship[npc.id] = Math.min(100, (this.relationship[npc.id] || 0) + this.getTalkBonus());
@@ -1858,7 +2172,11 @@ export class CozyPrototypeGame {
     if (npc.id === "npc-lingling" && this.progress.harvestCount >= 10) pages.push("你已经是靠谱农夫了！继续提升农场等级吧。");
     if (npc.id === "npc-maomao") pages.push("按 G 可以送礼物，送鱼给我加好感会更快喵！");
     if (npc.id === "npc-zhuang" && this.progress.bridgeRepaired) pages.push("东区开了，资源更多，建设速度会明显提升。");
-    if (npc.id === "npc-ye") pages.push("高地的入口在雾林北边，等镇子更繁荣一些就会彻底开放。");
+    if (npc.id === "npc-ye") {
+      const forestTask = this.getAreaTask("forest");
+      pages.push("高地的入口在雾林北边，等镇子更繁荣一些就会彻底开放。");
+      if (forestTask && !forestTask.done) pages.push(`林务站今天贴着「${forestTask.title}」：${this.formatAreaTaskProgress(forestTask)}。`);
+    }
     if (npc.id === "npc-lan") pages.push("月湾和镇子之间来回很快，缺钱时来这里跑一圈通常不会空手。");
     if (npc.id === "npc-mei") pages.push(this.progress.workshopLevel ? "加工坊会把普通食材变成真正赚钱的货，别让水果和牛奶压仓。" : "等手头宽裕了，建个加工坊吧，日子会从卖原料变成做品牌。");
     if (npc.id === "npc-su") pages.push(this.progress.ranchLevel ? `你的牧场现在是：${this.getRanchSummary()}。动物每天喂干草，心情好会给更好的产物。` : "农场不只有作物。先建牧场，再买小鸡，现金流会更稳。");
@@ -1927,12 +2245,14 @@ export class CozyPrototypeGame {
         const itemKey = list[this.shopSelection];
         const price = ITEMS[itemKey].buyPrice;
         if (this.gold < price) return this.showMessage("金币不足。", 1200);
+        this.startAction("buy", { duration: 520, item: itemKey });
         this.gold -= price;
         this.addItem(itemKey, 1);
         this.showMessage(`购买 ${ITEMS[itemKey].name} -${price}金`, 1400);
       } else if (this.shopMode === "sell") {
         const itemKey = list[this.shopSelection];
         const price = this.getSellPrice(itemKey);
+        this.startAction("sell", { duration: 520, item: itemKey });
         this.removeItem(itemKey, 1);
         this.gold += price;
         this.progress.totalEarned += price;
@@ -1947,6 +2267,7 @@ export class CozyPrototypeGame {
         if (missing) {
           return this.showMessage("材料或金币不足。", 1500);
         }
+        this.startAction("build", { duration: 680, item: up.id });
         Object.entries(c).filter(([, amount]) => amount > 0).forEach(([key, amount]) => {
           if (key === "gold") this.gold -= amount;
           else this.removeItem(key, amount);
@@ -1959,11 +2280,13 @@ export class CozyPrototypeGame {
 
   handleFishingInput() {
     if (this.fishingState === "biting") {
+      this.startAction("reel", { duration: 650 });
       this.fishingState = "reeling";
       this.fishingBarY = 180;
       this.fishingFishY = 80 + Math.random() * 180;
       this.fishingProgress = 18 + (this.getSkillLevel("fishing") - 1) * 4 + Math.round(this.getBuffValue("fishing") * 30);
     } else if (this.fishingState === "reeling") {
+      this.startAction("reel", { duration: 280 });
       this.fishingBarVel = -120;
     } else if (this.fishingState === "result") {
       this.scene = SCENE.PLAYING;
@@ -2028,6 +2351,7 @@ export class CozyPrototypeGame {
     const levelUps = this.gainSkillXp("fishing", xp);
     this.fishingResult = { name: ITEMS[key].name, icon: ITEMS[key].icon, value: this.getSellPrice(key) };
     this.fishingState = "result";
+    this.startAction("catch", { duration: 760, item: key });
     this.spawnParticles(this.canvas.width / 2, 300, "#4fa8e0", 10);
     this.showMessage(`钓到 ${ITEMS[key].name}${this.formatLevelUps(levelUps)}`, 2200);
   }
@@ -2283,6 +2607,7 @@ export class CozyPrototypeGame {
     this.renderInteractables();
     this.renderNpcs();
     this.renderPlayer();
+    this.renderActionEffects();
     this.renderParticles();
     ctx.restore();
 
@@ -2434,6 +2759,15 @@ export class CozyPrototypeGame {
       else if (obj.type === "ore") this.drawOre(obj);
       else if (obj.type === "coral") this.drawCoral(obj);
       else if (obj.type === "fishspot") this.drawFishspot(obj);
+      else if (obj.type === "trailboard") this.drawTrailBoard(obj);
+      else if (obj.type === "shrine") this.drawShrine(obj);
+      else if (obj.type === "spring") this.drawSpring(obj);
+      else if (obj.type === "ruin") this.drawRuin(obj);
+      else if (obj.type === "logjam") this.drawLogjam(obj);
+      else if (obj.type === "beehive") this.drawBeehive(obj);
+      else if (obj.type === "resinTap") this.drawResinTap(obj);
+      else if (obj.type === "wildPatch") this.drawWildPatch(obj);
+      else if (obj.type === "firefly") this.drawFireflyCluster(obj);
       else if (obj.type === "house") this.drawHouse(obj);
       else if (obj.type === "shop") this.drawShop(obj);
       else if (obj.type === "sign") this.drawSign(obj);
@@ -2454,6 +2788,12 @@ export class CozyPrototypeGame {
         ctx.fillStyle = "#d7b86d";
         ctx.beginPath();
         ctx.arc(obj.x + obj.w - 4, obj.y - 6, 7, 0, Math.PI * 2);
+        ctx.fill();
+      }
+      if (obj.type === "trailboard" && this.canCompleteAreaTask(this.getAreaTask(obj.areaId || this.currentMapId))) {
+        ctx.fillStyle = "#b7e38f";
+        ctx.beginPath();
+        ctx.arc(obj.x + obj.w - 2, obj.y - 6, 7, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -2635,6 +2975,160 @@ export class CozyPrototypeGame {
     ctx.fillText("🎣", obj.x + 9, obj.y + 28);
   }
 
+  drawTrailBoard(obj) {
+    const { ctx } = this;
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h, 22, 5, 0.18);
+    this.fillRoundRect(obj.x + 19, obj.y + 26, 8, 34, 3, "#76533a");
+    this.fillRoundRect(obj.x + 5, obj.y + 5, obj.w - 10, 30, 6, "#8d6748", "rgba(255,255,255,0.20)");
+    this.fillRoundRect(obj.x + 10, obj.y + 10, obj.w - 20, 20, 4, "rgba(248,241,216,0.72)");
+    const task = this.getAreaTask(obj.areaId || this.currentMapId);
+    ctx.fillStyle = task?.done ? "#6f8e71" : this.canCompleteAreaTask(task) ? "#d9b96f" : "#456c56";
+    ctx.beginPath();
+    ctx.arc(obj.x + obj.w / 2, obj.y + 20, 5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawShrine(obj) {
+    const { ctx } = this;
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 2, 25, 6, 0.18);
+    const used = this.progress.forestShrineDay === this.gameDay;
+    const stone = ctx.createLinearGradient(obj.x, obj.y, obj.x + obj.w, obj.y + obj.h);
+    stone.addColorStop(0, used ? "#9ca99c" : "#b6c0ac");
+    stone.addColorStop(1, used ? "#6f8274" : "#718a72");
+    this.fillRoundRect(obj.x + 7, obj.y + 16, obj.w - 14, 34, 8, stone, "rgba(255,255,255,0.18)");
+    this.fillRoundRect(obj.x + 14, obj.y + 6, obj.w - 28, 15, 6, "#6e8a68");
+    ctx.strokeStyle = used ? "rgba(248,241,216,0.22)" : "rgba(214,242,170,0.65)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(obj.x + obj.w / 2, obj.y + 32, 13 + Math.sin(this.lastTime * 0.003) * 2, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  drawSpring(obj) {
+    const { ctx } = this;
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 1, 25, 5, 0.14);
+    const used = this.progress.forestSpringDay === this.gameDay;
+    const water = ctx.createRadialGradient(obj.x + 28, obj.y + 20, 3, obj.x + 28, obj.y + 20, 32);
+    water.addColorStop(0, used ? "rgba(170,196,196,0.74)" : "rgba(178,237,230,0.92)");
+    water.addColorStop(1, used ? "rgba(92,122,124,0.62)" : "rgba(71,149,159,0.74)");
+    ctx.fillStyle = water;
+    ctx.beginPath();
+    ctx.ellipse(obj.x + 29, obj.y + 23, 28, 17, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(248,241,216,0.38)";
+    ctx.beginPath();
+    ctx.ellipse(obj.x + 29, obj.y + 23, 20 + Math.sin(this.lastTime * 0.004) * 3, 10, 0, 0, Math.PI * 2);
+    ctx.stroke();
+  }
+
+  drawRuin(obj) {
+    const { ctx } = this;
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 3, 33, 7, 0.16);
+    this.fillRoundRect(obj.x + 6, obj.y + 22, 62, 24, 6, obj.collected ? "#8a938a" : "#7b8b7d", "rgba(255,255,255,0.14)");
+    this.fillRoundRect(obj.x + 16, obj.y + 8, 12, 36, 4, obj.collected ? "#99a19a" : "#aab4a7");
+    this.fillRoundRect(obj.x + 44, obj.y + 13, 11, 31, 4, obj.collected ? "#8f998f" : "#9faa9d");
+    ctx.strokeStyle = obj.collected ? "rgba(159,196,220,0.25)" : "rgba(154,207,255,0.55)";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(obj.x + 28, obj.y + 28);
+    ctx.lineTo(obj.x + 38, obj.y + 22);
+    ctx.lineTo(obj.x + 48, obj.y + 30);
+    ctx.stroke();
+  }
+
+  drawLogjam(obj) {
+    const { ctx } = this;
+    if (obj.collected) {
+      ctx.fillStyle = "rgba(112,83,59,0.28)";
+      ctx.fillRect(obj.x + 10, obj.y + 26, obj.w - 20, 4);
+      return;
+    }
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 1, 37, 5, 0.16);
+    for (let i = 0; i < 3; i++) {
+      this.fillRoundRect(obj.x + 6 + i * 10, obj.y + 8 + i * 7, obj.w - 18, 11, 6, i % 2 ? "#8b6240" : "#9c7048", "rgba(255,255,255,0.12)");
+      ctx.fillStyle = "rgba(70,47,30,0.35)";
+      ctx.beginPath();
+      ctx.arc(obj.x + 13 + i * 10, obj.y + 13 + i * 7, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawBeehive(obj) {
+    const { ctx } = this;
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 1, 15, 4, 0.12);
+    ctx.strokeStyle = "#6b5134";
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(obj.x + 18, obj.y);
+    ctx.lineTo(obj.x + 18, obj.y + 11);
+    ctx.stroke();
+    const grad = ctx.createLinearGradient(obj.x, obj.y + 8, obj.x, obj.y + obj.h);
+    grad.addColorStop(0, obj.collected ? "#b99562" : "#d9a84d");
+    grad.addColorStop(1, obj.collected ? "#8d714b" : "#ad7131");
+    ctx.fillStyle = grad;
+    ctx.beginPath();
+    ctx.ellipse(obj.x + 18, obj.y + 25, 18, 17, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = "rgba(89,58,28,0.36)";
+    for (let i = 0; i < 3; i++) {
+      ctx.beginPath();
+      ctx.moveTo(obj.x + 5, obj.y + 18 + i * 7);
+      ctx.lineTo(obj.x + 31, obj.y + 18 + i * 7);
+      ctx.stroke();
+    }
+  }
+
+  drawResinTap(obj) {
+    const { ctx } = this;
+    this.fillRoundRect(obj.x + 12, obj.y, 13, 42, 4, "#6e513a");
+    this.fillRoundRect(obj.x + 4, obj.y + 24, 28, 15, 5, obj.collected ? "#8f8a75" : "#b48645", "rgba(255,255,255,0.16)");
+    if (!obj.collected) {
+      ctx.fillStyle = "#d6a15c";
+      ctx.beginPath();
+      ctx.arc(obj.x + 18, obj.y + 21, 4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  drawWildPatch(obj) {
+    const { ctx } = this;
+    ctx.strokeStyle = obj.collected ? "#849477" : "#5f9f67";
+    ctx.lineWidth = 3;
+    for (let i = 0; i < 6; i++) {
+      const sx = obj.x + 6 + i * 6;
+      ctx.beginPath();
+      ctx.moveTo(sx, obj.y + 32);
+      ctx.quadraticCurveTo(sx - 7, obj.y + 17, sx + 2, obj.y + 8 + (i % 2) * 5);
+      ctx.stroke();
+    }
+    ctx.fillStyle = obj.collected ? "rgba(188,210,164,0.24)" : "rgba(196,225,153,0.55)";
+    ctx.beginPath();
+    ctx.ellipse(obj.x + 22, obj.y + 25, 18, 7, 0, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawFireflyCluster(obj) {
+    const { ctx } = this;
+    const hour = this.gameMinutes / 60;
+    const active = hour >= 18 || hour <= 5;
+    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 2, 18, 4, 0.10);
+    ctx.strokeStyle = obj.collected ? "#7c8f77" : "#5f8d56";
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(obj.x + 12, obj.y + 36);
+    ctx.lineTo(obj.x + 16, obj.y + 16);
+    ctx.moveTo(obj.x + 28, obj.y + 36);
+    ctx.lineTo(obj.x + 31, obj.y + 18);
+    ctx.stroke();
+    const glow = active && !obj.collected ? 0.65 + Math.sin(this.lastTime * 0.006) * 0.18 : 0.18;
+    ctx.fillStyle = `rgba(238,255,172,${glow})`;
+    for (let i = 0; i < 5; i++) {
+      ctx.beginPath();
+      ctx.arc(obj.x + 10 + i * 7, obj.y + 12 + Math.sin(this.lastTime * 0.004 + i) * 7, active ? 3 : 1.8, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
   drawHouse(obj) {
     const { ctx } = this;
     this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 4, obj.w * 0.46, 15, 0.22);
@@ -2800,17 +3294,214 @@ export class CozyPrototypeGame {
     });
   }
 
+  getFacingVector() {
+    if (this.player.facing === "left") return { x: -1, y: 0 };
+    if (this.player.facing === "right") return { x: 1, y: 0 };
+    if (this.player.facing === "up") return { x: 0, y: -1 };
+    return { x: 0, y: 1 };
+  }
+
+  getActionIcon(type, item) {
+    const map = {
+      plant: item ? ITEMS[item]?.icon : "🌱",
+      harvest: "🧺",
+      forage: "🧺",
+      gift: item ? ITEMS[item]?.icon : "🎁",
+      talk: "💬",
+      read: "📋",
+      shop: "🪙",
+      buy: item ? ITEMS[item]?.icon : "🛒",
+      sell: "🪙",
+      ship: "📦",
+      deliver: "📦",
+      feed: "🌾",
+      cook: "🍳",
+      craft: item ? ITEMS[item]?.icon : "🔨",
+      write: "✎",
+      sleep: "Z",
+      catch: item ? ITEMS[item]?.icon : "🐟",
+    };
+    return map[type] || "";
+  }
+
+  renderPlayerTool(hand, dir, side, progress) {
+    const { ctx } = this;
+    const action = this.actionAnimation;
+    if (!action) return;
+    const type = action.type;
+    const swing = Math.sin(progress * Math.PI);
+    const itemIcon = this.getActionIcon(type, action.item);
+
+    ctx.save();
+    ctx.lineCap = "round";
+    ctx.lineJoin = "round";
+    if (type === "hoe" || type === "axe" || type === "pickaxe" || type === "build") {
+      const toolColor = type === "axe" ? "#8f5a3f" : type === "pickaxe" ? "#6f7f86" : "#8a6b4c";
+      const tipX = hand.x + dir.x * (18 + swing * 10) + side.x * 5;
+      const tipY = hand.y + dir.y * (18 + swing * 10) + side.y * 5;
+      ctx.strokeStyle = "#7b563d";
+      ctx.lineWidth = 4;
+      ctx.beginPath();
+      ctx.moveTo(hand.x - dir.x * 6, hand.y - dir.y * 6);
+      ctx.lineTo(tipX, tipY);
+      ctx.stroke();
+      ctx.strokeStyle = toolColor;
+      ctx.lineWidth = 6;
+      ctx.beginPath();
+      ctx.moveTo(tipX - side.x * 9, tipY - side.y * 9);
+      ctx.lineTo(tipX + side.x * 9, tipY + side.y * 9);
+      ctx.stroke();
+    } else if (type === "water") {
+      this.fillRoundRect(hand.x - 5 + dir.x * 6, hand.y - 7 + dir.y * 6, 16, 12, 4, "#6d97af", "rgba(255,255,255,0.30)");
+      ctx.strokeStyle = "#446f86";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(hand.x + dir.x * 17, hand.y + dir.y * 17);
+      ctx.lineTo(hand.x + dir.x * 24, hand.y + dir.y * 24);
+      ctx.stroke();
+    } else if (type === "cast" || type === "reel") {
+      const rodEndX = hand.x + dir.x * 34 + side.x * 10;
+      const rodEndY = hand.y + dir.y * 34 + side.y * 10;
+      ctx.strokeStyle = "#6f4c32";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(hand.x, hand.y);
+      ctx.lineTo(rodEndX, rodEndY);
+      ctx.stroke();
+      ctx.strokeStyle = "rgba(240,248,236,0.66)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(rodEndX, rodEndY);
+      ctx.quadraticCurveTo(rodEndX + dir.x * 16, rodEndY + 18, rodEndX + dir.x * 28, rodEndY + 34);
+      ctx.stroke();
+    } else if (itemIcon) {
+      ctx.font = type === "talk" ? "20px sans-serif" : "18px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(itemIcon, hand.x + dir.x * (12 + swing * 4), hand.y + dir.y * (12 + swing * 4));
+      ctx.textAlign = "left";
+    }
+    ctx.restore();
+  }
+
   renderPlayer() {
     const { ctx } = this;
     const { x, y, size } = this.player;
+    const dir = this.getFacingVector();
+    const side = { x: -dir.y, y: dir.x };
+    const action = this.actionAnimation;
+    const progress = this.getActionProgress();
+    const actionSwing = action ? Math.sin(progress * Math.PI) : 0;
+    const moving = !action && (this.keys.has("arrowup") || this.keys.has("w") || this.keys.has("arrowdown") || this.keys.has("s") || this.keys.has("arrowleft") || this.keys.has("a") || this.keys.has("arrowright") || this.keys.has("d"));
+    const walk = moving ? Math.sin(this.footstepTimer * 0.18) : 0;
+    const bob = moving ? Math.abs(walk) * 2 : actionSwing * 1.2;
+
+    this.drawGroundShadow(x, y + 16, 16, 5, 0.28);
+
     ctx.save();
-    ctx.shadowColor = "rgba(20,32,28,0.26)";
-    ctx.shadowBlur = 10;
-    ctx.shadowOffsetY = 5;
-    this.fillRoundRect(x - size / 2, y - size / 2, size, size, 8, "#486f8f", "rgba(255,255,255,0.35)");
+    ctx.translate(x, y - bob);
+
+    const legSwing = moving ? walk * 4 : 0;
+    this.fillRoundRect(-8 + side.x * legSwing * 0.15, 6 + side.y * 1, 7, 15, 4, "#273b46");
+    this.fillRoundRect(1 - side.x * legSwing * 0.15, 6 - side.y * 1, 7, 15, 4, "#253842");
+
+    const torsoGrad = ctx.createLinearGradient(0, -10, 0, 12);
+    torsoGrad.addColorStop(0, "#5b83a0");
+    torsoGrad.addColorStop(1, "#355a76");
+    this.fillRoundRect(-12, -10, 24, 25, 8, torsoGrad, "rgba(255,255,255,0.28)");
+
+    const shoulderY = -4;
+    const reach = action ? 11 + actionSwing * 9 : 7;
+    const armSwing = moving ? walk * 5 : actionSwing * 7;
+    const leftShoulder = { x: -11, y: shoulderY };
+    const rightShoulder = { x: 11, y: shoulderY };
+    const activeHand = {
+      x: rightShoulder.x + dir.x * reach + side.x * (2 + armSwing * 0.2),
+      y: rightShoulder.y + dir.y * reach + side.y * (2 + armSwing * 0.2),
+    };
+    const passiveHand = {
+      x: leftShoulder.x + dir.x * 6 - side.x * (2 + armSwing * 0.2),
+      y: leftShoulder.y + dir.y * 6 - side.y * (2 + armSwing * 0.2),
+    };
+    ctx.strokeStyle = "#efc9a1";
+    ctx.lineWidth = 5;
+    ctx.beginPath();
+    ctx.moveTo(leftShoulder.x, leftShoulder.y);
+    ctx.lineTo(passiveHand.x, passiveHand.y + (moving ? -walk : 0));
+    ctx.moveTo(rightShoulder.x, rightShoulder.y);
+    ctx.lineTo(activeHand.x, activeHand.y);
+    ctx.stroke();
+
+    this.renderPlayerTool({ x: activeHand.x, y: activeHand.y }, dir, side, progress);
+
+    const faceYOffset = this.player.facing === "up" ? -2 : 0;
+    this.fillRoundRect(-9, -25 + faceYOffset, 18, 15, 7, "#efc9a1", "rgba(116,80,55,0.14)");
+    this.fillRoundRect(-13, -32 + faceYOffset, 26, 10, 5, "#9d5c4d");
+    if (this.player.facing !== "up") {
+      ctx.fillStyle = "#27312e";
+      ctx.beginPath();
+      ctx.arc(-4, -18 + faceYOffset, 1.4, 0, Math.PI * 2);
+      ctx.arc(4, -18 + faceYOffset, 1.4, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
     ctx.restore();
-    this.fillRoundRect(x - 8, y - size / 2 + 2, 16, 12, 5, "#efc9a1");
-    this.fillRoundRect(x - size / 2 + 2, y - size / 2 - 8, size - 4, 10, 4, "#9d5c4d");
+  }
+
+  renderActionEffects() {
+    const { ctx } = this;
+    const action = this.actionAnimation;
+    if (!action) return;
+    const progress = this.getActionProgress();
+    const dir = this.getFacingVector();
+    const target = action.target;
+
+    ctx.save();
+    if (action.type === "water" && target) {
+      ctx.strokeStyle = "rgba(126,190,232,0.62)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 7; i++) {
+        const t = (progress + i * 0.09) % 1;
+        const sx = this.player.x + dir.x * 18 + (i - 3) * 2;
+        const sy = this.player.y + dir.y * 18 - 8;
+        const ex = sx + (target.x - sx) * t;
+        const ey = sy + (target.y - sy) * t + Math.sin(t * Math.PI) * 8;
+        ctx.beginPath();
+        ctx.moveTo(sx, sy);
+        ctx.quadraticCurveTo((sx + ex) / 2, sy - 10, ex, ey);
+        ctx.stroke();
+      }
+    }
+
+    if ((action.type === "plant" || action.type === "feed") && target) {
+      ctx.fillStyle = action.type === "feed" ? "rgba(215,185,111,0.85)" : "rgba(119,157,107,0.85)";
+      for (let i = 0; i < 6; i++) {
+        const t = Math.min(1, progress * 1.4 - i * 0.08);
+        if (t <= 0) continue;
+        ctx.beginPath();
+        ctx.arc(this.player.x + (target.x - this.player.x) * t + Math.sin(i) * 4, this.player.y + (target.y - this.player.y) * t - Math.sin(t * Math.PI) * 12, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+
+    if (["hoe", "axe", "pickaxe", "harvest", "forage", "build"].includes(action.type) && target) {
+      ctx.strokeStyle = action.type === "harvest" || action.type === "forage" ? "rgba(249,239,209,0.56)" : "rgba(255,222,154,0.55)";
+      ctx.lineWidth = 2;
+      const radius = 14 + Math.sin(progress * Math.PI) * 14;
+      ctx.beginPath();
+      ctx.arc(target.x, target.y, radius, -Math.PI * 0.15, Math.PI * 1.15);
+      ctx.stroke();
+    }
+
+    if (["gift", "deliver", "ship", "buy", "sell", "catch", "cook", "craft", "write", "sleep", "talk"].includes(action.type)) {
+      const icon = this.getActionIcon(action.type, action.item);
+      const y = this.player.y - 42 - Math.sin(progress * Math.PI) * 12;
+      ctx.globalAlpha = Math.max(0, 1 - progress * 0.35);
+      ctx.font = "20px sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(icon, this.player.x, y);
+      ctx.textAlign = "left";
+    }
+    ctx.restore();
   }
 
   renderParticles() {
@@ -2999,8 +3690,10 @@ export class CozyPrototypeGame {
     const { ctx, canvas } = this;
     const active = this.quests.find(q => !q.done);
     const request = this.getPendingRequests()[0];
-    const x = 14, y = canvas.height - 112;
-    this.drawSoftPanel(x, y, 378, 98, { fill: "rgba(24,35,32,0.76)", stroke: "rgba(249,239,209,0.14)", accent: this.getSeasonInfo().accent, blur: 18, offsetY: 6, radius: 14 });
+    const areaTask = this.currentMapId !== "town" ? this.getAreaTask(this.currentMapId) : null;
+    const panelH = areaTask ? 124 : 98;
+    const x = 14, y = canvas.height - panelH - 14;
+    this.drawSoftPanel(x, y, 378, panelH, { fill: "rgba(24,35,32,0.76)", stroke: "rgba(249,239,209,0.14)", accent: this.getSeasonInfo().accent, blur: 18, offsetY: 6, radius: 14 });
     ctx.fillStyle = UI.cream;
     ctx.font = "bold 13px sans-serif";
     ctx.fillText("今日节奏", x + 24, y + 25);
@@ -3016,6 +3709,11 @@ export class CozyPrototypeGame {
       ctx.fillText(`委托 · ${this.getNpcName(request.requester)}要 ${item.icon} ${item.name}x${request.amount}，${request.gold}金`, x + 24, y + 87);
     } else {
       ctx.fillText("委托 · 今天都完成了", x + 24, y + 87);
+    }
+    if (areaTask) {
+      ctx.fillStyle = this.canCompleteAreaTask(areaTask) ? "#d9e99d" : "rgba(249,239,209,0.78)";
+      const status = areaTask.done ? "已完成" : this.formatAreaTaskProgress(areaTask);
+      ctx.fillText(`区域 · ${areaTask.title}：${status}`, x + 24, y + 108);
     }
   }
 
@@ -3302,13 +4000,15 @@ export class CozyPrototypeGame {
       const cropCount = Object.values(CROPS).filter((crop) => this.collections.items[crop.harvest]).length;
       const fishKeys = ["fish", "nightFish", "silverFish", "goldKoi"];
       const fishCount = fishKeys.filter((key) => this.collections.items[key]).length;
-      const artisanKeys = ["mayonnaise", "cheese", "jam", "cloth", "honey"];
+      const artisanKeys = ["mayonnaise", "cheese", "jam", "cloth", "honey", "forestWax"];
       const artisanCount = artisanKeys.filter((key) => this.collections.items[key]).length;
+      const resourceKeys = ["wood", "stone", "herb", "mushroom", "fern", "resin", "wildHoney", "fireflyJar", "relicShard", "crystal", "ore", "coral"];
+      const resourceCount = resourceKeys.filter((key) => this.collections.items[key]).length;
       const rows = [
         ["作物", cropCount, Object.keys(CROPS).length, "解锁更多种子并完成收获"],
         ["鱼类", fishCount, fishKeys.length, "不同天气、时间、区域会出现不同鱼"],
         ["加工品", artisanCount, artisanKeys.length, "建造加工坊后制作高价商品"],
-        ["资源", Math.min(8, this.progress.forageCount), 8, "探索雾林、月湾和高地"],
+        ["资源", resourceCount, resourceKeys.length, "探索雾林、月湾和高地"],
       ];
       rows.forEach((row) => {
         this.fillRoundRect(contentX, y - 18, 548, 46, 12, "rgba(32,52,47,0.06)");
@@ -3342,14 +4042,16 @@ export class CozyPrototypeGame {
         `牧场 Lv${this.progress.ranchLevel}：${this.getRanchSummary()}`,
         `工具 Lv${this.progress.toolLevel}，鱼竿 Lv${this.progress.rodLevel}，水渠 Lv${this.progress.irrigationLevel}`,
         `出货 ${this.progress.shippingCount} 件 / ${this.progress.shippingValue} 金，加工 ${this.progress.artisanMade} 件`,
-        `完成委托 ${this.progress.requestsCompleted}，小镇工程 ${this.progress.projectsCompleted}/${PROJECTS.length}`,
+        `完成委托 ${this.progress.requestsCompleted}，区域委托 ${this.progress.areaTasksCompleted || 0}，小镇工程 ${this.progress.projectsCompleted}/${PROJECTS.length}`,
+        `雾林声望 ${this.progress.forestRenown || 0}，遗迹碎片 ${this.progress.forestRelics || 0}，祭台祝福 ${this.progress.forestShrineBlessings || 0}`,
       ];
+      const compact = entries.length > 6;
       entries.forEach((line) => {
-        this.fillRoundRect(contentX, y - 18, 548, 38, 10, "rgba(32,52,47,0.06)");
+        this.fillRoundRect(contentX, y - 16, 548, compact ? 32 : 38, 10, "rgba(32,52,47,0.06)");
         ctx.fillStyle = UI.ink;
-        ctx.font = "13px sans-serif";
+        ctx.font = compact ? "12px sans-serif" : "13px sans-serif";
         ctx.fillText(line, contentX + 16, y + 1);
-        y += 48;
+        y += compact ? 36 : 48;
       });
     }
 
@@ -3489,5 +4191,48 @@ export class CozyPrototypeGame {
     const pageText = actions.length > visible ? `  ${start + 1}-${Math.min(actions.length, start + visible)}/${actions.length}` : "";
     ctx.fillText(`W/S 或 ↑↓ 选择，E/Enter 执行，ESC 离开小屋${pageText}`, canvas.width / 2, 417);
     ctx.textAlign = "left";
+    this.renderIndoorActionAnimation();
+  }
+
+  renderIndoorActionAnimation() {
+    const { ctx, canvas } = this;
+    const action = this.actionAnimation;
+    if (!action) return;
+    const progress = this.getActionProgress();
+    const x = canvas.width / 2;
+    const y = 318;
+    const icon = this.getActionIcon(action.type, action.item);
+    ctx.save();
+    this.drawGroundShadow(x, y + 44, 38, 8, 0.22);
+    const body = ctx.createLinearGradient(x, y - 16, x, y + 38);
+    body.addColorStop(0, "#5b83a0");
+    body.addColorStop(1, "#355a76");
+    this.fillRoundRect(x - 17, y - 12, 34, 42, 11, body, "rgba(255,255,255,0.25)");
+    this.fillRoundRect(x - 12, y - 34, 24, 22, 9, "#efc9a1", "rgba(116,80,55,0.14)");
+    this.fillRoundRect(x - 17, y - 42, 34, 12, 6, "#9d5c4d");
+    const stir = Math.sin(progress * Math.PI * 4);
+    ctx.strokeStyle = "#efc9a1";
+    ctx.lineWidth = 5;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y - 2);
+    ctx.lineTo(x - 36, y + 14 + stir * 4);
+    ctx.moveTo(x + 15, y - 2);
+    ctx.lineTo(x + 34, y + 10 - stir * 4);
+    ctx.stroke();
+    this.fillRoundRect(x - 44, y + 18, 88, 18, 8, "rgba(79,54,38,0.72)");
+    ctx.font = "28px sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(icon, x, y + 16 - Math.sin(progress * Math.PI) * 12);
+    if (action.type === "cook" || action.type === "craft") {
+      ctx.strokeStyle = action.type === "cook" ? "rgba(255,229,172,0.60)" : "rgba(157,202,218,0.55)";
+      ctx.lineWidth = 2;
+      for (let i = 0; i < 3; i++) {
+        ctx.beginPath();
+        ctx.arc(x, y + 12, 18 + i * 10 + Math.sin(progress * Math.PI * 2 + i) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    ctx.restore();
   }
 }
