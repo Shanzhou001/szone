@@ -47,7 +47,8 @@
           "artifactName": "${productName}-${version}-${arch}-portable.${ext}"
         },
         "nsis": {
-            "artifactName": "${productName}-${version}-${arch}-nsis.${ext}"
+            "artifactName": "${productName}-${version}-${arch}-nsis.${ext}",
+            "include": "build/installer.nsh"
           }
   }
 }

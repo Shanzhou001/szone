@@ -367,11 +367,11 @@ const CROPS = {
 
 const NPCS = [
   { id: "npc-lingling", name: "小玲", mapId: "town", baseX: 450, baseY: 300, color: "#e888aa", hatColor: "#ff6688", likes: ["flower", "blueberry", "melon"] },
-  { id: "npc-chen", name: "老陈", mapId: "town", baseX: 870, baseY: 280, color: "#8855aa", hatColor: "#aa44cc", likes: ["potato", "wood", "corn", "crystal"] },
+  { id: "npc-chen", name: "老陈", mapId: "town", baseX: 850, baseY: 704, color: "#8855aa", hatColor: "#aa44cc", likes: ["potato", "wood", "corn", "crystal"] },
   { id: "npc-maomao", name: "毛毛", mapId: "town", baseX: 300, baseY: 620, color: "#f0c040", hatColor: "#e0a020", likes: ["fish", "nightFish", "goldKoi", "coral"] },
   { id: "npc-zhuang", name: "阿壮", mapId: "town", baseX: 700, baseY: 650, color: "#55aa55", hatColor: "#339933", likes: ["pumpkin", "mushroom", "melon", "herb"] },
   { id: "npc-ye", name: "阿叶", mapId: "forest", baseX: 396, baseY: 316, color: "#78b665", hatColor: "#3d7d3a", likes: ["herb", "mushroom", "flower"] },
-  { id: "npc-lan", name: "小岚", mapId: "harbor", baseX: 964, baseY: 360, color: "#73c6ec", hatColor: "#357ba1", likes: ["fish", "silverFish", "coral"] },
+  { id: "npc-lan", name: "小岚", mapId: "harbor", baseX: 820, baseY: 520, color: "#73c6ec", hatColor: "#357ba1", likes: ["fish", "silverFish", "coral"] },
   { id: "npc-mei", name: "梅姨", mapId: "town", baseX: 540, baseY: 560, color: "#bc7a68", hatColor: "#8f5147", likes: ["teaLeaf", "jam", "honey", "flower"] },
   { id: "npc-su", name: "苏木", mapId: "town", baseX: 1020, baseY: 690, color: "#6f91a7", hatColor: "#475d6f", likes: ["egg", "milk", "cheese", "cloth"] },
 ];
@@ -499,7 +499,7 @@ export class CozyPrototypeGame {
   }
 
   createTileMap() {
-    return [
+    const map = [
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,0],
       [0,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,0],
@@ -527,6 +527,9 @@ export class CozyPrototypeGame {
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
       [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
     ];
+    this.paintRect(map, 14, 11, 20, 15, TILE.PATH);
+    this.paintRect(map, 16, 15, 18, 16, TILE.PATH);
+    return map;
   }
 
   createWorlds() {
@@ -632,7 +635,7 @@ export class CozyPrototypeGame {
     return [
       { id:"tree-1",type:"tree",x:80,y:80,w:64,h:78,item:"wood",amount:1,collected:false,regrowTimer:0,regrowTime:60000,name:"大橡树" },
       { id:"tree-2",type:"tree",x:200,y:100,w:64,h:78,item:"wood",amount:1,collected:false,regrowTimer:0,regrowTime:55000,name:"小枫树" },
-      { id:"tree-3",type:"tree",x:960,y:160,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"果树",extraItem:"fruit" },
+      { id:"tree-3",type:"tree",x:1034,y:160,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"果树",extraItem:"fruit" },
       { id:"tree-4",type:"tree",x:1130,y:90,w:64,h:78,item:"wood",amount:1,collected:false,regrowTimer:0,regrowTime:60000,name:"松树",eastOnly:true },
       { id:"bush-1",type:"bush",x:258,y:198,w:58,h:42,item:"fruit",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"莓果灌木" },
       { id:"bush-2",type:"bush",x:1096,y:252,w:58,h:42,item:"fruit",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"东区果丛",eastOnly:true },
@@ -641,13 +644,13 @@ export class CozyPrototypeGame {
       { id:"mush-1",type:"mushroom",x:320,y:340,w:36,h:36,item:"mushroom",amount:1,collected:false,regrowTimer:0,regrowTime:90000,name:"红蘑菇" },
       { id:"mush-2",type:"mushroom",x:1180,y:380,w:36,h:36,item:"mushroom",amount:2,collected:false,regrowTimer:0,regrowTime:90000,name:"棕蘑菇",eastOnly:true },
       { id:"stone-1",type:"stone",x:500,y:480,w:58,h:44,item:"stone",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"圆石" },
-      { id:"stone-2",type:"stone",x:830,y:500,w:58,h:44,item:"stone",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"大岩石",eastOnly:true },
+      { id:"stone-2",type:"stone",x:1122,y:504,w:58,h:44,item:"stone",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"大岩石",eastOnly:true },
       { id:"shell-1",type:"shell",x:100,y:430,w:28,h:20,item:"shell",amount:1,collected:false,regrowTimer:0,regrowTime:50000,name:"贝壳" },
       { id:"shell-2",type:"shell",x:180,y:460,w:28,h:20,item:"shell",amount:1,collected:false,regrowTimer:0,regrowTime:50000,name:"螺壳" },
       { id:"fish-1",type:"fishspot",x:680,y:290,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"钓鱼点" },
       { id:"fish-2",type:"fishspot",x:1080,y:322,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"东区深水点",eastOnly:true },
-      { id:"house-1",type:"house",x:560,y:130,w:170,h:150,name:"你的小屋" },
-      { id:"shop-1",type:"shop",x:820,y:130,w:160,h:140,name:"老陈的商店" },
+      { id:"house-1",type:"house",x:540,y:130,w:170,h:150,name:"你的小屋" },
+      { id:"shop-1",type:"shop",x:760,y:548,w:160,h:140,name:"老陈的商店" },
       { id:"sign-1",type:"sign",x:400,y:530,w:30,h:44,name:"公告牌",text:"公告牌会刷新每日委托；小屋里可以做料理和休息。" },
       { id:"project-1",type:"project",x:590,y:472,w:84,h:72,name:"镇务工程板" },
       { id:"shipping-1",type:"shipping",x:428,y:668,w:62,h:54,name:"出货箱" },
@@ -664,15 +667,15 @@ export class CozyPrototypeGame {
       { id:"warp-forest-town",type:"warp",x:1304,y:560,w:56,h:88,name:"返回镇子",label:"回晨露镇",targetMap:"town",targetX:126,targetY:590 },
       { id:"warp-forest-highlands",type:"warp",x:930,y:44,w:72,h:50,name:"山间栈道",label:"上高地",targetMap:"highlands",targetX:1030,targetY:790,requiresTownRank:3,lockReason:"再多积累些名望，山道才会开放。" },
       { id:"forest-board",type:"trailboard",x:1222,y:612,w:46,h:58,name:"雾林林务站",areaId:"forest" },
-      { id:"forest-shrine",type:"shrine",x:690,y:342,w:54,h:64,name:"苔石祭台" },
-      { id:"forest-spring",type:"spring",x:606,y:442,w:58,h:42,name:"林间泉眼" },
+      { id:"forest-shrine",type:"shrine",x:746,y:342,w:54,h:64,name:"苔石祭台" },
+      { id:"forest-spring",type:"spring",x:748,y:438,w:58,h:42,name:"林间泉眼" },
       { id:"forest-ruin-1",type:"ruin",x:760,y:520,w:74,h:54,item:"relicShard",amount:1,collected:false,regrowTimer:0,regrowTime:160000,name:"苔痕遗迹" },
       { id:"forest-logjam",type:"logjam",x:248,y:646,w:86,h:38,item:"wood",amount:4,collected:false,regrowTimer:0,regrowTime:0,name:"倒伏木障" },
       { id:"forest-bee-1",type:"beehive",x:706,y:188,w:36,h:42,item:"wildHoney",amount:1,collected:false,regrowTimer:0,regrowTime:96000,name:"野蜂箱",extraItem:"honey" },
       { id:"forest-resin-1",type:"resinTap",x:302,y:240,w:36,h:46,item:"resin",amount:1,collected:false,regrowTimer:0,regrowTime:84000,name:"松脂采集罐" },
       { id:"forest-fern-1",type:"wildPatch",x:292,y:744,w:42,h:38,item:"fern",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"林蕨丛",extraItem:"herb" },
       { id:"forest-fern-2",type:"wildPatch",x:946,y:704,w:42,h:38,item:"fern",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"湿地林蕨" },
-      { id:"forest-firefly-1",type:"firefly",x:528,y:520,w:44,h:44,item:"fireflyJar",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"萤火群" },
+      { id:"forest-firefly-1",type:"firefly",x:738,y:520,w:44,h:44,item:"fireflyJar",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"萤火群" },
       { id:"forest-tree-1",type:"tree",x:214,y:150,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:58000,name:"老杉树" },
       { id:"forest-tree-2",type:"tree",x:586,y:182,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:64000,name:"浓荫树" },
       { id:"forest-tree-3",type:"tree",x:1018,y:290,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"苔木" },
@@ -713,7 +716,7 @@ export class CozyPrototypeGame {
       { id:"high-ore-1",type:"ore",x:698,y:276,w:52,h:42,item:"ore",amount:2,collected:false,regrowTimer:0,regrowTime:125000,name:"铁色矿脉" },
       { id:"high-ore-2",type:"ore",x:1016,y:834,w:52,h:42,item:"ore",amount:2,collected:false,regrowTimer:0,regrowTime:125000,name:"裂岩矿脉" },
       { id:"high-herb-1",type:"herb",x:378,y:986,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"高地香草" },
-      { id:"high-herb-2",type:"herb",x:1076,y:334,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"清冽香草" },
+      { id:"high-herb-2",type:"herb",x:1120,y:430,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"清冽香草" },
       { id:"high-stone-1",type:"stone",x:914,y:962,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:120000,name:"高地岩石" },
       { id:"high-fish-1",type:"fishspot",x:916,y:220,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"山顶清潭" },
     ];
@@ -722,7 +725,8 @@ export class CozyPrototypeGame {
   createNpcs() {
     return NPCS.map((n) => {
       this.relationship[n.id] = 0;
-      return { ...n, size: 26, x: n.baseX, y: n.baseY, moveTimer: 0, vx: 0, vy: 0 };
+      const safeBase = this.findNearestStandablePosition(n.mapId, n.baseX, n.baseY, 26);
+      return { ...n, baseX: safeBase.x, baseY: safeBase.y, size: 26, x: safeBase.x, y: safeBase.y, moveTimer: 0, vx: 0, vy: 0 };
     });
   }
 
@@ -750,9 +754,49 @@ export class CozyPrototypeGame {
     this.interactables = world.interactables;
     if (typeof x === "number") this.player.x = x;
     if (typeof y === "number") this.player.y = y;
+    this.ensurePlayerOnLand();
     this.camera.x = Math.max(0, Math.min(MAP_W * TILE_SIZE - this.canvas.width, this.player.x - this.canvas.width / 2));
     this.camera.y = Math.max(0, Math.min(MAP_H * TILE_SIZE - this.canvas.height, this.player.y - this.canvas.height / 2));
     if (message !== null) this.showMessage(message || `来到 ${world.name}`, 2200);
+  }
+
+  getTileAtMap(mapId, x, y) {
+    if (x < 0 || y < 0 || x >= MAP_W * TILE_SIZE || y >= MAP_H * TILE_SIZE) return TILE.WATER;
+    const map = this.worlds?.[mapId]?.tileMap;
+    if (!map) return TILE.WATER;
+    const tx = Math.floor(x / TILE_SIZE);
+    const ty = Math.floor(y / TILE_SIZE);
+    return map[ty]?.[tx] ?? TILE.WATER;
+  }
+
+  canStandOnMap(mapId, x, y, size = this.player.size) {
+    const half = size / 2;
+    const corners = [[x - half, y - half], [x + half, y - half], [x - half, y + half], [x + half, y + half]];
+    return corners.every(([px, py]) => this.getTileAtMap(mapId, px, py) !== TILE.WATER);
+  }
+
+  findNearestStandablePosition(mapId, x, y, size = this.player.size) {
+    const clampX = (value) => Math.max(size, Math.min(MAP_W * TILE_SIZE - size, value));
+    const clampY = (value) => Math.max(size, Math.min(MAP_H * TILE_SIZE - size, value));
+    const startX = clampX(x);
+    const startY = clampY(y);
+    if (this.canStandOnMap(mapId, startX, startY, size)) return { x: startX, y: startY };
+    for (let radius = 24; radius <= TILE_SIZE * 8; radius += 24) {
+      for (let step = 0; step < 24; step++) {
+        const angle = (Math.PI * 2 * step) / 24;
+        const px = clampX(startX + Math.cos(angle) * radius);
+        const py = clampY(startY + Math.sin(angle) * radius);
+        if (this.canStandOnMap(mapId, px, py, size)) return { x: px, y: py };
+      }
+    }
+    return { x: startX, y: startY };
+  }
+
+  ensurePlayerOnLand() {
+    if (this.canStandOnMap(this.currentMapId, this.player.x, this.player.y, this.player.size)) return;
+    const safe = this.findNearestStandablePosition(this.currentMapId, this.player.x, this.player.y, this.player.size);
+    this.player.x = safe.x;
+    this.player.y = safe.y;
   }
 
   getInteractableBlockReason(obj) {
@@ -1724,7 +1768,10 @@ export class CozyPrototypeGame {
   updateNpcs(dt) {
     const hour = this.gameMinutes / 60;
     this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
-      const target = this.getNpcScheduleTarget(npc, hour);
+      const scheduledTarget = this.getNpcScheduleTarget(npc, hour);
+      const target = this.canStandOnMap(npc.mapId, scheduledTarget.x, scheduledTarget.y, npc.size)
+        ? scheduledTarget
+        : this.findNearestStandablePosition(npc.mapId, scheduledTarget.x, scheduledTarget.y, npc.size);
       const dx = target.x - npc.x;
       const dy = target.y - npc.y;
       const d = Math.hypot(dx, dy);
@@ -1756,9 +1803,9 @@ export class CozyPrototypeGame {
       return { x: 300, y: 840 };
     }
     if (npc.mapId === "harbor") {
-      if (hour < 12) return { x: 954, y: 358 };
+      if (hour < 12) return { x: 820, y: 520 };
       if (hour < 18) return { x: 742, y: 924 };
-      return { x: 1080, y: 520 };
+      return { x: 816, y: 620 };
     }
     if (this.isMarketDay() && hour >= 12 && hour < 20) {
       if (npc.id === "npc-chen") return { x: 500, y: 548 };
@@ -1769,16 +1816,16 @@ export class CozyPrototypeGame {
       return { x: 560, y: 592 };
     }
     if (this.weather === "rain" && hour >= 9 && hour < 18) {
-      if (npc.id === "npc-chen") return { x: 890, y: 260 };
-      if (npc.id === "npc-lingling") return { x: 720, y: 300 };
-      if (npc.id === "npc-maomao") return { x: 690, y: 336 };
+      if (npc.id === "npc-chen") return { x: 846, y: 690 };
+      if (npc.id === "npc-lingling") return { x: 620, y: 306 };
+      if (npc.id === "npc-maomao") return { x: 314, y: 584 };
       if (npc.id === "npc-mei") return { x: 584, y: 248 };
-      if (npc.id === "npc-su") return { x: 840, y: 318 };
+      if (npc.id === "npc-su") return { x: 600, y: 820 };
       return { x: 650, y: 372 };
     }
     if (hour < 12) return { x: npc.baseX - 50, y: npc.baseY };
     if (hour < 18) {
-      if (npc.id === "npc-chen") return { x: 890, y: 260 };
+      if (npc.id === "npc-chen") return { x: 846, y: 690 };
       if (npc.id === "npc-lingling") return { x: 200, y: 760 };
       if (npc.id === "npc-maomao") return { x: 660, y: 280 };
       if (npc.id === "npc-mei") return { x: 540, y: 560 };
@@ -1819,14 +1866,7 @@ export class CozyPrototypeGame {
 
   canStandAt(x, y, size) {
     if (this.currentMapId === "town" && !this.progress.bridgeRepaired && x > 1060 && y > 460 && y < 620) return false;
-    const half = (size || this.player.size) / 2;
-    const corners = [[x - half, y - half], [x + half, y - half], [x - half, y + half], [x + half, y + half]];
-    return corners.every(([px, py]) => {
-      if (px < 0 || py < 0 || px >= MAP_W * TILE_SIZE || py >= MAP_H * TILE_SIZE) return false;
-      const tx = Math.floor(px / TILE_SIZE);
-      const ty = Math.floor(py / TILE_SIZE);
-      return this.tileMap[ty]?.[tx] !== TILE.WATER;
-    });
+    return this.canStandOnMap(this.currentMapId, x, y, size || this.player.size);
   }
 
   getOwnedSeedKeys() {
