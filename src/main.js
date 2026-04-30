@@ -6,7 +6,7 @@ const helpClose = document.getElementById("helpClose");
 const helpPanel = document.getElementById("helpPanel");
 
 if (!canvas) {
-  throw new Error("未找到 gameCanvas 元素，请检查 index.html");
+  throw new Error("未找到 gameCanvas 元素，请检查 index.html。");
 }
 
 const game = new CozyPrototypeGame(canvas);
@@ -16,7 +16,6 @@ function setHelpOpen(open) {
   if (!helpPanel || !helpToggle) return;
   helpPanel.hidden = !open;
   helpToggle.setAttribute("aria-expanded", String(open));
-  document.body.classList.toggle("help-open", open);
 }
 
 helpToggle?.addEventListener("click", () => {

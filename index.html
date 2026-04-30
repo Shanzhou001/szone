@@ -3,71 +3,53 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>晨露小镇</title>
+    <title>星禾镇物语</title>
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
     <main class="app-shell">
       <header class="topbar">
         <div class="brand">
-          <p class="eyebrow">Pastoral Life Sim</p>
-          <h1>晨露小镇</h1>
-          <p class="subtitle">四季、农场、牧场、加工坊与小镇关系</p>
+          <p class="eyebrow">Cozy Life Simulation</p>
+          <h1>星禾镇物语</h1>
+          <p class="subtitle">农场、居民、收藏、工坊、牧场、镇务工程与四季生活。</p>
         </div>
         <button id="helpToggle" class="help-toggle" type="button" aria-expanded="false" aria-controls="helpPanel">
           帮助
         </button>
       </header>
 
-      <section class="stage-card">
-        <canvas id="gameCanvas" width="960" height="540" aria-label="游戏画布"></canvas>
+      <section class="stage">
+        <canvas id="gameCanvas" width="1120" height="720" aria-label="星禾镇物语游戏画布"></canvas>
       </section>
 
       <aside id="helpPanel" class="help-panel" hidden>
         <div class="help-panel__header">
           <div>
-            <p class="help-panel__eyebrow">Help</p>
+            <p class="help-panel__eyebrow">Guide</p>
             <h2>游玩说明</h2>
           </div>
           <button id="helpClose" class="help-close" type="button" aria-label="关闭帮助面板">×</button>
         </div>
 
-        <section class="help-section help-section--goal">
-          <h3>核心目标</h3>
-          <p>安排每日体力：种植、采集、照料牧场、加工商品、出货、跑委托和社交，逐步提升镇级并完成小镇工程。</p>
+        <section class="help-section">
+          <h3>核心节奏</h3>
+          <p>每天安排体力：翻地、播种、浇水、采集、钓鱼、挖矿、拜访居民、完成公告委托，再把商品放进出货箱。夜里结算收入，四季会改变种子、鱼类、天气和节日。</p>
+          <p>技能升级、成就、邮箱回礼和镇务工程会持续解锁新目标。</p>
         </section>
 
-        <section class="help-section help-section--keys">
+        <section class="help-section">
           <h3>按键</h3>
-          <p><kbd>Enter</kbd> 开始</p>
-          <p><kbd>WASD</kbd> / <kbd>方向键</kbd> 移动</p>
-          <p><kbd>E</kbd> 互动 / 对话 / 进入建筑</p>
-          <p><kbd>Q</kbd> 切换种子</p>
-          <p><kbd>G</kbd> 赠礼</p>
-          <p><kbd>I</kbd> 背包</p>
-          <p><kbd>J</kbd> 生活日志</p>
-          <p><kbd>空格</kbd> 钓鱼操作</p>
-          <p><kbd>Tab</kbd> 商店分页</p>
-          <p><kbd>F5</kbd> 保存</p>
+          <p><kbd>Enter</kbd> 开始或确认，<kbd>Esc</kbd> 返回。</p>
+          <p><kbd>WASD</kbd> / <kbd>方向键</kbd> 移动，<kbd>Shift</kbd> 小跑。</p>
+          <p><kbd>E</kbd> 交互，<kbd>Space</kbd> 使用当前工具。</p>
+          <p><kbd>Q</kbd> 切换种子，<kbd>R</kbd> 切换工具，<kbd>1-8</kbd> 直接选工具。</p>
+          <p><kbd>Tab</kbd> 切换右侧面板，<kbd>I</kbd> 背包，<kbd>J</kbd> 日志，<kbd>F5</kbd> 存档。</p>
         </section>
 
-        <section class="help-section help-section--areas">
-          <h3>区域</h3>
-          <p>晨露镇：农场、商店、公告牌和主要居民。</p>
-          <p>雾林：香草、蘑菇和林间池塘更丰富。</p>
-          <p>月湾：更适合跑鱼货和捡珊瑚。</p>
-          <p>风岬高地：后期开启，晶石、矿石和稀有鱼收益更高。</p>
-        </section>
-
-        <section class="help-section help-section--systems">
-          <h3>新增系统</h3>
-          <p>季节和节日会影响售价与社交；牧场动物需要干草，成熟后产出蛋奶羊毛；加工坊可把原料、矿石做成高价商品。</p>
-          <p>镇务工程可捐献物资换取水渠、鱼档、摊位等长期解锁；出货箱会批量出售商品并保留建设材料。</p>
-        </section>
-
-        <section class="help-section help-section--rhythm">
-          <h3>生活节奏</h3>
-          <p>天气、体力、料理增益、集市日和节日都会影响当天最划算的行动。小屋可休息到次日，也能制作料理与加工品。</p>
+        <section class="help-section">
+          <h3>界面规划</h3>
+          <p>新版画布被拆成顶部状态栏、左侧世界视窗、右侧管理面板和底部操作栏。任务不会再覆盖地图顶部，人物走到最上方也能完整看见。</p>
         </section>
       </aside>
     </main>

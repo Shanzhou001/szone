@@ -1,5302 +1,2745 @@
-// =============================================
-// 晨露小镇 - 长线生活模拟版
-// =============================================
+// 星禾镇物语 - 重写版生活模拟核心
+
+const WIDTH = 1120;
+const HEIGHT = 720;
+const TILE = 32;
+const MAP_W = 80;
+const MAP_H = 58;
+const SAVE_KEY = "szone.stargrain.save.v2";
 
 const SCENE = {
   TITLE: "title",
   PLAYING: "playing",
   SHOP: "shop",
-  DIALOGUE: "dialogue",
-  FISHING: "fishing",
+  HOUSE: "house",
+  WORKSHOP: "workshop",
+  TOWN: "town",
+  REQUESTS: "requests",
+  MUSEUM: "museum",
+  NPC: "npc",
   INVENTORY: "inventory",
-  INDOOR: "indoor",
   JOURNAL: "journal",
+  MAIL: "mail",
+  FISHING: "fishing",
 };
 
-const TILE = {
+const TILE_KIND = {
   GRASS: 0,
   PATH: 1,
   WATER: 2,
   SAND: 3,
-  FLOWER: 4,
-  DARK_GRASS: 5,
-  WOOD_FLOOR: 6,
-  FARM_SOIL: 7,
+  FARM: 4,
+  FOREST: 5,
+  STONE: 6,
+  FLOWER: 7,
+  BRIDGE: 8,
 };
 
 const TILE_COLORS = {
-  [TILE.GRASS]: "#86b96f",
-  [TILE.PATH]: "#d9c8a7",
-  [TILE.WATER]: "#6ea9c4",
-  [TILE.SAND]: "#e3d6ad",
-  [TILE.FLOWER]: "#8dbe78",
-  [TILE.DARK_GRASS]: "#668f58",
-  [TILE.WOOD_FLOOR]: "#b78e5c",
-  [TILE.FARM_SOIL]: "#856249",
+  [TILE_KIND.GRASS]: ["#86b96f", "#7fad68"],
+  [TILE_KIND.PATH]: ["#d7c198", "#cdb489"],
+  [TILE_KIND.WATER]: ["#5f9fba", "#4e8ca8"],
+  [TILE_KIND.SAND]: ["#e7d6aa", "#d8c58f"],
+  [TILE_KIND.FARM]: ["#896247", "#77543d"],
+  [TILE_KIND.FOREST]: ["#5d9361", "#4f8056"],
+  [TILE_KIND.STONE]: ["#8d9690", "#7d8580"],
+  [TILE_KIND.FLOWER]: ["#8ec779", "#79b468"],
+  [TILE_KIND.BRIDGE]: ["#a9794f", "#8f6341"],
 };
 
-const TILE_SIZE = 48;
-const INTERACT_DISTANCE = 90;
-const MAP_W = 30;
-const MAP_H = 26;
-const TIME_SPEED = 0.03;
+const LAYOUT = {
+  top: { x: 0, y: 0, w: WIDTH, h: 54 },
+  world: { x: 0, y: 54, w: 820, h: 590 },
+  side: { x: 820, y: 54, w: 300, h: 590 },
+  bottom: { x: 0, y: 644, w: WIDTH, h: 76 },
+};
 
 const UI = {
   ink: "#1d2e2a",
-  inkSoft: "#61716a",
-  paper: "rgba(249, 244, 231, 0.94)",
-  paperDim: "rgba(232, 222, 202, 0.86)",
-  glass: "rgba(25, 36, 33, 0.82)",
-  glassSoft: "rgba(25, 36, 33, 0.62)",
-  cream: "#f9efd1",
-  gold: "#d9b96f",
-  green: "#779d6b",
-  blue: "#6a9bb4",
-  red: "#bd756a",
-  shadow: "rgba(20, 31, 28, 0.30)",
+  inkSoft: "#5f706a",
+  paper: "#f7f0dd",
+  paper2: "#efe2c4",
+  line: "rgba(31,45,42,0.16)",
+  dark: "#243733",
+  dark2: "#192a27",
+  cream: "#fff5d6",
+  leaf: "#6f9b66",
+  mint: "#9fcf9d",
+  water: "#5e9db8",
+  sky: "#a7d7f0",
+  sun: "#d7ad61",
+  clay: "#b47a56",
+  red: "#bd6f60",
+  blue: "#5d84ad",
 };
 
 const SEASONS = [
-  { id: "spring", name: "春芽季", accent: "#7cae75", cropBonus: ["turnip", "strawberry", "tea"], desc: "野花和浆果更活跃，适合开荒。" },
-  { id: "summer", name: "夏潮季", accent: "#d6a65f", cropBonus: ["corn", "melon", "rice"], desc: "作物成长稳定，海边鱼货价值更高。" },
-  { id: "autumn", name: "秋实季", accent: "#c9855f", cropBonus: ["pumpkin", "grape", "potato"], desc: "农作物售价更好，委托奖励更丰厚。" },
-  { id: "winter", name: "冬灯季", accent: "#7aa5ba", cropBonus: ["mushroom", "crystal"], desc: "采矿和料理更划算，稀有鱼更常出现。" },
-];
-
-const FESTIVALS = [
-  { day: 7, name: "花篱集", desc: "送花和水果好感额外提升。" },
-  { day: 14, name: "潮声夜市", desc: "夜晚出售鱼货价格更高。" },
-  { day: 21, name: "丰收评鉴", desc: "农产品和加工品售价提升。" },
-  { day: 28, name: "灯火晚餐", desc: "料理恢复更多体力。" },
-];
-
-const WORLD_INFO = {
-  town: { id: "town", name: "晨露镇", accent: "#7ccf72", short: "镇" },
-  forest: { id: "forest", name: "雾林", accent: "#5eaf6a", short: "林" },
-  harbor: { id: "harbor", name: "月湾", accent: "#68b6e7", short: "湾" },
-  highlands: { id: "highlands", name: "风岬高地", accent: "#d9a560", short: "高" },
-};
-
-const SKY_COLORS = [
-  { hour: 0, color: "#1a1a3a" },
-  { hour: 5, color: "#2d1b4e" },
-  { hour: 6, color: "#e87c35" },
-  { hour: 8, color: "#9fd8ff" },
-  { hour: 12, color: "#6bbfff" },
-  { hour: 17, color: "#f4a55a" },
-  { hour: 20, color: "#4a3070" },
-  { hour: 24, color: "#1a1a3a" },
+  { id: "spring", name: "春芽季", accent: "#72a86f", crops: ["turnip", "potato", "strawberry", "tea"], desc: "野花和浆果更活跃，居民喜欢收到花束。" },
+  { id: "summer", name: "夏潮季", accent: "#d4a05c", crops: ["tomato", "corn", "strawberry", "tea"], desc: "海边鱼价更好，炎热天气会更消耗体力。" },
+  { id: "autumn", name: "秋实季", accent: "#c78058", crops: ["potato", "corn", "pumpkin", "tea"], desc: "农作物售价提升，适合完成镇务库存。" },
+  { id: "winter", name: "冬灯季", accent: "#76a9bf", crops: ["winterRoot", "tea"], desc: "普通田地生长慢，挖矿、钓稀有鱼和料理更划算。" },
 ];
 
 const WEATHER = {
-  sunny: { name: "晴朗", icon: "☀️", desc: "适合种田和跑图", autoWater: false, fishingProgress: 1, rareFishBonus: 0, forageBonus: 0, energyScale: 1, requestBonus: 1 },
-  rain: { name: "细雨", icon: "🌧️", desc: "农田会自动浇水，钓鱼更稳定", autoWater: true, fishingProgress: 1.12, rareFishBonus: 0.03, forageBonus: 0, energyScale: 0.9, requestBonus: 1 },
-  windy: { name: "大风", icon: "🍃", desc: "采集更容易获得额外掉落", autoWater: false, fishingProgress: 1, rareFishBonus: 0, forageBonus: 0.24, energyScale: 1, requestBonus: 1 },
-  mist: { name: "薄雾", icon: "🌫️", desc: "稀有鱼更活跃，委托奖励略高", autoWater: false, fishingProgress: 1.05, rareFishBonus: 0.08, forageBonus: 0.08, energyScale: 1, requestBonus: 1.08 },
+  sunny: { name: "晴朗", icon: "晴", autoWater: false, energy: 1, fish: 1, forage: 1 },
+  rain: { name: "细雨", icon: "雨", autoWater: true, energy: 0.94, fish: 1.15, forage: 1.05 },
+  windy: { name: "海风", icon: "风", autoWater: false, energy: 1, fish: 1, forage: 1.25 },
+  mist: { name: "薄雾", icon: "雾", autoWater: false, energy: 0.98, fish: 1.12, forage: 1.1 },
 };
 
-const SKILL_INFO = {
-  farming: { label: "农耕", icon: "🌾", color: "#82d45e" },
-  fishing: { label: "钓鱼", icon: "🎣", color: "#5cbaf0" },
-  foraging: { label: "采集", icon: "🌿", color: "#77c37a" },
-  social: { label: "社交", icon: "💬", color: "#f08ab8" },
-  crafting: { label: "加工", icon: "🍳", color: "#e5b66a" },
-};
-
-const ANIMALS = {
-  chicken: { name: "小鸡", icon: "🐔", product: "egg", rareProduct: "largeEgg", matureDays: 2, cost: { gold: 260, hay: 3 } },
-  cow: { name: "奶牛", icon: "🐄", product: "milk", rareProduct: "largeMilk", matureDays: 4, cost: { gold: 540, hay: 6 } },
-  sheep: { name: "绵羊", icon: "🐑", product: "wool", rareProduct: "fineWool", matureDays: 5, cost: { gold: 720, hay: 8 } },
-};
-
-const PROJECTS = [
-  {
-    id: "pantry",
-    name: "田园储藏室",
-    desc: "把稳定作物交给镇务所，解锁更好的茶叶经营。",
-    requirements: { turnip: 3, potato: 3, strawberry: 2 },
-    reward: { gold: 180, item: "seed_tea", amount: 5 },
-  },
-  {
-    id: "fishery",
-    name: "月湾鱼档",
-    desc: "帮月湾建立鱼档，夜钓与稀有鱼收益会更好。",
-    requirements: { fish: 4, silverFish: 2, shell: 3, coral: 1 },
-    reward: { gold: 260, rodLevel: 1 },
-  },
-  {
-    id: "forestStation",
-    name: "雾林林务站",
-    desc: "修整林道和采集台，雾林会成为稳定的草药、蜂蜜和松脂来源。",
-    requirements: { wood: 18, fern: 4, resin: 3, wildHoney: 1 },
-    reward: { gold: 340, item: "seed_tea", amount: 5 },
-  },
-  {
-    id: "irrigation",
-    name: "灌溉水渠",
-    desc: "修一段水渠，每天自动浇灌一批已播种地块。",
-    requirements: { wood: 18, stone: 24, crystal: 2 },
-    reward: { gold: 120, irrigationLevel: 1 },
-  },
-  {
-    id: "ranchGuild",
-    name: "牧场协会",
-    desc: "提交动物产物，获得稳定饲料和牧场名望。",
-    requirements: { egg: 2, milk: 1, mayonnaise: 1 },
-    reward: { gold: 280, item: "hay", amount: 20 },
-  },
-  {
-    id: "artisanStall",
-    name: "手作摊位",
-    desc: "让加工品成为小镇招牌，出售加工品获得更高评价。",
-    requirements: { cheese: 1, jam: 1, honey: 1, cloth: 1 },
-    reward: { gold: 420, toolLevel: 1 },
-  },
-  {
-    id: "highlandLift",
-    name: "高地升降台",
-    desc: "高地矿料运输更方便，工具升级成本更低。",
-    requirements: { wood: 30, stone: 30, ore: 8, ingot: 2 },
-    reward: { gold: 520, toolLevel: 1 },
-  },
+const FESTIVALS = [
+  { day: 7, name: "花灯市集", desc: "花、果酱、茶类礼物好感加成。" },
+  { day: 14, name: "潮声夜钓", desc: "夜晚鱼类售价提升。" },
+  { day: 21, name: "丰收评议", desc: "农作物与加工品售价提升。" },
+  { day: 28, name: "星禾晚餐", desc: "料理恢复更多体力。" },
 ];
-
-const NON_SHIPPABLE_ITEMS = new Set(["wood", "stone", "hay", "crystal", "ore", "ingot"]);
-
-const CROP_QUALITY = {
-  normal: { label: "普通", short: "", color: "#f1ead0", multiplier: 1, xp: 0 },
-  silver: { label: "银星", short: "☆", color: "#c9d3d6", multiplier: 1.18, xp: 2 },
-  gold: { label: "金星", short: "★", color: "#d9b96f", multiplier: 1.42, xp: 4 },
-  iridium: { label: "虹星", short: "✦", color: "#b98ddd", multiplier: 1.72, xp: 7 },
-};
-
-const MAIL_TEMPLATES = [
-  {
-    id: "welcome",
-    from: "镇务所",
-    title: "欢迎来到晨露小镇",
-    body: "先把门前的田照料起来。每天浇水、收成、出货，镇子会慢慢回应你的努力。",
-    reward: { item: "seed_potato", amount: 2 },
-    condition: (game) => game.gameDay === 1,
-  },
-  {
-    id: "market",
-    from: "老陈",
-    title: "集市日提醒",
-    body: "今天出货价格更好。高价作物、鱼货和加工品都值得留到这天集中处理。",
-    reward: { item: "hay", amount: 3 },
-    condition: (game) => game.isMarketDay(),
-  },
-  {
-    id: "rain-plan",
-    from: "梅姨",
-    title: "雨天安排",
-    body: "雨天不用浇水，适合把体力留给采集、料理和钓鱼。别让好天气和坏天气都过成同一天。",
-    reward: { item: "herb", amount: 1 },
-    condition: (game) => game.weather === "rain",
-  },
-  {
-    id: "forest-route",
-    from: "阿叶",
-    title: "雾林路线笔记",
-    body: "林务站、泉眼、祭台和遗迹可以串成一条路线。熟悉以后，森林会变成稳定收益。",
-    reward: { item: "fern", amount: 1 },
-    condition: (game) => game.progress.townRank >= 2 && game.gameDay % 4 === 0,
-  },
-  {
-    id: "ranch-care",
-    from: "苏木",
-    title: "牧场照料备忘",
-    body: "动物每天都要吃干草。心情高的时候，产物会更好，牧场才会真正撑住现金流。",
-    reward: { item: "hay", amount: 6 },
-    condition: (game) => game.progress.ranchLevel > 0 && game.gameDay % 3 === 0,
-  },
-  {
-    id: "artisan",
-    from: "梅姨",
-    title: "别只卖原料",
-    body: "加工坊会让水果、牛奶、蜂蜜和蛋变成更有名字的商品。等你有了库存，就别急着全出货。",
-    reward: { item: "fruit", amount: 1 },
-    condition: (game) => game.progress.workshopLevel > 0 && game.gameDay % 5 === 2,
-  },
-  {
-    id: "quality",
-    from: "小玲",
-    title: "作物品质观察",
-    body: "连续照料过的作物更容易长出高品质。不是每一块田都要多，但每一天都要稳。",
-    reward: { item: "flower", amount: 1 },
-    condition: (game) => (game.progress.qualityHarvests || 0) >= 3 && game.gameDay % 4 === 1,
-  },
-  {
-    id: "shipping",
-    from: "月湾商会",
-    title: "出货回执",
-    body: "昨天的出货记录已经送到商会。稳定出货会让外面的商人更愿意来晨露镇。",
-    reward: { gold: 36 },
-    condition: (game) => (game.lastDayReport?.shippedValue || 0) >= 180,
-  },
-];
-
-const RECIPES = [
-  {
-    id: "fruitTea",
-    name: "花果茶",
-    ingredients: { fruit: 1, flower: 1 },
-    energy: 20,
-    effect: "social",
-    amount: 2,
-    desc: "恢复 20 体力，今日聊天额外 +2 好感",
-  },
-  {
-    id: "heartyStew",
-    name: "丰收炖菜",
-    ingredients: { mushroom: 1, potato: 1, herb: 1 },
-    energy: 32,
-    effect: "harvest",
-    amount: 0.22,
-    desc: "恢复 32 体力，今日收获更容易额外 +1",
-  },
-  {
-    id: "seaSnack",
-    name: "海风小食",
-    ingredients: { fish: 1, coral: 1 },
-    energy: 28,
-    effect: "fishing",
-    amount: 0.18,
-    desc: "恢复 28 体力，钓鱼进度更快、稀有鱼略多",
-  },
-  {
-    id: "mountainPlate",
-    name: "高地拼盘",
-    ingredients: { crystal: 1, herb: 1, mushroom: 1 },
-    energy: 40,
-    effect: "social",
-    amount: 3,
-    desc: "恢复 40 体力，今日聊天额外 +3 好感",
-  },
-  {
-    id: "farmOmelet",
-    name: "晨光蛋卷",
-    ingredients: { egg: 1, herb: 1 },
-    energy: 34,
-    effect: "harvest",
-    amount: 0.16,
-    desc: "恢复 34 体力，今日收获小幅提升",
-  },
-  {
-    id: "creamSoup",
-    name: "奶油蔬菜汤",
-    ingredients: { milk: 1, potato: 1, corn: 1 },
-    energy: 46,
-    effect: "fishing",
-    amount: 0.14,
-    desc: "恢复 46 体力，今日钓鱼节奏更稳",
-  },
-  {
-    id: "honeyToast",
-    name: "蜂蜜烤吐司",
-    ingredients: { honey: 1, fruit: 1 },
-    energy: 38,
-    effect: "social",
-    amount: 4,
-    desc: "恢复 38 体力，今日社交额外 +4 好感",
-  },
-  {
-    id: "forestSalad",
-    name: "雾林冷盘",
-    ingredients: { fern: 1, herb: 1, wildHoney: 1 },
-    energy: 36,
-    effect: "foraging",
-    amount: 0.18,
-    desc: "恢复 36 体力，今日采集额外收获概率提升",
-  },
-];
-
-const WORKSHOP_RECIPES = [
-  { id: "mayonnaise", name: "蛋黄酱", icon: "🥣", ingredients: { egg: 1 }, result: "mayonnaise", amount: 1, xp: 4, desc: "把鸡蛋加工成更高价值的商品" },
-  { id: "cheese", name: "奶酪", icon: "🧀", ingredients: { milk: 1 }, result: "cheese", amount: 1, xp: 5, desc: "稳定赚钱，也常被居民点名" },
-  { id: "jam", name: "果酱", icon: "🍯", ingredients: { fruit: 2 }, result: "jam", amount: 1, xp: 4, desc: "适合处理多余水果" },
-  { id: "ingot", name: "金属锭", icon: "🔩", ingredients: { ore: 3, stone: 1 }, result: "ingot", amount: 1, xp: 5, desc: "高地矿石熔成建设材料" },
-  { id: "cloth", name: "布料", icon: "🧶", ingredients: { wool: 1 }, result: "cloth", amount: 1, xp: 6, desc: "小屋和镇子升级会用到" },
-  { id: "flowerHoney", name: "花蜜", icon: "🍯", ingredients: { flower: 2 }, result: "honey", amount: 1, xp: 3, desc: "料理和赠礼都很受欢迎" },
-  { id: "forestWax", name: "林脂蜡", icon: "🕯️", ingredients: { resin: 1, wildHoney: 1 }, result: "forestWax", amount: 1, xp: 6, desc: "雾林材料加工成高价手作" },
-];
-
-const REQUEST_TEMPLATES = [
-  { id: "wood-bundle", requester: "npc-chen", item: "wood", amount: [4, 6], gold: 70, favor: 5, minRank: 1 },
-  { id: "stone-pile", requester: "npc-zhuang", item: "stone", amount: [4, 6], gold: 62, favor: 4, minRank: 1 },
-  { id: "flower-bouquet", requester: "npc-lingling", item: "flower", amount: [2, 3], gold: 48, favor: 6, minRank: 1 },
-  { id: "fruit-basket", requester: "npc-lingling", item: "fruit", amount: [2, 4], gold: 62, favor: 5, minRank: 1 },
-  { id: "river-supply", requester: "npc-maomao", item: "fish", amount: [1, 2], gold: 74, favor: 6, minRank: 1 },
-  { id: "mushroom-soup", requester: "npc-zhuang", item: "mushroom", amount: [2, 3], gold: 78, favor: 6, minRank: 2 },
-  { id: "blueberry-jam", requester: "npc-lingling", item: "blueberry", amount: [2, 3], gold: 126, favor: 8, minRank: 2 },
-  { id: "night-catch", requester: "npc-maomao", item: "nightFish", amount: [1, 2], gold: 138, favor: 8, minRank: 2 },
-  { id: "forest-herbs", requester: "npc-ye", item: "herb", amount: [2, 4], gold: 104, favor: 7, minRank: 2 },
-  { id: "harbor-coral", requester: "npc-lan", item: "coral", amount: [1, 2], gold: 132, favor: 8, minRank: 2 },
-  { id: "corn-stock", requester: "npc-chen", item: "corn", amount: [2, 3], gold: 148, favor: 8, minRank: 3 },
-  { id: "crystal-study", requester: "npc-chen", item: "crystal", amount: [1, 2], gold: 176, favor: 9, minRank: 3 },
-  { id: "gold-koi", requester: "npc-maomao", item: "goldKoi", amount: [1, 1], gold: 220, favor: 12, minRank: 3 },
-  { id: "melon-feast", requester: "npc-zhuang", item: "melon", amount: [1, 2], gold: 188, favor: 10, minRank: 4 },
-  { id: "egg-breakfast", requester: "npc-su", item: "egg", amount: [2, 4], gold: 116, favor: 7, minRank: 2 },
-  { id: "milk-run", requester: "npc-lingling", item: "milk", amount: [1, 3], gold: 138, favor: 7, minRank: 2 },
-  { id: "tea-leaf", requester: "npc-mei", item: "teaLeaf", amount: [2, 4], gold: 150, favor: 8, minRank: 3 },
-  { id: "jam-order", requester: "npc-mei", item: "jam", amount: [1, 2], gold: 196, favor: 10, minRank: 3 },
-  { id: "cheese-board", requester: "npc-su", item: "cheese", amount: [1, 2], gold: 216, favor: 10, minRank: 3 },
-  { id: "cloth-repair", requester: "npc-zhuang", item: "cloth", amount: [1, 2], gold: 248, favor: 11, minRank: 4 },
-  { id: "honey-gift", requester: "npc-lan", item: "honey", amount: [1, 2], gold: 186, favor: 9, minRank: 4 },
-  { id: "fine-wool", requester: "npc-ye", item: "fineWool", amount: [1, 1], gold: 320, favor: 12, minRank: 5 },
-  { id: "ore-sample", requester: "npc-chen", item: "ore", amount: [3, 5], gold: 178, favor: 8, minRank: 3 },
-  { id: "ingot-order", requester: "npc-su", item: "ingot", amount: [1, 2], gold: 260, favor: 11, minRank: 4 },
-  { id: "forest-fern", requester: "npc-ye", item: "fern", amount: [2, 4], gold: 118, favor: 8, minRank: 2 },
-  { id: "forest-resin", requester: "npc-chen", item: "resin", amount: [1, 2], gold: 132, favor: 7, minRank: 2 },
-  { id: "wild-honey", requester: "npc-mei", item: "wildHoney", amount: [1, 2], gold: 168, favor: 9, minRank: 2 },
-  { id: "firefly-study", requester: "npc-ye", item: "fireflyJar", amount: [1, 1], gold: 190, favor: 10, minRank: 3 },
-  { id: "forest-wax", requester: "npc-mei", item: "forestWax", amount: [1, 2], gold: 238, favor: 11, minRank: 4 },
-];
-
-const AREA_TASK_TEMPLATES = {
-  forest: [
-    { id: "forest-herb-kit", title: "雾林草药包", desc: "阿叶要整理林务站的常备药草。", requirements: { herb: 2, mushroom: 1 }, gold: 126, favor: "npc-ye", favorGain: 7, xp: { foraging: 8 }, reward: { item: "seed_tea", amount: 2 }, minRank: 1 },
-    { id: "forest-trail-repair", title: "林道维护", desc: "修补湿滑木阶，让雾林路线更安全。", requirements: { wood: 5, resin: 1 }, gold: 154, favor: "npc-ye", favorGain: 6, xp: { foraging: 7 }, reward: { item: "hay", amount: 5 }, minRank: 1 },
-    { id: "forest-glow-study", title: "萤火观测", desc: "收集夜间萤光样本，记录雾林生态。", requirements: { fireflyJar: 1, fern: 2 }, gold: 196, favor: "npc-ye", favorGain: 9, xp: { foraging: 10 }, reward: { item: "wildHoney", amount: 1 }, minRank: 2 },
-  ],
-  harbor: [
-    { id: "harbor-tide-basket", title: "潮汐篮", desc: "小岚需要贝壳和珊瑚补齐渔具装饰。", requirements: { shell: 3, coral: 1 }, gold: 172, favor: "npc-lan", favorGain: 7, xp: { fishing: 6 }, reward: { item: "fish", amount: 1 }, minRank: 1 },
-    { id: "harbor-smoke-fish", title: "海风鱼货", desc: "把当天能卖的鱼货集中交给码头。", requirements: { fish: 2, silverFish: 1 }, gold: 218, favor: "npc-lan", favorGain: 8, xp: { fishing: 9 }, reward: { item: "coral", amount: 1 }, minRank: 2 },
-  ],
-  highlands: [
-    { id: "highland-survey", title: "高地勘探", desc: "记录晶石和矿脉，让山道工程更稳。", requirements: { ore: 3, crystal: 1 }, gold: 236, favor: "npc-chen", favorGain: 8, xp: { foraging: 7, crafting: 4 }, reward: { item: "stone", amount: 5 }, minRank: 3 },
-    { id: "highland-forge-stock", title: "炉料补给", desc: "为工坊储备高地矿料。", requirements: { ore: 4, stone: 4 }, gold: 260, favor: "npc-su", favorGain: 8, xp: { crafting: 9 }, reward: { item: "ingot", amount: 1 }, minRank: 4 },
-  ],
-};
 
 const ITEMS = {
-  wood: { name: "木材", icon: "🪵", sellPrice: 6, buyPrice: 18, desc: "建造材料" },
-  fruit: { name: "果子", icon: "🍎", sellPrice: 10, buyPrice: 24, desc: "新鲜水果" },
-  fish: { name: "普通鱼", icon: "🐟", sellPrice: 18, buyPrice: 0, desc: "常见河鱼" },
-  nightFish: { name: "夜行鱼", icon: "🌙🐠", sellPrice: 36, buyPrice: 0, desc: "只在夜晚活跃" },
-  silverFish: { name: "银鳞鱼", icon: "🐠", sellPrice: 26, buyPrice: 0, desc: "雨天更容易钓到" },
-  goldKoi: { name: "锦鲤", icon: "🐡", sellPrice: 74, buyPrice: 0, desc: "很少见的漂亮鱼" },
-  flower: { name: "花", icon: "🌸", sellPrice: 8, buyPrice: 0, desc: "野花" },
-  herb: { name: "香草", icon: "🌿", sellPrice: 16, buyPrice: 0, desc: "林地里采来的香草" },
-  fern: { name: "林蕨", icon: "🌿", sellPrice: 18, buyPrice: 0, desc: "雾林深处的清香嫩蕨" },
-  resin: { name: "松脂", icon: "🟠", sellPrice: 24, buyPrice: 0, desc: "修补和加工都用得上的树脂" },
-  wildHoney: { name: "野蜂蜜", icon: "🍯", sellPrice: 58, buyPrice: 0, desc: "雾林蜂箱里的浓香蜂蜜" },
-  fireflyJar: { name: "萤火瓶", icon: "✨", sellPrice: 64, buyPrice: 0, desc: "夜晚在雾林收集的微光样本" },
-  relicShard: { name: "遗迹碎片", icon: "🔹", sellPrice: 92, buyPrice: 0, desc: "林中旧遗迹留下的蓝色碎片" },
-  stone: { name: "石头", icon: "🪨", sellPrice: 5, buyPrice: 14, desc: "坚硬石材" },
-  crystal: { name: "晶石", icon: "💎", sellPrice: 46, buyPrice: 0, desc: "高地闪亮矿晶" },
-  mushroom: { name: "蘑菇", icon: "🍄", sellPrice: 14, buyPrice: 0, desc: "林地采集物" },
-  shell: { name: "贝壳", icon: "🐚", sellPrice: 12, buyPrice: 0, desc: "海滩采集物" },
-  coral: { name: "珊瑚", icon: "🪸", sellPrice: 34, buyPrice: 0, desc: "月湾的稀有拾取物" },
-  ore: { name: "矿石", icon: "⛏️", sellPrice: 22, buyPrice: 0, desc: "高地矿脉产物" },
-  ingot: { name: "金属锭", icon: "🔩", sellPrice: 84, buyPrice: 0, desc: "加工矿石后的建设材料" },
-  turnip: { name: "萝卜", icon: "🥕", sellPrice: 18, buyPrice: 0, desc: "短周期作物" },
-  potato: { name: "土豆", icon: "🥔", sellPrice: 30, buyPrice: 0, desc: "中期作物" },
-  blueberry: { name: "蓝莓", icon: "🫐", sellPrice: 48, buyPrice: 0, desc: "高价值作物" },
-  corn: { name: "玉米", icon: "🌽", sellPrice: 68, buyPrice: 0, desc: "高产耐种作物" },
-  pumpkin: { name: "南瓜", icon: "🎃", sellPrice: 82, buyPrice: 0, desc: "后期高收益" },
-  melon: { name: "甜瓜", icon: "🍈", sellPrice: 110, buyPrice: 0, desc: "高阶高价作物" },
-  rice: { name: "水稻", icon: "🌾", sellPrice: 38, buyPrice: 0, desc: "夏潮季长势更好" },
-  strawberry: { name: "草莓", icon: "🍓", sellPrice: 56, buyPrice: 0, desc: "春芽季人气作物" },
-  grape: { name: "葡萄", icon: "🍇", sellPrice: 72, buyPrice: 0, desc: "适合加工果酱" },
-  teaLeaf: { name: "茶叶", icon: "🍵", sellPrice: 44, buyPrice: 0, desc: "香气很稳的作物" },
-  hay: { name: "干草", icon: "🌾", sellPrice: 3, buyPrice: 8, desc: "喂养动物的基础饲料" },
-  egg: { name: "鸡蛋", icon: "🥚", sellPrice: 28, buyPrice: 0, desc: "小鸡成熟后产出" },
-  largeEgg: { name: "大鸡蛋", icon: "🥚", sellPrice: 48, buyPrice: 0, desc: "高亲密动物的优质产物" },
-  milk: { name: "牛奶", icon: "🥛", sellPrice: 44, buyPrice: 0, desc: "奶牛成熟后产出" },
-  largeMilk: { name: "大瓶牛奶", icon: "🥛", sellPrice: 76, buyPrice: 0, desc: "亲密奶牛的优质产物" },
-  wool: { name: "羊毛", icon: "🧶", sellPrice: 64, buyPrice: 0, desc: "绵羊成熟后产出" },
-  fineWool: { name: "细软羊毛", icon: "🧶", sellPrice: 108, buyPrice: 0, desc: "稀有优质羊毛" },
-  mayonnaise: { name: "蛋黄酱", icon: "🥣", sellPrice: 74, buyPrice: 0, desc: "加工坊产物" },
-  cheese: { name: "奶酪", icon: "🧀", sellPrice: 96, buyPrice: 0, desc: "加工坊产物" },
-  jam: { name: "果酱", icon: "🍯", sellPrice: 88, buyPrice: 0, desc: "加工坊产物" },
-  cloth: { name: "布料", icon: "🧵", sellPrice: 132, buyPrice: 0, desc: "高级建设材料" },
-  honey: { name: "蜂蜜", icon: "🍯", sellPrice: 86, buyPrice: 0, desc: "可料理也可出售" },
-  forestWax: { name: "林脂蜡", icon: "🕯️", sellPrice: 118, buyPrice: 0, desc: "松脂和蜂蜜加工成的高级手作品" },
-  seed_turnip: { name: "萝卜种子", icon: "🌱", sellPrice: 2, buyPrice: 14, desc: "2天成熟" },
-  seed_potato: { name: "土豆种子", icon: "🌾", sellPrice: 3, buyPrice: 24, desc: "3天成熟" },
-  seed_blueberry: { name: "蓝莓种子", icon: "🫐", sellPrice: 4, buyPrice: 34, desc: "4天成熟" },
-  seed_corn: { name: "玉米种子", icon: "🌽", sellPrice: 6, buyPrice: 44, desc: "4天成熟，产量稳定" },
-  seed_pumpkin: { name: "南瓜种子", icon: "🎃", sellPrice: 5, buyPrice: 52, desc: "5天成熟" },
-  seed_melon: { name: "甜瓜种子", icon: "🍈", sellPrice: 8, buyPrice: 72, desc: "6天成熟，高阶作物" },
-  seed_rice: { name: "水稻种子", icon: "🌾", sellPrice: 4, buyPrice: 28, desc: "3天成熟，夏季更好" },
-  seed_strawberry: { name: "草莓种子", icon: "🍓", sellPrice: 5, buyPrice: 38, desc: "4天成熟，春季热卖" },
-  seed_grape: { name: "葡萄种子", icon: "🍇", sellPrice: 6, buyPrice: 48, desc: "5天成熟，适合加工" },
-  seed_tea: { name: "茶叶种子", icon: "🍵", sellPrice: 6, buyPrice: 42, desc: "4天成熟，稳定作物" },
+  seed_turnip: { name: "芜菁种子", type: "seed", buy: 16 },
+  seed_potato: { name: "土豆种子", type: "seed", buy: 22 },
+  seed_strawberry: { name: "草莓种子", type: "seed", buy: 46 },
+  seed_tomato: { name: "番茄种子", type: "seed", buy: 36 },
+  seed_corn: { name: "玉米种子", type: "seed", buy: 42 },
+  seed_pumpkin: { name: "南瓜种子", type: "seed", buy: 58 },
+  seed_tea: { name: "茶苗", type: "seed", buy: 64 },
+  seed_winterRoot: { name: "雪根种子", type: "seed", buy: 34 },
+  seed_carrot: { name: "胡萝卜种子", type: "seed", buy: 20 },
+  seed_blueberry: { name: "蓝莓种子", type: "seed", buy: 50 },
+  seed_rice: { name: "水稻种子", type: "seed", buy: 44 },
+  seed_yam: { name: "山药种子", type: "seed", buy: 48 },
+  seed_snowpea: { name: "雪豆种子", type: "seed", buy: 42 },
+
+  turnip: { name: "芜菁", type: "crop", sell: 44 },
+  potato: { name: "土豆", type: "crop", sell: 58 },
+  strawberry: { name: "草莓", type: "crop", sell: 92 },
+  tomato: { name: "番茄", type: "crop", sell: 72 },
+  corn: { name: "玉米", type: "crop", sell: 80 },
+  pumpkin: { name: "南瓜", type: "crop", sell: 136 },
+  teaLeaf: { name: "茶叶", type: "crop", sell: 86 },
+  winterRoot: { name: "雪根", type: "crop", sell: 64 },
+  carrot: { name: "胡萝卜", type: "crop", sell: 52 },
+  blueberry: { name: "蓝莓", type: "crop", sell: 78 },
+  rice: { name: "稻米", type: "crop", sell: 92 },
+  yam: { name: "山药", type: "crop", sell: 106 },
+  snowpea: { name: "雪豆", type: "crop", sell: 82 },
+
+  wood: { name: "木材", type: "material", sell: 5, keep: true },
+  stone: { name: "石料", type: "material", sell: 5, keep: true },
+  fiber: { name: "纤维", type: "material", sell: 4, keep: true },
+  clay: { name: "黏土", type: "material", sell: 7, keep: true },
+  ore: { name: "矿石", type: "material", sell: 16, keep: true },
+  crystal: { name: "晶石", type: "material", sell: 44, keep: true },
+  ingot: { name: "金属锭", type: "material", sell: 86, keep: true },
+  pearl: { name: "月贝珠", type: "material", sell: 120, keep: true },
+
+  flower: { name: "野花", type: "forage", sell: 10 },
+  herb: { name: "香草", type: "forage", sell: 18 },
+  berry: { name: "浆果", type: "forage", sell: 16 },
+  mushroom: { name: "蘑菇", type: "forage", sell: 24 },
+  shell: { name: "贝壳", type: "forage", sell: 18 },
+  coral: { name: "珊瑚", type: "forage", sell: 38 },
+  seaweed: { name: "海藻", type: "forage", sell: 22 },
+  pinecone: { name: "松果", type: "forage", sell: 14 },
+  honey: { name: "花蜜", type: "artisan", sell: 74 },
+
+  riverFish: { name: "溪鱼", type: "fish", sell: 34 },
+  seaBass: { name: "海鲈", type: "fish", sell: 48 },
+  nightFish: { name: "夜光鱼", type: "fish", sell: 86 },
+  koi: { name: "锦鲤", type: "fish", sell: 118 },
+  crab: { name: "潮蟹", type: "fish", sell: 62 },
+  catfish: { name: "雨鲶", type: "fish", sell: 74 },
+  tuna: { name: "蓝鳍鱼", type: "fish", sell: 128 },
+  glacierTrout: { name: "冰溪鳟", type: "fish", sell: 112 },
+
+  butterfly: { name: "斑蝶", type: "bug", sell: 28 },
+  beetle: { name: "树甲", type: "bug", sell: 46 },
+  firefly: { name: "萤火", type: "bug", sell: 58 },
+  cicada: { name: "夏蝉", type: "bug", sell: 42 },
+  snowMoth: { name: "雪蛾", type: "bug", sell: 70 },
+
+  egg: { name: "鸡蛋", type: "ranch", sell: 38 },
+  milk: { name: "牛奶", type: "ranch", sell: 68 },
+  wool: { name: "羊毛", type: "ranch", sell: 82 },
+  duckEgg: { name: "鸭蛋", type: "ranch", sell: 56 },
+  mayo: { name: "蛋黄酱", type: "artisan", sell: 96 },
+  cheese: { name: "奶酪", type: "artisan", sell: 142 },
+  jam: { name: "浆果酱", type: "artisan", sell: 120 },
+  tea: { name: "星禾茶", type: "artisan", sell: 150 },
+  cloth: { name: "布料", type: "artisan", sell: 150 },
+  pickles: { name: "腌菜罐", type: "artisan", sell: 126 },
+  flour: { name: "米粉", type: "artisan", sell: 138 },
+  riceCake: { name: "年糕", type: "artisan", sell: 188 },
+  fruitWine: { name: "果酒", type: "artisan", sell: 230 },
+  bait: { name: "鱼饵", type: "tool", sell: 8, keep: true },
+  hay: { name: "干草", type: "ranch", sell: 4, keep: true },
+
+  salad: { name: "森林沙拉", type: "food", energy: 35 },
+  stew: { name: "丰收炖菜", type: "food", energy: 48 },
+  seaSnack: { name: "海风小食", type: "food", energy: 42 },
+  riceBowl: { name: "山药饭", type: "food", energy: 46 },
+  berryCake: { name: "蓝莓蛋糕", type: "food", energy: 54 },
+  moonSoup: { name: "月湾汤", type: "food", energy: 62 },
 };
 
 const CROPS = {
-  turnip: { name: "萝卜", seed: "seed_turnip", harvest: "turnip", growDays: 2, stages: 3, yield: [1, 2], unlock: 1, waterNeed: 2 },
-  potato: { name: "土豆", seed: "seed_potato", harvest: "potato", growDays: 3, stages: 4, yield: [1, 2], unlock: 1, waterNeed: 3 },
-  blueberry: { name: "蓝莓", seed: "seed_blueberry", harvest: "blueberry", growDays: 4, stages: 4, yield: [2, 3], unlock: 2, waterNeed: 4 },
-  corn: { name: "玉米", seed: "seed_corn", harvest: "corn", growDays: 4, stages: 4, yield: [2, 4], unlock: 3, waterNeed: 4 },
-  pumpkin: { name: "南瓜", seed: "seed_pumpkin", harvest: "pumpkin", growDays: 5, stages: 5, yield: [1, 2], unlock: 3, waterNeed: 5 },
-  melon: { name: "甜瓜", seed: "seed_melon", harvest: "melon", growDays: 6, stages: 5, yield: [1, 2], unlock: 4, waterNeed: 5 },
-  rice: { name: "水稻", seed: "seed_rice", harvest: "rice", growDays: 3, stages: 4, yield: [2, 3], unlock: 2, waterNeed: 3 },
-  strawberry: { name: "草莓", seed: "seed_strawberry", harvest: "strawberry", growDays: 4, stages: 4, yield: [2, 3], unlock: 3, waterNeed: 4 },
-  grape: { name: "葡萄", seed: "seed_grape", harvest: "grape", growDays: 5, stages: 5, yield: [2, 4], unlock: 4, waterNeed: 5 },
-  tea: { name: "茶叶", seed: "seed_tea", harvest: "teaLeaf", growDays: 4, stages: 4, yield: [2, 3], unlock: 3, waterNeed: 4 },
+  turnip: { name: "芜菁", seed: "seed_turnip", harvest: "turnip", days: 3, seasons: ["spring"], xp: 5 },
+  potato: { name: "土豆", seed: "seed_potato", harvest: "potato", days: 4, seasons: ["spring", "autumn"], xp: 6 },
+  strawberry: { name: "草莓", seed: "seed_strawberry", harvest: "strawberry", days: 6, regrow: 3, seasons: ["spring", "summer"], xp: 8 },
+  tomato: { name: "番茄", seed: "seed_tomato", harvest: "tomato", days: 5, regrow: 3, seasons: ["summer"], xp: 7 },
+  corn: { name: "玉米", seed: "seed_corn", harvest: "corn", days: 6, regrow: 4, seasons: ["summer", "autumn"], xp: 8 },
+  pumpkin: { name: "南瓜", seed: "seed_pumpkin", harvest: "pumpkin", days: 7, seasons: ["autumn"], xp: 10 },
+  tea: { name: "茶树", seed: "seed_tea", harvest: "teaLeaf", days: 5, regrow: 4, seasons: ["spring", "summer", "autumn", "winter"], xp: 8 },
+  winterRoot: { name: "雪根", seed: "seed_winterRoot", harvest: "winterRoot", days: 4, seasons: ["winter"], xp: 7 },
+  carrot: { name: "胡萝卜", seed: "seed_carrot", harvest: "carrot", days: 4, seasons: ["spring"], xp: 6 },
+  blueberry: { name: "蓝莓", seed: "seed_blueberry", harvest: "blueberry", days: 7, regrow: 3, seasons: ["summer"], xp: 9 },
+  rice: { name: "水稻", seed: "seed_rice", harvest: "rice", days: 6, seasons: ["summer", "autumn"], xp: 8 },
+  yam: { name: "山药", seed: "seed_yam", harvest: "yam", days: 6, seasons: ["autumn"], xp: 9 },
+  snowpea: { name: "雪豆", seed: "seed_snowpea", harvest: "snowpea", days: 5, regrow: 3, seasons: ["winter"], xp: 8 },
 };
 
-const NPCS = [
-  { id: "npc-lingling", name: "小玲", mapId: "town", baseX: 450, baseY: 300, color: "#e888aa", hatColor: "#ff6688", likes: ["flower", "blueberry", "melon"] },
-  { id: "npc-chen", name: "老陈", mapId: "town", baseX: 850, baseY: 704, color: "#8855aa", hatColor: "#aa44cc", likes: ["potato", "wood", "corn", "crystal"] },
-  { id: "npc-maomao", name: "毛毛", mapId: "town", baseX: 300, baseY: 620, color: "#f0c040", hatColor: "#e0a020", likes: ["fish", "nightFish", "goldKoi", "coral"] },
-  { id: "npc-zhuang", name: "阿壮", mapId: "town", baseX: 700, baseY: 650, color: "#55aa55", hatColor: "#339933", likes: ["pumpkin", "mushroom", "melon", "herb"] },
-  { id: "npc-ye", name: "阿叶", mapId: "forest", baseX: 396, baseY: 316, color: "#78b665", hatColor: "#3d7d3a", likes: ["herb", "mushroom", "flower"] },
-  { id: "npc-lan", name: "小岚", mapId: "harbor", baseX: 820, baseY: 520, color: "#73c6ec", hatColor: "#357ba1", likes: ["fish", "silverFish", "coral"] },
-  { id: "npc-mei", name: "梅姨", mapId: "town", baseX: 540, baseY: 560, color: "#bc7a68", hatColor: "#8f5147", likes: ["teaLeaf", "jam", "honey", "flower"] },
-  { id: "npc-su", name: "苏木", mapId: "town", baseX: 1020, baseY: 690, color: "#6f91a7", hatColor: "#475d6f", likes: ["egg", "milk", "cheese", "cloth"] },
+const SEED_TO_CROP = Object.fromEntries(Object.values(CROPS).map((crop) => [crop.seed, crop]));
+
+const TOOLS = [
+  { id: "hand", name: "手", hint: "采收/拾取/交谈", energy: 0 },
+  { id: "hoe", name: "锄头", hint: "翻地", energy: 4 },
+  { id: "seed", name: "种子", hint: "播种", energy: 1 },
+  { id: "water", name: "水壶", hint: "浇水", energy: 2 },
+  { id: "axe", name: "斧头", hint: "砍树", energy: 6 },
+  { id: "pick", name: "矿镐", hint: "敲石", energy: 6 },
+  { id: "rod", name: "钓竿", hint: "钓鱼", energy: 7 },
+  { id: "net", name: "捕虫网", hint: "捕虫", energy: 3 },
 ];
 
-const NPC_PROFILES = {
-  "npc-lingling": {
-    role: "花田学徒",
-    mood: "轻快",
-    motto: "花开得好，说明这一天没有白过。",
-    giftHint: "喜欢鲜花、蓝莓和甜瓜",
-    portrait: { hair: "#55364e", coat: "#d9829f", accent: "#ffbfd0", skin: "#e9b98f", bg: ["#f8d6dd", "#d58aa3"] },
-    topics: ["花田的颜色会随季节变浅或变深。", "如果你要送礼，花和水果永远不会显得突兀。", "小镇关系好起来以后，委托会越来越像大家真正需要的事。"],
-  },
-  "npc-chen": {
-    role: "杂货店主",
-    mood: "精明",
-    motto: "货架空了最可怕，田地空了第二可怕。",
-    giftHint: "喜欢土豆、木材、玉米和晶石",
-    portrait: { hair: "#4b3155", coat: "#74559b", accent: "#c18fe4", skin: "#d8a47b", bg: ["#ead7a6", "#b88658"] },
-    topics: ["商店最好开在路边，人才能自然走进来。", "先用稳定作物攒现金，再投高价种子，节奏会舒服很多。", "镇级提高后，种子和投资项目都会更像正经生意。"],
-  },
-  "npc-maomao": {
-    role: "河岸钓手",
-    mood: "爽朗",
-    motto: "鱼不上钩的时候，人也该慢一点。",
-    giftHint: "喜欢鱼、夜行鱼、锦鲤和珊瑚",
-    portrait: { hair: "#6c4b22", coat: "#d8ac45", accent: "#ffe28c", skin: "#e4b184", bg: ["#cce9ed", "#6ea9c4"] },
-    topics: ["雨天和雾天的鱼更活跃，晚上也会换一批鱼。", "月湾不只适合钓鱼，贝壳和珊瑚也能补现金流。", "钓鱼点在水边就好，人站在岸上才合理。"],
-  },
-  "npc-zhuang": {
-    role: "木工承包人",
-    mood: "踏实",
-    motto: "好东西不是快出来的，是一层一层搭出来的。",
-    giftHint: "喜欢南瓜、蘑菇、甜瓜和香草",
-    portrait: { hair: "#3f402d", coat: "#5c9959", accent: "#9bd27d", skin: "#d9a77f", bg: ["#d7e2b7", "#7b9d6a"] },
-    topics: ["修桥、扩田、建牧场都需要木石，别把基础材料全卖空。", "工程板能把零碎资源变成长期优势。", "东区开放后，资源路线会更顺。"],
-  },
-  "npc-ye": {
-    role: "雾林守林人",
-    mood: "安静",
-    motto: "林子不会催人，但它会记得你做过什么。",
-    giftHint: "喜欢香草、蘑菇和花",
-    portrait: { hair: "#284733", coat: "#6ca765", accent: "#a9d58a", skin: "#d6a980", bg: ["#cfe1c2", "#5f8d63"] },
-    topics: ["雾林的采集点有自己的节奏，别一次跑空就放弃。", "祭台和泉眼每天都会变化，适合安排成固定路线。", "林务站的委托会把森林探索变成稳定收益。"],
-  },
-  "npc-lan": {
-    role: "月湾记录员",
-    mood: "清爽",
-    motto: "潮水每天都来，但每次留下的东西不一样。",
-    giftHint: "喜欢鱼、银鳞鱼和珊瑚",
-    portrait: { hair: "#2f6175", coat: "#73c6ec", accent: "#bdeaff", skin: "#dfb18d", bg: ["#cfecf3", "#6eb6d1"] },
-    topics: ["码头的木板比沙滩更适合久站，潮湿但不乱。", "月湾早上适合收集，晚上适合钓更贵的鱼。", "港口委托会奖励钓鱼经验，缺钱时很好用。"],
-  },
-  "npc-mei": {
-    role: "料理与手作导师",
-    mood: "温和",
-    motto: "好料理不是复杂，是刚好懂得材料。",
-    giftHint: "喜欢茶叶、果酱、蜂蜜和花",
-    portrait: { hair: "#5b3830", coat: "#bc7a68", accent: "#e8b297", skin: "#dfad86", bg: ["#f2d8bd", "#b97962"] },
-    topics: ["加工坊能把普通原料变成招牌商品。", "别只看当天价格，料理和加工会让库存更有价值。", "节日和集市日适合集中出货。"],
-  },
-  "npc-su": {
-    role: "牧场管理员",
-    mood: "细致",
-    motto: "动物吃得安稳，农场就会慢慢富起来。",
-    giftHint: "喜欢鸡蛋、牛奶、奶酪和布料",
-    portrait: { hair: "#46515d", coat: "#6f91a7", accent: "#b8ccd8", skin: "#deb08b", bg: ["#d9e0df", "#7c95a7"] },
-    topics: ["牧场不是摆设，每天喂干草才会稳定产出。", "动物亲密度高了，产物品质也会更像真正的回报。", "蛋奶羊毛进加工坊以后，价格会明显变好。"],
-  },
+const VILLAGERS = [
+  { id: "lin", name: "林秋", role: "花店学徒", color: "#d889a0", loves: ["flower", "tea", "jam"], talks: ["今天的花开得很齐，像有人把清晨整理过一遍。", "如果你种出茶叶，记得留一点给镇上的茶会。"] },
+  { id: "lan", name: "阿岚", role: "码头管理员", color: "#6093b6", loves: ["seaBass", "crab", "shell", "coral"], talks: ["涨潮前的海面最安静，适合把线抛远一点。", "码头修好后，外来的商船会更常靠岸。"] },
+  { id: "shi", name: "石川", role: "木匠", color: "#9a7358", loves: ["wood", "stone", "ingot"], talks: ["好镇子不是一天建成的，但每天都能多钉一块板。", "矿石别急着卖，加工成锭会更有用。"] },
+  { id: "miya", name: "米芽", role: "杂货店主", color: "#c2934d", loves: ["strawberry", "pumpkin", "honey"], talks: ["今天的货架换了季节种子，别买错时令。", "居民委托做得越多，商队越愿意给星禾镇让价。"] },
+  { id: "ye", name: "叶生", role: "林务员", color: "#5d9a67", loves: ["herb", "mushroom", "firefly"], talks: ["森林会记住温柔的人，也会奖励勤快的人。", "起雾的晚上，萤火比平时更容易看见。"] },
+  { id: "su", name: "苏白", role: "牧场主", color: "#8b8fb9", loves: ["egg", "milk", "cheese"], talks: ["动物吃饱后，产物会更稳定。", "别把干草全卖了，雨季前最好多留一点。"] },
+];
+
+const REQUESTS = [
+  { id: "wood", title: "修路木料", npc: "shi", item: "wood", amount: [6, 10], gold: 92, favor: 7, minRank: 1 },
+  { id: "flower", title: "集市花束", npc: "lin", item: "flower", amount: [2, 4], gold: 70, favor: 8, minRank: 1 },
+  { id: "fish", title: "码头鱼筐", npc: "lan", item: "riverFish", amount: [1, 3], gold: 110, favor: 8, minRank: 1 },
+  { id: "stone", title: "广场石料", npc: "shi", item: "stone", amount: [8, 12], gold: 104, favor: 6, minRank: 1 },
+  { id: "berry", title: "果酱试作", npc: "miya", item: "berry", amount: [3, 5], gold: 118, favor: 8, minRank: 1 },
+  { id: "herb", title: "森林药草包", npc: "ye", item: "herb", amount: [2, 4], gold: 118, favor: 8, minRank: 2 },
+  { id: "shell", title: "贝壳装饰", npc: "lan", item: "shell", amount: [3, 5], gold: 128, favor: 7, minRank: 2 },
+  { id: "egg", title: "早餐订单", npc: "su", item: "egg", amount: [2, 4], gold: 132, favor: 7, minRank: 2 },
+  { id: "tea", title: "茶会备货", npc: "lin", item: "teaLeaf", amount: [2, 4], gold: 170, favor: 9, minRank: 3 },
+  { id: "ore", title: "矿石样本", npc: "shi", item: "ore", amount: [4, 6], gold: 180, favor: 8, minRank: 3 },
+  { id: "mayo", title: "野餐酱料", npc: "miya", item: "mayo", amount: [1, 2], gold: 210, favor: 10, minRank: 3 },
+  { id: "firefly", title: "萤火观察", npc: "ye", item: "firefly", amount: [1, 2], gold: 190, favor: 10, minRank: 3 },
+  { id: "cheese", title: "奶酪拼盘", npc: "su", item: "cheese", amount: [1, 2], gold: 250, favor: 11, minRank: 4 },
+  { id: "koi", title: "镇馆锦鲤", npc: "lan", item: "koi", amount: [1, 1], gold: 320, favor: 12, minRank: 4 },
+  { id: "blueberry", title: "蓝莓甜点", npc: "miya", item: "blueberry", amount: [3, 5], gold: 190, favor: 9, minRank: 3 },
+  { id: "rice", title: "食堂米袋", npc: "su", item: "rice", amount: [2, 4], gold: 210, favor: 9, minRank: 3 },
+  { id: "catfish", title: "雨天鱼样", npc: "lan", item: "catfish", amount: [1, 2], gold: 230, favor: 10, minRank: 3 },
+  { id: "pickles", title: "腌菜订货", npc: "miya", item: "pickles", amount: [1, 2], gold: 260, favor: 11, minRank: 4 },
+  { id: "pearl", title: "月贝珠研究", npc: "lin", item: "pearl", amount: [1, 1], gold: 380, favor: 13, minRank: 5 },
+  { id: "wine", title: "庆典果酒", npc: "shi", item: "fruitWine", amount: [1, 2], gold: 420, favor: 13, minRank: 5 },
+];
+
+const PROJECTS = [
+  { id: "garden", name: "公共花园", desc: "居民会送来更多花与香草，商店解锁茶苗。", req: { wood: 18, flower: 6, stone: 8 }, reward: { gold: 140, item: "seed_tea", amount: 4, rank: 1 } },
+  { id: "bridge", name: "河桥修复", desc: "森林和海滩之间的路线更顺，采集点增加。", req: { wood: 32, stone: 18 }, reward: { gold: 220, rank: 1 } },
+  { id: "dock", name: "月湾码头", desc: "海鱼与夜鱼概率提高，码头出现商队订单。", req: { wood: 26, shell: 6, coral: 2, seaBass: 2 }, reward: { gold: 260, rank: 1 } },
+  { id: "coop", name: "牧场合作社", desc: "可在商店购买动物，干草售价降低。", req: { wood: 30, stone: 22, hay: 10 }, reward: { gold: 180, rank: 1 } },
+  { id: "canal", name: "灌溉水渠", desc: "每天自动浇灌一批田地，雨天收益更稳。", req: { stone: 38, clay: 8, crystal: 2 }, reward: { gold: 260, rank: 1 } },
+  { id: "museum", name: "博物馆侧厅", desc: "捐赠奖励提升，小镇评价更容易上升。", req: { wood: 24, stone: 24, crystal: 3, butterfly: 1 }, reward: { gold: 300, rank: 1 } },
+  { id: "mineCart", name: "山道矿车", desc: "挖矿体力消耗降低，稀有晶石概率提高。", req: { wood: 30, stone: 42, ore: 10, ingot: 2 }, reward: { gold: 360, rank: 1 } },
+  { id: "artisan", name: "手作摊位", desc: "加工品售价提高，居民委托会要求高级商品。", req: { jam: 2, mayo: 2, cheese: 1, cloth: 1 }, reward: { gold: 420, rank: 1 } },
+  { id: "seedBank", name: "种子档案室", desc: "商店会进更多地方品种，季节轮换时也能买到备播种子。", req: { carrot: 4, blueberry: 3, rice: 3, yam: 2 }, reward: { gold: 360, item: "seed_snowpea", amount: 4, rank: 1 } },
+  { id: "greenhouse", name: "温室玻璃房", desc: "农场可无视季节播种，冬天也能稳定经营作物。", req: { wood: 46, stone: 36, crystal: 5, ingot: 3 }, reward: { gold: 520, rank: 1 } },
+  { id: "festivalStage", name: "星灯舞台", desc: "节日奖励提高，居民好感会带来更多回礼。", req: { wood: 42, cloth: 2, tea: 2, honey: 3 }, reward: { gold: 480, rank: 1 } },
+  { id: "pearlDiving", name: "月湾潜水台", desc: "海滩会出现月贝珠，稀有海鱼概率进一步提高。", req: { wood: 36, coral: 6, pearl: 1, ingot: 2 }, reward: { gold: 560, rank: 1 } },
+];
+
+const RECIPES = [
+  { id: "mayo", name: "蛋黄酱", station: "workshop", ingredients: { egg: 1 }, result: "mayo", amount: 1, xp: 5 },
+  { id: "cheese", name: "奶酪", station: "workshop", ingredients: { milk: 1 }, result: "cheese", amount: 1, xp: 7 },
+  { id: "jam", name: "浆果酱", station: "workshop", ingredients: { berry: 3 }, result: "jam", amount: 1, xp: 6 },
+  { id: "tea", name: "星禾茶", station: "workshop", ingredients: { teaLeaf: 2, honey: 1 }, result: "tea", amount: 1, xp: 8 },
+  { id: "ingot", name: "金属锭", station: "workshop", ingredients: { ore: 3, stone: 1 }, result: "ingot", amount: 1, xp: 6 },
+  { id: "cloth", name: "布料", station: "workshop", ingredients: { wool: 1, fiber: 3 }, result: "cloth", amount: 1, xp: 8 },
+  { id: "bait", name: "鱼饵", station: "workshop", ingredients: { fiber: 2, shell: 1 }, result: "bait", amount: 4, xp: 4 },
+  { id: "pickles", name: "腌菜罐", station: "workshop", ingredients: { carrot: 1, yam: 1 }, result: "pickles", amount: 1, xp: 7 },
+  { id: "flour", name: "米粉", station: "workshop", ingredients: { rice: 2 }, result: "flour", amount: 1, xp: 6 },
+  { id: "riceCake", name: "年糕", station: "workshop", ingredients: { flour: 1, honey: 1 }, result: "riceCake", amount: 1, xp: 8 },
+  { id: "fruitWine", name: "果酒", station: "workshop", ingredients: { blueberry: 3, berry: 2 }, result: "fruitWine", amount: 1, xp: 10 },
+  { id: "salad", name: "森林沙拉", station: "house", ingredients: { herb: 1, mushroom: 1, berry: 1 }, result: "salad", amount: 1, xp: 4 },
+  { id: "stew", name: "丰收炖菜", station: "house", ingredients: { potato: 1, turnip: 1, egg: 1 }, result: "stew", amount: 1, xp: 6 },
+  { id: "seaSnack", name: "海风小食", station: "house", ingredients: { riverFish: 1, shell: 1, herb: 1 }, result: "seaSnack", amount: 1, xp: 5 },
+  { id: "riceBowl", name: "山药饭", station: "house", ingredients: { rice: 1, yam: 1 }, result: "riceBowl", amount: 1, xp: 5 },
+  { id: "berryCake", name: "蓝莓蛋糕", station: "house", ingredients: { blueberry: 2, egg: 1, flour: 1 }, result: "berryCake", amount: 1, xp: 7 },
+  { id: "moonSoup", name: "月湾汤", station: "house", ingredients: { seaBass: 1, seaweed: 1, snowpea: 1 }, result: "moonSoup", amount: 1, xp: 8 },
+];
+
+const SHOP_TABS = ["种子", "工具", "牧场", "装饰"];
+const SIDE_TABS = ["目标", "居民", "背包", "图鉴"];
+const JOURNAL_TABS = ["日历", "经营", "技能", "工程", "收藏", "成就"];
+const COLLECTION_TYPES = ["fish", "bug", "forage", "material", "crop", "artisan", "ranch"];
+
+const SKILL_THRESHOLDS = [0, 24, 70, 150, 280, 460];
+const SKILLS = {
+  farming: { name: "耕作", color: "#6f9b66", reward: (level) => ({ maxEnergy: level % 2 === 0 ? 2 : 0, item: "seed_carrot", amount: level }) },
+  fishing: { name: "垂钓", color: "#5e9db8", reward: (level) => ({ gold: 22 * level, item: "bait", amount: 2 + level }) },
+  foraging: { name: "采集", color: "#75a65b", reward: (level) => ({ item: level >= 4 ? "honey" : "fiber", amount: level }) },
+  mining: { name: "采矿", color: "#858e88", reward: (level) => ({ item: level >= 3 ? "ore" : "stone", amount: level + 1 }) },
+  crafting: { name: "手作", color: "#c2934d", reward: (level) => ({ gold: 28 * level, item: level >= 4 ? "ingot" : "fiber", amount: 1 }) },
+  social: { name: "社交", color: "#d889a0", reward: (level) => ({ gold: 18 * level, decor: level >= 4 ? 1 : 0 }) },
+  nature: { name: "自然", color: "#9b7cc6", reward: (level) => ({ item: level >= 3 ? "flower" : "berry", amount: level }) },
 };
 
-function lerpColor(c1, c2, t) {
-  const parse = (c) => [parseInt(c.slice(1, 3), 16), parseInt(c.slice(3, 5), 16), parseInt(c.slice(5, 7), 16)];
-  const [r1, g1, b1] = parse(c1);
-  const [r2, g2, b2] = parse(c2);
-  return `rgb(${Math.round(r1 + (r2 - r1) * t)},${Math.round(g1 + (g2 - g1) * t)},${Math.round(b1 + (b2 - b1) * t)})`;
+const ACHIEVEMENTS = [
+  { id: "firstHarvest", title: "第一篮收获", desc: "累计收获 8 件作物。", reward: { gold: 80, item: "seed_carrot", amount: 4 }, done: (g) => g.stats.harvested >= 8 },
+  { id: "dailySupplier", title: "可靠的供货人", desc: "累计出货 25 件商品。", reward: { gold: 150 }, done: (g) => g.stats.shipped >= 25 },
+  { id: "angler", title: "熟悉水纹", desc: "钓到 10 条鱼。", reward: { gold: 120, item: "bait", amount: 8 }, done: (g) => g.stats.fish >= 10 },
+  { id: "bugBook", title: "林间观察者", desc: "捕虫 8 次。", reward: { gold: 90, item: "flower", amount: 3 }, done: (g) => g.stats.bugs >= 8 },
+  { id: "neighbor", title: "街坊熟人", desc: "任意居民好感达到 45。", reward: { gold: 120, decor: 1 }, done: (g) => Math.max(...Object.values(g.relationships)) >= 45 },
+  { id: "requestRunner", title: "公告牌常客", desc: "完成 8 个每日委托。", reward: { gold: 220, item: "tea", amount: 1 }, done: (g) => g.stats.requests >= 8 },
+  { id: "artisanStart", title: "手作开张", desc: "制作 12 件物品。", reward: { gold: 180, item: "ore", amount: 3 }, done: (g) => g.stats.crafted >= 12 },
+  { id: "collector", title: "图鉴启封", desc: "发现 18 种物品。", reward: { gold: 200, item: "crystal", amount: 1 }, done: (g) => Object.keys(g.collections).length >= 18 },
+  { id: "museumFriend", title: "博物馆之友", desc: "捐赠 10 件藏品。", reward: { gold: 260, decor: 1 }, done: (g) => g.stats.donated >= 10 },
+  { id: "builder", title: "镇务骨干", desc: "完成 5 个镇务工程。", reward: { gold: 360, item: "ingot", amount: 2 }, done: (g) => Object.values(g.projects).filter(Boolean).length >= 5 },
+  { id: "rancher", title: "牧场清晨", desc: "拥有 3 只动物。", reward: { gold: 180, item: "hay", amount: 20 }, done: (g) => g.animals.length >= 3 },
+  { id: "rankFour", title: "被看见的小镇", desc: "小镇评价达到 4 级。", reward: { gold: 420, item: "seed_blueberry", amount: 5 }, done: (g) => g.townRank >= 4 },
+];
+
+const MAIL_TEMPLATES = [
+  { id: "welcome", from: "镇务所", title: "欢迎来到星禾镇", body: "先把小屋前的田地整理起来。出货箱会在夜里结算，材料可以留着做工程。", reward: { item: "seed_carrot", amount: 3 }, condition: (g) => g.day >= 1 },
+  { id: "first-rain", from: "阿岚", title: "雨天钓鱼", body: "下雨时溪鱼会靠近岸边，也更容易遇到雨鲶。带上鱼饵会轻松不少。", reward: { item: "bait", amount: 4 }, condition: (g) => g.weather === "rain" || g.tomorrowWeather === "rain" },
+  { id: "garden-mail", from: "林秋", title: "公共花园的回礼", body: "花园修好以后，大家都觉得广场柔和了许多。这里有一些适合茶会的苗。", reward: { item: "seed_tea", amount: 3 }, condition: (g) => g.projects.garden },
+  { id: "coop-mail", from: "苏白", title: "牧场合作社开张", body: "动物不只带来产物，也会让每天更有规律。记得提前准备干草。", reward: { item: "hay", amount: 12 }, condition: (g) => g.projects.coop },
+  { id: "rank-two", from: "米芽", title: "商队留言", body: "小镇评价升上来以后，外来的货车开始问这里要不要更多种子。", reward: { item: "seed_blueberry", amount: 3 }, condition: (g) => g.townRank >= 2 },
+  { id: "greenhouse-tip", from: "石川", title: "温室图纸角注", body: "如果你想把冬天也过得热闹，温室会是最硬的一块骨头，也是最值的一块玻璃。", reward: { item: "stone", amount: 10 }, condition: (g) => Object.values(g.projects).filter(Boolean).length >= 4 },
+  { id: "collector-note", from: "博物馆", title: "新的展柜", body: "你带来的藏品让展柜终于有了故事。继续收集鱼、虫、矿物和作物吧。", reward: { gold: 120 }, condition: (g) => g.stats.donated >= 5 },
+];
+
+function clamp(value, min, max) {
+  return Math.max(min, Math.min(max, value));
 }
 
-function getSkyColor(hour) {
-  for (let i = 0; i < SKY_COLORS.length - 1; i++) {
-    const a = SKY_COLORS[i], b = SKY_COLORS[i + 1];
-    if (hour >= a.hour && hour < b.hour) {
-      return lerpColor(a.color, b.color, (hour - a.hour) / (b.hour - a.hour));
-    }
-  }
-  return "#1a1a3a";
+function distance(a, b) {
+  return Math.hypot(a.x - b.x, a.y - b.y);
+}
+
+function tileKey(tx, ty) {
+  return `${tx},${ty}`;
+}
+
+function makeRng(seed) {
+  let s = seed % 2147483647;
+  if (s <= 0) s += 2147483646;
+  return () => {
+    s = (s * 16807) % 2147483647;
+    return (s - 1) / 2147483646;
+  };
+}
+
+function pick(list, rng) {
+  return list[Math.floor(rng() * list.length)];
+}
+
+function itemName(id) {
+  return ITEMS[id]?.name || id;
+}
+
+function formatReq(req) {
+  return Object.entries(req).map(([id, amount]) => `${itemName(id)}x${amount}`).join(" / ");
+}
+
+function hasAll(inventory, req) {
+  return Object.entries(req).every(([id, amount]) => (inventory[id] || 0) >= amount);
 }
 
 export class CozyPrototypeGame {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
-    this.scene = SCENE.TITLE;
+    this.canvas.width = WIDTH;
+    this.canvas.height = HEIGHT;
+    this.heldKeys = new Set();
     this.lastTime = 0;
-    this.keys = new Set();
-    this.camera = { x: 0, y: 0 };
-    this.interactionMessage = "";
-    this.messageTimer = 0;
-    this.actionAnimation = null;
-    this.footstepTimer = 0;
+    this.running = false;
+    this.hasSave = Boolean(localStorage.getItem(SAVE_KEY));
+    this.bindInput();
+    this.newGame();
+  }
 
-    this.gameMinutes = 8 * 60;
-    this.gameDay = 1;
-    this.gold = 120;
-    this.baseMoveSpeed = 185;
-    this.baseEnergy = 100;
-    this.energy = this.baseEnergy;
-    this.maxEnergy = this.baseEnergy;
-    this.weather = this.rollWeather(this.gameDay);
-    this.tomorrowWeather = this.rollWeather(this.gameDay + 1);
-    this.currentBuff = null;
+  start() {
+    if (this.running) return;
+    this.running = true;
+    requestAnimationFrame((time) => this.loop(time));
+  }
 
-    this.player = { x: 420, y: 420, size: 26, speed: this.baseMoveSpeed, facing: "down", name: "旅行者" };
-    this.inventory = { seed_turnip: 3, wood: 2 };
-    this.collections = { items: {} };
-    Object.keys(this.inventory).forEach((key) => { this.collections.items[key] = true; });
-    this.selectedSeedIndex = 0;
+  loop(time) {
+    const dt = Math.min(0.05, (time - this.lastTime) / 1000 || 0);
+    this.lastTime = time;
+    this.update(dt);
+    this.render();
+    if (this.running) requestAnimationFrame((next) => this.loop(next));
+  }
 
-    this.progress = {
-      houseLevel: 1,
-      farmLevel: 1,
-      bridgeRepaired: false,
-      eastUnlocked: false,
-      harvestCount: 0,
-      fishCaught: 0,
-      forageCount: 0,
-      requestsCompleted: 0,
-      mealsCooked: 0,
-      totalEarned: 0,
-      townRank: 1,
-      ranchLevel: 0,
-      workshopLevel: 0,
-      toolLevel: 1,
-      rodLevel: 1,
-      irrigationLevel: 0,
-      animalsRaised: 0,
-      artisanMade: 0,
-      shippingCount: 0,
-      shippingValue: 0,
-      projectsCompleted: 0,
-      completedProjects: [],
-      festivalVisits: 0,
-      areaTasksCompleted: 0,
-      forestRenown: 0,
-      harborRenown: 0,
-      highlandRenown: 0,
-      forestRelics: 0,
-      forestShrineBlessings: 0,
-      forestShrineDay: 0,
-      forestSpringDay: 0,
-      qualityHarvests: 0,
-      mailRead: 0,
-    };
+  bindInput() {
+    window.addEventListener("keydown", (event) => {
+      const key = this.normalizeKey(event);
+      const managed = ["arrowup", "arrowdown", "arrowleft", "arrowright", "w", "a", "s", "d", "shift", "space", "tab", "enter", "escape", "q", "r", "i", "j", "f5"].includes(key) || /^[1-8]$/.test(key);
+      if (managed) event.preventDefault();
+      this.heldKeys.add(key);
+      if (!event.repeat) this.handleKeyDown(key);
+    });
 
-    this.relationship = {};
-    this.dailyActions = { talked: {}, gifted: {} };
-    this.skills = this.createSkills();
-    this.dayStats = this.createDayStats();
-    this.ranch = this.createRanch();
+    window.addEventListener("keyup", (event) => {
+      this.heldKeys.delete(this.normalizeKey(event));
+    });
+  }
 
-    this.worlds = this.createWorlds();
-    this.currentMapId = "town";
-    this.tileMap = this.worlds[this.currentMapId].tileMap;
-    this.interactables = this.worlds[this.currentMapId].interactables;
-    this.npcs = this.createNpcs();
-    this.farmPlots = this.createFarmPlots();
+  normalizeKey(event) {
+    if (event.key === " ") return "space";
+    return event.key.toLowerCase();
+  }
 
-    this.dialogueTarget = null;
-    this.dialoguePages = [];
-    this.dialoguePage = 0;
-    this.dialogueMeta = null;
-    this.dialoguePageStartedAt = 0;
-
-    this.shopMode = "buy";
-    this.shopSelection = 0;
-
-    this.fishingState = "casting";
-    this.fishingTimer = 0;
-    this.fishingResult = null;
-    this.fishingBarY = 180;
-    this.fishingBarVel = 0;
-    this.fishingFishY = 140;
-    this.fishingFishDir = 1;
-    this.fishingProgress = 0;
-
-    this.quests = this.createQuests();
-    this.dailyRequests = this.createDailyRequests();
-    this.areaTasks = this.createAreaTasks();
-    this.lastDayReport = null;
-    this.mailbox = this.createDailyMail();
-    this.particles = [];
-    this.houseSelection = 0;
+  newGame(startPlaying = false) {
+    this.scene = startPlaying ? SCENE.PLAYING : SCENE.TITLE;
+    this.menuIndex = 0;
+    this.menuTab = 0;
+    this.sideTab = 0;
     this.journalTab = 0;
-
-    this.applyProgressDerivedStats();
-    this.bindEvents();
-    this.loadSave();
-  }
-
-  createTileMap() {
-    const map = [
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,0],
-      [0,5,5,5,5,5,5,5,0,0,0,0,0,0,0,0,0,0,0,0,0,0,5,5,5,5,5,5,5,0],
-      [0,5,5,4,4,5,5,5,0,0,0,0,0,0,0,0,0,2,2,2,2,0,5,5,4,4,5,5,5,0],
-      [0,5,5,4,4,5,5,5,0,0,0,0,0,0,0,0,2,2,2,2,2,0,5,5,4,4,5,5,5,0],
-      [0,5,5,5,5,5,5,5,0,0,0,0,0,0,0,2,2,2,2,2,2,0,5,5,5,5,5,5,5,0],
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,2,2,2,2,2,2,2,0,0,0,0,0,0,0,0,0],
-      [3,3,3,3,0,0,0,0,0,0,0,0,0,0,3,3,2,2,3,3,3,0,0,0,0,0,0,0,0,0],
-      [3,3,3,3,0,0,0,0,0,0,0,0,0,3,3,3,2,2,3,3,3,0,0,0,0,0,0,0,0,0],
-      [3,3,3,3,0,0,0,0,0,0,0,0,3,3,3,3,2,2,3,3,3,0,0,0,0,0,0,0,0,0],
-      [3,3,3,3,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1,1],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-      [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
-    ];
-    this.paintRect(map, 14, 11, 20, 15, TILE.PATH);
-    this.paintRect(map, 16, 15, 18, 16, TILE.PATH);
-    return map;
-  }
-
-  createWorlds() {
-    return {
-      town: {
-        ...WORLD_INFO.town,
-        tileMap: this.createTileMap(),
-        interactables: this.createInteractables(),
-      },
-      forest: {
-        ...WORLD_INFO.forest,
-        tileMap: this.createForestTileMap(),
-        interactables: this.createForestInteractables(),
-      },
-      harbor: {
-        ...WORLD_INFO.harbor,
-        tileMap: this.createHarborTileMap(),
-        interactables: this.createHarborInteractables(),
-      },
-      highlands: {
-        ...WORLD_INFO.highlands,
-        tileMap: this.createHighlandsTileMap(),
-        interactables: this.createHighlandsInteractables(),
-      },
+    this.day = 1;
+    this.minute = 6 * 60;
+    this.weather = "sunny";
+    this.tomorrowWeather = "rain";
+    this.gold = 420;
+    this.energy = 104;
+    this.maxEnergy = 104;
+    this.player = { x: 16 * TILE + 16, y: 22 * TILE + 16, dir: "down", speed: 158, step: 0 };
+    this.camera = { x: 0, y: 0 };
+    this.selectedTool = 0;
+    this.selectedSeed = "seed_turnip";
+    this.inventory = {
+      seed_turnip: 6,
+      seed_potato: 4,
+      wood: 10,
+      stone: 8,
+      hay: 6,
+      berry: 2,
     };
+    this.shipping = {};
+    this.relationships = Object.fromEntries(VILLAGERS.map((npc) => [npc.id, 8]));
+    this.giftedToday = {};
+    this.projects = {};
+    this.achievements = {};
+    this.skillRewards = {};
+    this.mail = [];
+    this.collections = {};
+    this.donated = {};
+    this.animals = [];
+    this.decor = 0;
+    this.houseLevel = 1;
+    this.toolLevel = 1;
+    this.rodLevel = 1;
+    this.townRank = 1;
+    this.stats = {
+      earned: 0,
+      shipped: 0,
+      harvested: 0,
+      fish: 0,
+      bugs: 0,
+      requests: 0,
+      crafted: 0,
+      donated: 0,
+      daysPlayed: 0,
+      farming: 0,
+      fishing: 0,
+      foraging: 0,
+      mining: 0,
+      crafting: 0,
+      social: 0,
+      nature: 0,
+    };
+    this.messages = [];
+    this.lastReport = null;
+    this.activeNpc = null;
+    this.fishing = null;
+    this.map = [];
+    this.plots = [];
+    this.resources = [];
+    this.objects = [];
+    this.npcs = [];
+    this.createMap();
+    this.createPlots();
+    this.createObjects();
+    this.createNpcs();
+    this.generateDailyContent();
+    this.generateResources();
+    this.refreshMail();
+    this.checkAchievements();
+    this.pushMessage("欢迎来到星禾镇。先整理农田，再拜访居民。");
   }
 
-  createBlankMap(fill = TILE.GRASS) {
-    return Array.from({ length: MAP_H }, () => Array(MAP_W).fill(fill));
+  createMap() {
+    for (let y = 0; y < MAP_H; y++) {
+      const row = [];
+      for (let x = 0; x < MAP_W; x++) {
+        let kind = TILE_KIND.GRASS;
+        if (x < 24 && y < 18) kind = TILE_KIND.FOREST;
+        if (x > 58 && y < 23) kind = TILE_KIND.STONE;
+        if (y > 43) kind = TILE_KIND.SAND;
+        if (y > 51) kind = TILE_KIND.WATER;
+        if (x >= 9 && x <= 29 && y >= 17 && y <= 33) kind = TILE_KIND.FARM;
+        if (x >= 37 && x <= 58 && y >= 15 && y <= 33) kind = TILE_KIND.GRASS;
+        if ((x >= 16 && x <= 58 && y === 25) || (y >= 18 && y <= 41 && x === 48)) kind = TILE_KIND.PATH;
+        if ((x >= 35 && x <= 58 && y === 20) || (x >= 41 && x <= 55 && y === 30)) kind = TILE_KIND.PATH;
+        if (x >= 44 && x <= 46 && y < 43) kind = TILE_KIND.WATER;
+        if (x >= 43 && x <= 47 && y >= 24 && y <= 27) kind = TILE_KIND.BRIDGE;
+        if (x >= 49 && x <= 57 && y >= 44 && y <= 46) kind = TILE_KIND.PATH;
+        if (x >= 3 && x <= 12 && y >= 36 && y <= 39) kind = TILE_KIND.FLOWER;
+        row.push(kind);
+      }
+      this.map.push(row);
+    }
   }
 
-  paintRect(map, x1, y1, x2, y2, tile) {
-    for (let y = y1; y <= y2; y++) {
-      for (let x = x1; x <= x2; x++) {
-        if (map[y]?.[x] !== undefined) map[y][x] = tile;
+  createPlots() {
+    for (let y = 22; y <= 27; y++) {
+      for (let x = 12; x <= 19; x++) {
+        this.plots.push({ tx: x, ty: y, tilled: false, watered: false, crop: null, age: 0, quality: 0 });
       }
     }
   }
 
-  createForestTileMap() {
-    const map = this.createBlankMap(TILE.DARK_GRASS);
-    this.paintRect(map, 0, 10, 29, 14, TILE.PATH);
-    this.paintRect(map, 0, 0, 4, 25, TILE.GRASS);
-    this.paintRect(map, 0, 4, 2, 17, TILE.PATH);
-    this.paintRect(map, 9, 7, 14, 11, TILE.WATER);
-    this.paintRect(map, 18, 1, 24, 5, TILE.GRASS);
-    this.paintRect(map, 18, 0, 20, 2, TILE.PATH);
-    this.paintRect(map, 20, 13, 29, 20, TILE.GRASS);
-    this.paintRect(map, 24, 10, 29, 14, TILE.PATH);
-    this.paintRect(map, 23, 14, 27, 18, TILE.PATH);
-    this.paintRect(map, 5, 18, 12, 24, TILE.GRASS);
-    this.paintRect(map, 5, 4, 8, 7, TILE.FLOWER);
-    this.paintRect(map, 15, 15, 18, 18, TILE.FLOWER);
-    this.paintRect(map, 6, 20, 9, 22, TILE.FLOWER);
-    this.paintRect(map, 13, 19, 16, 22, TILE.PATH);
-    this.paintRect(map, 3, 15, 7, 17, TILE.PATH);
-    this.paintRect(map, 21, 6, 24, 9, TILE.DARK_GRASS);
-    return map;
-  }
-
-  createHarborTileMap() {
-    const map = this.createBlankMap(TILE.SAND);
-    this.paintRect(map, 0, 0, 29, 8, TILE.GRASS);
-    this.paintRect(map, 0, 9, 29, 11, TILE.PATH);
-    this.paintRect(map, 18, 0, 29, 25, TILE.WATER);
-    this.paintRect(map, 14, 8, 18, 25, TILE.WOOD_FLOOR);
-    this.paintRect(map, 8, 11, 13, 18, TILE.GRASS);
-    this.paintRect(map, 1, 8, 4, 14, TILE.PATH);
-    this.paintRect(map, 0, 12, 6, 25, TILE.SAND);
-    return map;
-  }
-
-  createHighlandsTileMap() {
-    const map = this.createBlankMap(TILE.DARK_GRASS);
-    this.paintRect(map, 0, 11, 29, 14, TILE.PATH);
-    this.paintRect(map, 0, 0, 5, 25, TILE.GRASS);
-    this.paintRect(map, 7, 2, 13, 7, TILE.SAND);
-    this.paintRect(map, 17, 3, 22, 8, TILE.WATER);
-    this.paintRect(map, 17, 15, 28, 23, TILE.SAND);
-    this.paintRect(map, 23, 10, 29, 14, TILE.PATH);
-    this.paintRect(map, 1, 10, 3, 14, TILE.PATH);
-    this.paintRect(map, 9, 17, 15, 23, TILE.GRASS);
-    return map;
-  }
-
-  createFarmPlots() {
-    const plots = [];
-    const startX = 92;
-    const startY = 724;
-    const cols = 6;
-    const rows = 5;
-    let id = 0;
-    for (let y = 0; y < rows; y++) {
-      for (let x = 0; x < cols; x++) {
-        const lockedLevel = y >= 4 || x >= 5 ? 3 : y >= 2 ? 2 : 1;
-        plots.push({ id: `plot-${id++}`, x: startX + x * 54, y: startY + y * 54, w: 44, h: 44, tilled: false, watered: false, cropKey: null, stage: 0, growthMinutes: 0, wateredDays: 0, ready: false, lockedLevel });
-      }
-    }
-    return plots;
-  }
-
-  createInteractables() {
-    return [
-      { id:"tree-1",type:"tree",x:80,y:80,w:64,h:78,item:"wood",amount:1,collected:false,regrowTimer:0,regrowTime:60000,name:"大橡树" },
-      { id:"tree-2",type:"tree",x:200,y:100,w:64,h:78,item:"wood",amount:1,collected:false,regrowTimer:0,regrowTime:55000,name:"小枫树" },
-      { id:"tree-3",type:"tree",x:1034,y:160,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"果树",extraItem:"fruit" },
-      { id:"tree-4",type:"tree",x:1130,y:90,w:64,h:78,item:"wood",amount:1,collected:false,regrowTimer:0,regrowTime:60000,name:"松树",eastOnly:true },
-      { id:"bush-1",type:"bush",x:258,y:198,w:58,h:42,item:"fruit",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"莓果灌木" },
-      { id:"bush-2",type:"bush",x:1096,y:252,w:58,h:42,item:"fruit",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"东区果丛",eastOnly:true },
-      { id:"flower-1",type:"flower",x:160,y:200,w:32,h:32,item:"flower",amount:1,collected:false,regrowTimer:0,regrowTime:40000,name:"野花丛" },
-      { id:"flower-2",type:"flower",x:1050,y:200,w:32,h:32,item:"flower",amount:1,collected:false,regrowTimer:0,regrowTime:40000,name:"紫罗兰",eastOnly:true },
-      { id:"mush-1",type:"mushroom",x:320,y:340,w:36,h:36,item:"mushroom",amount:1,collected:false,regrowTimer:0,regrowTime:90000,name:"红蘑菇" },
-      { id:"mush-2",type:"mushroom",x:1180,y:380,w:36,h:36,item:"mushroom",amount:2,collected:false,regrowTimer:0,regrowTime:90000,name:"棕蘑菇",eastOnly:true },
-      { id:"stone-1",type:"stone",x:500,y:480,w:58,h:44,item:"stone",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"圆石" },
-      { id:"stone-2",type:"stone",x:1122,y:504,w:58,h:44,item:"stone",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"大岩石",eastOnly:true },
-      { id:"shell-1",type:"shell",x:100,y:430,w:28,h:20,item:"shell",amount:1,collected:false,regrowTimer:0,regrowTime:50000,name:"贝壳" },
-      { id:"shell-2",type:"shell",x:180,y:460,w:28,h:20,item:"shell",amount:1,collected:false,regrowTimer:0,regrowTime:50000,name:"螺壳" },
-      { id:"fish-1",type:"fishspot",x:680,y:290,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"钓鱼点" },
-      { id:"fish-2",type:"fishspot",x:1080,y:322,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"东区深水点",eastOnly:true },
-      { id:"house-1",type:"house",x:540,y:130,w:170,h:150,name:"你的小屋" },
-      { id:"mailbox-1",type:"mailbox",x:520,y:282,w:34,h:46,name:"邮箱" },
-      { id:"shop-1",type:"shop",x:760,y:548,w:160,h:140,name:"老陈的商店" },
-      { id:"sign-1",type:"sign",x:400,y:530,w:30,h:44,name:"公告牌",text:"公告牌会刷新每日委托；小屋里可以做料理和休息。" },
-      { id:"project-1",type:"project",x:590,y:472,w:84,h:72,name:"镇务工程板" },
-      { id:"shipping-1",type:"shipping",x:428,y:668,w:62,h:54,name:"出货箱" },
-      { id:"ranch-1",type:"ranch",x:468,y:760,w:142,h:96,name:"牧场棚" },
-      { id:"bridge-1",type:"bridge",x:1018,y:520,w:110,h:54,name:"旧桥" },
-      { id:"warp-town-forest",type:"warp",x:18,y:550,w:56,h:84,name:"林间小径",label:"去雾林",targetMap:"forest",targetX:1290,targetY:610 },
-      { id:"warp-town-harbor",type:"warp",x:136,y:438,w:84,h:48,name:"通往月湾",label:"去月湾",targetMap:"harbor",targetX:178,targetY:590 },
-      { id:"warp-town-highlands",type:"warp",x:1296,y:232,w:52,h:88,name:"高地坡道",label:"去高地",targetMap:"highlands",targetX:170,targetY:610,requiresBridge:true,requiresTownRank:3,lockReason:"修桥后并把镇级提升到 3 才能前往高地。" },
-    ];
-  }
-
-  createForestInteractables() {
-    return [
-      { id:"warp-forest-town",type:"warp",x:1304,y:560,w:56,h:88,name:"返回镇子",label:"回晨露镇",targetMap:"town",targetX:126,targetY:590 },
-      { id:"warp-forest-highlands",type:"warp",x:930,y:44,w:72,h:50,name:"山间栈道",label:"上高地",targetMap:"highlands",targetX:1030,targetY:790,requiresTownRank:3,lockReason:"再多积累些名望，山道才会开放。" },
-      { id:"forest-board",type:"trailboard",x:1222,y:612,w:46,h:58,name:"雾林林务站",areaId:"forest" },
-      { id:"forest-shrine",type:"shrine",x:746,y:342,w:54,h:64,name:"苔石祭台" },
-      { id:"forest-spring",type:"spring",x:748,y:438,w:58,h:42,name:"林间泉眼" },
-      { id:"forest-ruin-1",type:"ruin",x:760,y:520,w:74,h:54,item:"relicShard",amount:1,collected:false,regrowTimer:0,regrowTime:160000,name:"苔痕遗迹" },
-      { id:"forest-logjam",type:"logjam",x:248,y:646,w:86,h:38,item:"wood",amount:4,collected:false,regrowTimer:0,regrowTime:0,name:"倒伏木障" },
-      { id:"forest-bee-1",type:"beehive",x:706,y:188,w:36,h:42,item:"wildHoney",amount:1,collected:false,regrowTimer:0,regrowTime:96000,name:"野蜂箱",extraItem:"honey" },
-      { id:"forest-resin-1",type:"resinTap",x:302,y:240,w:36,h:46,item:"resin",amount:1,collected:false,regrowTimer:0,regrowTime:84000,name:"松脂采集罐" },
-      { id:"forest-fern-1",type:"wildPatch",x:292,y:744,w:42,h:38,item:"fern",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"林蕨丛",extraItem:"herb" },
-      { id:"forest-fern-2",type:"wildPatch",x:946,y:704,w:42,h:38,item:"fern",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"湿地林蕨" },
-      { id:"forest-firefly-1",type:"firefly",x:738,y:520,w:44,h:44,item:"fireflyJar",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"萤火群" },
-      { id:"forest-tree-1",type:"tree",x:214,y:150,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:58000,name:"老杉树" },
-      { id:"forest-tree-2",type:"tree",x:586,y:182,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:64000,name:"浓荫树" },
-      { id:"forest-tree-3",type:"tree",x:1018,y:290,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"苔木" },
-      { id:"forest-mush-1",type:"mushroom",x:474,y:690,w:36,h:36,item:"mushroom",amount:2,collected:false,regrowTimer:0,regrowTime:88000,name:"林地蘑菇" },
-      { id:"forest-mush-2",type:"mushroom",x:822,y:864,w:36,h:36,item:"mushroom",amount:2,collected:false,regrowTimer:0,regrowTime:92000,name:"厚伞菇" },
-      { id:"forest-herb-1",type:"herb",x:356,y:806,w:34,h:34,item:"herb",amount:1,collected:false,regrowTimer:0,regrowTime:76000,name:"清香草" },
-      { id:"forest-herb-2",type:"herb",x:1080,y:730,w:34,h:34,item:"herb",amount:1,collected:false,regrowTimer:0,regrowTime:76000,name:"山风草" },
-      { id:"forest-flower-1",type:"flower",x:640,y:568,w:32,h:32,item:"flower",amount:2,collected:false,regrowTimer:0,regrowTime:52000,name:"林间花簇" },
-      { id:"forest-fish-1",type:"fishspot",x:564,y:400,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"林间池塘" },
-      { id:"forest-stone-1",type:"stone",x:1040,y:930,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:110000,name:"山脚岩石" },
-    ];
-  }
-
-  createHarborInteractables() {
-    return [
-      { id:"warp-harbor-town",type:"warp",x:74,y:530,w:64,h:96,name:"返镇栈桥",label:"回晨露镇",targetMap:"town",targetX:236,targetY:520 },
-      { id:"harbor-board",type:"trailboard",x:230,y:516,w:46,h:58,name:"月湾告示牌",areaId:"harbor" },
-      { id:"harbor-fish-1",type:"fishspot",x:1102,y:226,w:44,h:44,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"港湾深水" },
-      { id:"harbor-fish-2",type:"fishspot",x:1020,y:596,w:44,h:44,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"潮汐鱼群" },
-      { id:"harbor-shell-1",type:"shell",x:324,y:836,w:28,h:20,item:"shell",amount:2,collected:false,regrowTimer:0,regrowTime:50000,name:"浅滩贝壳" },
-      { id:"harbor-shell-2",type:"shell",x:512,y:1028,w:28,h:20,item:"shell",amount:2,collected:false,regrowTimer:0,regrowTime:50000,name:"海沫贝壳" },
-      { id:"harbor-coral-1",type:"coral",x:658,y:972,w:38,h:32,item:"coral",amount:1,collected:false,regrowTimer:0,regrowTime:93000,name:"赤珊瑚" },
-      { id:"harbor-coral-2",type:"coral",x:874,y:884,w:38,h:32,item:"coral",amount:1,collected:false,regrowTimer:0,regrowTime:93000,name:"蓝珊瑚" },
-      { id:"harbor-bush-1",type:"bush",x:402,y:314,w:58,h:42,item:"fruit",amount:2,collected:false,regrowTimer:0,regrowTime:70000,name:"湾边果丛" },
-      { id:"harbor-stone-1",type:"stone",x:612,y:280,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:110000,name:"潮石" },
-    ];
-  }
-
-  createHighlandsInteractables() {
-    return [
-      { id:"warp-highlands-town",type:"warp",x:36,y:514,w:64,h:98,name:"下山坡道",label:"回晨露镇",targetMap:"town",targetX:1220,targetY:284 },
-      { id:"warp-highlands-forest",type:"warp",x:1144,y:590,w:78,h:54,name:"穿林山道",label:"去雾林",targetMap:"forest",targetX:934,targetY:112 },
-      { id:"highlands-board",type:"trailboard",x:156,y:524,w:46,h:58,name:"高地勘探牌",areaId:"highlands" },
-      { id:"high-tree-1",type:"tree",x:218,y:194,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"山松" },
-      { id:"high-tree-2",type:"tree",x:462,y:808,w:64,h:78,item:"wood",amount:2,collected:false,regrowTimer:0,regrowTime:62000,name:"岬角树" },
-      { id:"high-crystal-1",type:"crystal",x:580,y:200,w:42,h:42,item:"crystal",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"风晶簇" },
-      { id:"high-crystal-2",type:"crystal",x:1170,y:892,w:42,h:42,item:"crystal",amount:1,collected:false,regrowTimer:0,regrowTime:120000,name:"崖晶石" },
-      { id:"high-ore-1",type:"ore",x:698,y:276,w:52,h:42,item:"ore",amount:2,collected:false,regrowTimer:0,regrowTime:125000,name:"铁色矿脉" },
-      { id:"high-ore-2",type:"ore",x:1016,y:834,w:52,h:42,item:"ore",amount:2,collected:false,regrowTimer:0,regrowTime:125000,name:"裂岩矿脉" },
-      { id:"high-herb-1",type:"herb",x:378,y:986,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"高地香草" },
-      { id:"high-herb-2",type:"herb",x:1120,y:430,w:34,h:34,item:"herb",amount:2,collected:false,regrowTimer:0,regrowTime:76000,name:"清冽香草" },
-      { id:"high-stone-1",type:"stone",x:914,y:962,w:58,h:44,item:"stone",amount:2,collected:false,regrowTimer:0,regrowTime:120000,name:"高地岩石" },
-      { id:"high-fish-1",type:"fishspot",x:916,y:220,w:40,h:40,item:null,amount:0,collected:false,regrowTimer:0,regrowTime:0,name:"山顶清潭" },
+  createObjects() {
+    const b = (id, name, action, tx, ty, tw, th, color, roof) => ({
+      kind: "building",
+      id,
+      name,
+      action,
+      x: tx * TILE,
+      y: ty * TILE,
+      w: tw * TILE,
+      h: th * TILE,
+      color,
+      roof,
+      blocks: true,
+    });
+    this.objects = [
+      b("home", "小屋", "house", 10, 14, 5, 4, "#d7b486", "#9d5c4d"),
+      b("shop", "杂货店", "shop", 39, 16, 5, 4, "#e0c78e", "#b57949"),
+      b("townhall", "镇务所", "town", 50, 16, 6, 5, "#d9c6a4", "#6d8b74"),
+      b("board", "公告牌", "requests", 47, 22, 2, 2, "#a77a4e", "#7a553d"),
+      b("workshop", "工坊", "workshop", 41, 28, 5, 4, "#c69a72", "#7d6f61"),
+      b("museum", "博物馆", "museum", 56, 27, 5, 4, "#c5ced0", "#587c8c"),
+      b("ranch", "牧场棚", "ranch", 28, 31, 6, 4, "#d9b787", "#8b6d55"),
+      b("mine", "山洞", "mine", 68, 12, 5, 4, "#858e88", "#59615d"),
+      b("dock", "月湾码头", "dock", 51, 45, 7, 2, "#aa7a50", "#8e6342"),
+      b("shipping", "出货箱", "shipping", 20, 19, 2, 2, "#ba7955", "#795241"),
     ];
   }
 
   createNpcs() {
-    return NPCS.map((n) => {
-      this.relationship[n.id] = 0;
-      const safeBase = this.findNearestStandablePosition(n.mapId, n.baseX, n.baseY, 26);
-      return { ...n, baseX: safeBase.x, baseY: safeBase.y, size: 26, x: safeBase.x, y: safeBase.y, moveTimer: 0, vx: 0, vy: 0 };
-    });
-  }
-
-  createRanch() {
-    return { animals: [] };
-  }
-
-  getCurrentWorld() {
-    return this.worlds[this.currentMapId];
-  }
-
-  getCurrentMapName() {
-    return this.getCurrentWorld()?.name || "未知区域";
-  }
-
-  formatTime() {
-    const hour = Math.floor(this.gameMinutes / 60);
-    const min = Math.floor(this.gameMinutes % 60);
-    return `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-  }
-
-  getAllInteractables() {
-    return Object.values(this.worlds).flatMap((world) => world.interactables);
-  }
-
-  switchMap(mapId, x, y, message) {
-    const world = this.worlds[mapId];
-    if (!world) return;
-    this.currentMapId = mapId;
-    this.tileMap = world.tileMap;
-    this.interactables = world.interactables;
-    if (typeof x === "number") this.player.x = x;
-    if (typeof y === "number") this.player.y = y;
-    this.ensurePlayerOnLand();
-    this.camera.x = Math.max(0, Math.min(MAP_W * TILE_SIZE - this.canvas.width, this.player.x - this.canvas.width / 2));
-    this.camera.y = Math.max(0, Math.min(MAP_H * TILE_SIZE - this.canvas.height, this.player.y - this.canvas.height / 2));
-    if (message !== null) this.showMessage(message || `来到 ${world.name}`, 2200);
-  }
-
-  getTileAtMap(mapId, x, y) {
-    if (x < 0 || y < 0 || x >= MAP_W * TILE_SIZE || y >= MAP_H * TILE_SIZE) return TILE.WATER;
-    const map = this.worlds?.[mapId]?.tileMap;
-    if (!map) return TILE.WATER;
-    const tx = Math.floor(x / TILE_SIZE);
-    const ty = Math.floor(y / TILE_SIZE);
-    return map[ty]?.[tx] ?? TILE.WATER;
-  }
-
-  canStandOnMap(mapId, x, y, size = this.player.size) {
-    const half = size / 2;
-    const corners = [[x - half, y - half], [x + half, y - half], [x - half, y + half], [x + half, y + half]];
-    return corners.every(([px, py]) => this.getTileAtMap(mapId, px, py) !== TILE.WATER);
-  }
-
-  findNearestStandablePosition(mapId, x, y, size = this.player.size) {
-    const clampX = (value) => Math.max(size, Math.min(MAP_W * TILE_SIZE - size, value));
-    const clampY = (value) => Math.max(size, Math.min(MAP_H * TILE_SIZE - size, value));
-    const startX = clampX(x);
-    const startY = clampY(y);
-    if (this.canStandOnMap(mapId, startX, startY, size)) return { x: startX, y: startY };
-    for (let radius = 24; radius <= TILE_SIZE * 8; radius += 24) {
-      for (let step = 0; step < 24; step++) {
-        const angle = (Math.PI * 2 * step) / 24;
-        const px = clampX(startX + Math.cos(angle) * radius);
-        const py = clampY(startY + Math.sin(angle) * radius);
-        if (this.canStandOnMap(mapId, px, py, size)) return { x: px, y: py };
-      }
-    }
-    return { x: startX, y: startY };
-  }
-
-  ensurePlayerOnLand() {
-    if (this.canStandOnMap(this.currentMapId, this.player.x, this.player.y, this.player.size)) return;
-    const safe = this.findNearestStandablePosition(this.currentMapId, this.player.x, this.player.y, this.player.size);
-    this.player.x = safe.x;
-    this.player.y = safe.y;
-  }
-
-  getInteractableBlockReason(obj) {
-    if (obj.eastOnly && !this.progress.eastUnlocked) return "东区还没有开放。";
-    if (obj.requiresBridge && !this.progress.bridgeRepaired) return obj.lockReason || "需要先修好旧桥。";
-    if (obj.requiresTownRank && this.progress.townRank < obj.requiresTownRank) return obj.lockReason || `镇级达到 ${obj.requiresTownRank} 才能前往。`;
-    return "";
-  }
-
-  createQuests() {
-    return [
-      { id: "daily-farm", title: "农场起步", desc: "播种并收获 5 次作物", done: false, check: () => this.progress.harvestCount >= 5, reward: { gold: 100 } },
-      { id: "builder", title: "家园建设", desc: "将小屋升级到 2 级", done: false, check: () => this.progress.houseLevel >= 2, reward: { item: "seed_blueberry", amount: 4 } },
-      { id: "social", title: "邻里关系", desc: "任意 NPC 好感达到 30", done: false, check: () => Object.values(this.relationship).some(v => v >= 30), reward: { gold: 140 } },
-      { id: "bridge", title: "通往东区", desc: "修复旧桥并解锁东区", done: false, check: () => this.progress.bridgeRepaired, reward: { item: "seed_pumpkin", amount: 3 } },
-      { id: "cook", title: "温暖餐桌", desc: "在小屋完成 3 次料理", done: false, check: () => this.progress.mealsCooked >= 3, reward: { gold: 180 } },
-      { id: "farm-expand", title: "大农庄", desc: "将农场扩建到 3 级", done: false, check: () => this.progress.farmLevel >= 3, reward: { item: "seed_corn", amount: 4 } },
-      { id: "request-board", title: "镇上帮手", desc: "完成 6 个每日委托", done: false, check: () => this.progress.requestsCompleted >= 6, reward: { gold: 220 } },
-      { id: "town", title: "镇子繁荣", desc: "累计赚到 2500 金币", done: false, check: () => this.progress.totalEarned >= 2500, reward: { gold: 300 } },
-      { id: "ranch-start", title: "清晨牧歌", desc: "建成牧场并养下第一只动物", done: false, check: () => this.progress.animalsRaised >= 1, reward: { item: "hay", amount: 12 } },
-      { id: "artisan", title: "手作工坊", desc: "制作 5 件加工品", done: false, check: () => this.progress.artisanMade >= 5, reward: { gold: 260 } },
-      { id: "high-rank", title: "山海之间", desc: "镇级达到 5", done: false, check: () => this.progress.townRank >= 5, reward: { item: "seed_grape", amount: 5 } },
-      { id: "shipping", title: "出货达人", desc: "通过出货箱累计收入 1200 金", done: false, check: () => this.progress.shippingValue >= 1200, reward: { gold: 220 } },
-      { id: "projects", title: "小镇工程师", desc: "完成 3 个镇务工程", done: false, check: () => this.progress.projectsCompleted >= 3, reward: { item: "ingot", amount: 2 } },
-      { id: "tools", title: "好工具省力气", desc: "将工具组升级到 3 级", done: false, check: () => this.progress.toolLevel >= 3, reward: { gold: 260 } },
-      { id: "forest-ranger", title: "雾林巡护员", desc: "完成 3 个区域委托", done: false, check: () => this.progress.areaTasksCompleted >= 3, reward: { item: "wildHoney", amount: 2 } },
-      { id: "forest-ruins", title: "苔痕秘藏", desc: "在雾林遗迹找到 3 块遗迹碎片", done: false, check: () => this.progress.forestRelics >= 3, reward: { gold: 340 } },
-    ];
-  }
-
-  createSkills() {
-    return Object.fromEntries(Object.keys(SKILL_INFO).map((key) => [key, { level: 1, xp: 0 }]));
-  }
-
-  createDayStats() {
-    return { harvested: 0, qualityHarvests: 0, qualityGold: 0, foraged: 0, fishCaught: 0, requests: 0, cooked: 0, animalProducts: 0, artisan: 0, shipped: 0, shippedValue: 0 };
-  }
-
-  createDailyRequests() {
-    const available = REQUEST_TEMPLATES.filter((template) => template.minRank <= this.progress.townRank + 1);
-    const pool = [...available];
-    const chosen = [];
-    while (pool.length > 0 && chosen.length < 3) {
-      const index = Math.floor(Math.random() * pool.length);
-      chosen.push(this.instantiateRequest(pool.splice(index, 1)[0]));
-    }
-    return chosen;
-  }
-
-  instantiateRequest(template) {
-    const [minAmount, maxAmount] = template.amount;
-    const amount = minAmount + Math.floor(Math.random() * (maxAmount - minAmount + 1));
-    const weatherCfg = this.getWeatherConfig();
-    const marketBonus = this.isMarketDay() ? 1.12 : 1;
-    return {
-      id: `${template.id}-${this.gameDay}-${Math.floor(Math.random() * 10000)}`,
-      requester: template.requester,
-      item: template.item,
-      amount,
-      gold: Math.round(template.gold * marketBonus * weatherCfg.requestBonus),
-      favor: template.favor,
-      done: false,
+    const positions = {
+      lin: [38, 22],
+      lan: [56, 45],
+      shi: [43, 31],
+      miya: [41, 21],
+      ye: [14, 12],
+      su: [31, 34],
     };
-  }
-
-  createDailyMail() {
-    const letters = MAIL_TEMPLATES
-      .filter((template) => template.condition(this))
-      .slice(0, 3)
-      .map((template) => ({
-        id: `${template.id}-${this.gameDay}`,
-        from: template.from,
-        title: template.title,
-        body: template.body,
-        reward: template.reward || null,
-        read: false,
-      }));
-    if (!letters.length && this.gameDay % 2 === 1) {
-      letters.push({
-        id: `daily-note-${this.gameDay}`,
-        from: "镇务所",
-        title: "今日备忘",
-        body: this.getSeasonDay() % 7 === 0 ? "今天适合检查日志、整理背包和规划下一批作物。" : "公告牌和各区域委托会给你稳定目标。先看目标，再决定今天的路线。",
-        reward: null,
-        read: false,
-      });
-    }
-    return letters;
-  }
-
-  getUnreadMail() {
-    return (this.mailbox || []).filter((mail) => !mail.read);
-  }
-
-  collectMailReward(mail) {
-    if (!mail?.reward || mail.reward.claimed) return "";
-    const reward = mail.reward;
-    const parts = [];
-    if (reward.gold) {
-      this.gold += reward.gold;
-      this.progress.totalEarned += reward.gold;
-      parts.push(`${reward.gold}金`);
-    }
-    if (reward.item) {
-      this.addItem(reward.item, reward.amount || 1);
-      parts.push(`${ITEMS[reward.item]?.name || reward.item}x${reward.amount || 1}`);
-    }
-    reward.claimed = true;
-    return parts.length ? ` 附赠：${parts.join("、")}` : "";
-  }
-
-  readMailbox() {
-    if (!Array.isArray(this.mailbox) || !this.mailbox.length) {
-      this.showMessage("邮箱里没有新信。", 1500);
-      return;
-    }
-    const unread = this.getUnreadMail();
-    if (!unread.length) {
-      const latest = this.mailbox[this.mailbox.length - 1];
-      this.showMessage(`最近的信｜${latest.from}：${latest.title}。${latest.body}`, 3200);
-      return;
-    }
-    const mail = unread[0];
-    mail.read = true;
-    this.progress.mailRead = (this.progress.mailRead || 0) + 1;
-    const rewardText = this.collectMailReward(mail);
-    this.startAction("read", { duration: 560, item: "mail" });
-    this.showMessage(`来信｜${mail.from}《${mail.title}》：${mail.body}${rewardText}`, 5200);
-  }
-
-  buildDayReport(stats, rested) {
-    const shippedValue = stats.shippedValue || 0;
-    const totalActions = (stats.harvested || 0) + (stats.foraged || 0) + (stats.fishCaught || 0) + (stats.requests || 0) + (stats.artisan || 0) + (stats.animalProducts || 0);
-    const score = shippedValue + totalActions * 18 + (stats.qualityGold || 0) + (rested ? 30 : -20);
-    const grade = score >= 760 ? "S" : score >= 480 ? "A" : score >= 260 ? "B" : score >= 120 ? "C" : "D";
-    return {
-      day: this.gameDay,
-      grade,
-      rested,
-      harvested: stats.harvested || 0,
-      qualityHarvests: stats.qualityHarvests || 0,
-      foraged: stats.foraged || 0,
-      fishCaught: stats.fishCaught || 0,
-      shipped: stats.shipped || 0,
-      shippedValue,
-      requests: stats.requests || 0,
-      artisan: stats.artisan || 0,
-      qualityGold: stats.qualityGold || 0,
-    };
-  }
-
-  createAreaTasks() {
-    return Object.fromEntries(Object.entries(AREA_TASK_TEMPLATES).map(([areaId, templates]) => {
-      const available = templates.filter((task) => task.minRank <= this.progress.townRank + 1);
-      const pool = available.length ? available : templates;
-      const index = Math.floor(Math.random() * pool.length);
-      return [areaId, { ...pool[index], done: false }];
+    this.npcs = VILLAGERS.map((npc, index) => ({
+      ...npc,
+      x: positions[npc.id][0] * TILE + 16,
+      y: positions[npc.id][1] * TILE + 16,
+      homeX: positions[npc.id][0] * TILE + 16,
+      homeY: positions[npc.id][1] * TILE + 16,
+      phase: index * 0.6,
     }));
   }
 
-  getAreaTask(areaId = this.currentMapId) {
-    return this.areaTasks?.[areaId] || null;
-  }
-
-  getAreaRenownKey(areaId) {
-    if (areaId === "forest") return "forestRenown";
-    if (areaId === "harbor") return "harborRenown";
-    if (areaId === "highlands") return "highlandRenown";
-    return "";
-  }
-
-  canCompleteAreaTask(task) {
-    return !!task && !task.done && Object.entries(task.requirements || {}).every(([key, amount]) => (this.inventory[key] || 0) >= amount);
-  }
-
-  formatAreaTaskProgress(task) {
-    if (!task) return "";
-    return Object.entries(task.requirements || {})
-      .map(([key, amount]) => `${ITEMS[key]?.name || key}${this.inventory[key] || 0}/${amount}`)
-      .join(" / ");
-  }
-
-  tryCompleteAreaTask(areaId = this.currentMapId) {
-    const task = this.getAreaTask(areaId);
-    if (!task) {
-      this.showMessage("这里今天没有区域委托。", 1600);
-      return false;
+  generateDailyContent() {
+    const rng = makeRng(this.day * 97 + this.townRank * 131);
+    const pool = REQUESTS.filter((request) => request.minRank <= this.townRank);
+    this.dailyRequests = [];
+    const used = new Set();
+    const count = clamp(3 + Math.floor(this.townRank / 2), 3, 5);
+    while (this.dailyRequests.length < count && used.size < pool.length) {
+      const template = pick(pool, rng);
+      if (used.has(template.id)) continue;
+      used.add(template.id);
+      const amount = template.amount[0] + Math.floor(rng() * (template.amount[1] - template.amount[0] + 1));
+      this.dailyRequests.push({
+        ...template,
+        amount,
+        done: false,
+        gold: Math.round(template.gold * (1 + (this.townRank - 1) * 0.08) * WEATHER[this.weather].forage),
+      });
     }
-    if (task.done) {
-      this.showMessage(`${task.title} 今天已经完成了，明天会刷新新的委托。`, 2200);
-      return true;
-    }
-    if (!this.canCompleteAreaTask(task)) {
-      this.showMessage(`${task.title}：${task.desc} 需要 ${this.formatAreaTaskProgress(task)}`, 4200);
-      return false;
-    }
-
-    Object.entries(task.requirements || {}).forEach(([key, amount]) => this.removeItem(key, amount));
-    if (task.gold) {
-      this.gold += task.gold;
-      this.progress.totalEarned += task.gold;
-    }
-    if (task.reward?.item) this.addItem(task.reward.item, task.reward.amount || 1);
-    if (task.favor) this.relationship[task.favor] = Math.min(100, (this.relationship[task.favor] || 0) + (task.favorGain || 4));
-    Object.entries(task.xp || {}).forEach(([skill, amount]) => this.gainSkillXp(skill, amount));
-    const renownKey = this.getAreaRenownKey(areaId);
-    if (renownKey) this.progress[renownKey] = (this.progress[renownKey] || 0) + 1;
-    this.progress.areaTasksCompleted = (this.progress.areaTasksCompleted || 0) + 1;
-    task.done = true;
-    this.startAction("deliver", { duration: 640 });
-    const rewardText = task.reward?.item ? `，获得 ${ITEMS[task.reward.item].name}x${task.reward.amount || 1}` : "";
-    this.showMessage(`完成区域委托：${task.title}，获得 ${task.gold || 0} 金${rewardText}`, 3200);
-    return true;
+    this.giftedToday = {};
   }
 
-  applyProgressDerivedStats() {
-    this.player.speed = this.baseMoveSpeed + (this.progress.houseLevel - 1) * 6;
-    this.maxEnergy = this.baseEnergy + (this.progress.houseLevel - 1) * 14;
-    this.energy = Math.min(this.energy, this.maxEnergy);
-  }
-
-  rollWeather(day) {
-    const townRank = this.progress?.townRank || 1;
-    const seed = Math.abs(Math.sin(day * 97.13 + townRank * 0.73));
-    if (seed < 0.4) return "sunny";
-    if (seed < 0.67) return "rain";
-    if (seed < 0.88) return "windy";
-    return "mist";
-  }
-
-  saveGame() {
-    const data = {
-      gold: this.gold,
-      energy: this.energy,
-      inventory: this.inventory,
-      collections: this.collections,
-      gameDay: this.gameDay,
-      gameMinutes: this.gameMinutes,
-      currentMapId: this.currentMapId,
-      weather: this.weather,
-      tomorrowWeather: this.tomorrowWeather,
-      currentBuff: this.currentBuff,
-      player: { x: this.player.x, y: this.player.y },
-      interactables: this.getAllInteractables().map(o => ({ id: o.id, collected: o.collected, regrowTimer: o.regrowTimer || 0 })),
-      farmPlots: this.farmPlots,
-      progress: this.progress,
-      relationship: this.relationship,
-      skills: this.skills,
-      dailyRequests: this.dailyRequests,
-      areaTasks: this.areaTasks,
-      ranch: this.ranch,
-      mailbox: this.mailbox,
-      lastDayReport: this.lastDayReport,
+  generateResources() {
+    const rng = makeRng(this.day * 1009 + this.getSeasonIndex() * 251);
+    const resources = [];
+    const add = (type, tx, ty, item, amount = 1, tool = "hand", blocks = false) => {
+      resources.push({
+        id: `${type}-${tx}-${ty}-${this.day}-${resources.length}`,
+        kind: type,
+        type,
+        item,
+        amount,
+        tool,
+        blocks,
+        x: tx * TILE + 16,
+        y: ty * TILE + 18,
+        tx,
+        ty,
+        sway: rng() * Math.PI * 2,
+      });
     };
-    try { localStorage.setItem("cozytown_save", JSON.stringify(data)); } catch (e) {}
-    this.showMessage("游戏已保存 💾", 2000);
+
+    for (let i = 0; i < 58; i++) {
+      const tx = 2 + Math.floor(rng() * 22);
+      const ty = 2 + Math.floor(rng() * 34);
+      if (this.map[ty]?.[tx] === TILE_KIND.FOREST && rng() > 0.18) add("tree", tx, ty, "wood", 2 + Math.floor(rng() * 3), "axe", true);
+    }
+    for (let i = 0; i < 34; i++) {
+      const tx = 59 + Math.floor(rng() * 18);
+      const ty = 4 + Math.floor(rng() * 26);
+      if (this.map[ty]?.[tx] === TILE_KIND.STONE) {
+        const roll = rng();
+        const item = roll > 0.88 || (this.projects.mineCart && roll > 0.78) ? "crystal" : roll > 0.6 ? "ore" : "stone";
+        add(item === "stone" ? "rock" : "ore", tx, ty, item, 1 + Math.floor(rng() * 3), "pick", true);
+      }
+    }
+    for (let i = 0; i < 24; i++) {
+      const tx = 3 + Math.floor(rng() * 24);
+      const ty = 3 + Math.floor(rng() * 34);
+      const forestPool = this.getSeason().id === "autumn"
+        ? ["flower", "herb", "berry", "mushroom", "mushroom", "pinecone"]
+        : this.getSeason().id === "winter"
+          ? ["herb", "mushroom", "pinecone", "pinecone", "snowpea"]
+          : ["flower", "herb", "berry", "mushroom", "pinecone"];
+      const item = pick(forestPool, rng);
+      if (this.map[ty]?.[tx] !== TILE_KIND.WATER) add("forage", tx, ty, item, 1, "hand");
+    }
+    for (let i = 0; i < 14; i++) {
+      const tx = 49 + Math.floor(rng() * 20);
+      const ty = 44 + Math.floor(rng() * 7);
+      const roll = rng();
+      const item = this.projects.pearlDiving && roll > 0.9 ? "pearl" : roll > 0.7 ? "coral" : roll > 0.42 ? "seaweed" : "shell";
+      add("forage", tx, ty, item, 1, "hand");
+    }
+    for (let i = 0; i < 16; i++) {
+      const evening = this.minute > 18 * 60;
+      const tx = 5 + Math.floor(rng() * 30);
+      const ty = 4 + Math.floor(rng() * 34);
+      const season = this.getSeason().id;
+      const item = season === "winter"
+        ? (rng() > 0.62 ? "snowMoth" : "beetle")
+        : season === "summer"
+          ? (evening && rng() > 0.48 ? "firefly" : rng() > 0.42 ? "cicada" : "butterfly")
+          : evening && rng() > 0.45 ? "firefly" : rng() > 0.45 ? "beetle" : "butterfly";
+      add("bug", tx, ty, item, 1, "net");
+    }
+    if (this.projects.garden) {
+      for (let i = 0; i < 8; i++) add("forage", 4 + i, 37 + (i % 2), i % 3 === 0 ? "honey" : "flower", 1, "hand");
+    }
+    this.resources = resources;
   }
 
-  loadSave() {
-    try {
-      const raw = localStorage.getItem("cozytown_save");
-      if (!raw) return;
-      const data = JSON.parse(raw);
-      this.gold = data.gold ?? this.gold;
-      this.energy = data.energy ?? this.energy;
-      this.inventory = data.inventory ?? this.inventory;
-      this.collections = { items: {}, ...(data.collections || {}) };
-      if (!this.collections.items) this.collections.items = {};
-      this.gameDay = data.gameDay ?? this.gameDay;
-      this.gameMinutes = data.gameMinutes ?? this.gameMinutes;
-      this.currentMapId = data.currentMapId || this.currentMapId;
-      this.weather = data.weather || this.weather;
-      this.tomorrowWeather = data.tomorrowWeather || this.tomorrowWeather;
-      this.currentBuff = data.currentBuff && data.currentBuff.day === this.gameDay ? data.currentBuff : null;
-      if (data.player) Object.assign(this.player, data.player);
-      if (data.interactables) {
-        data.interactables.forEach((saved) => {
-          const obj = this.getAllInteractables().find(o => o.id === saved.id);
-          if (obj) {
-            obj.collected = saved.collected;
-            obj.regrowTimer = saved.regrowTimer || 0;
-          }
-        });
-      }
-      if (data.farmPlots?.length) this.farmPlots = data.farmPlots;
-      if (data.progress) this.progress = { ...this.progress, ...data.progress };
-      if (!Array.isArray(this.progress.completedProjects)) this.progress.completedProjects = [];
-      if (data.relationship) this.relationship = { ...this.relationship, ...data.relationship };
-      if (data.skills) {
-        this.skills = Object.fromEntries(Object.keys(SKILL_INFO).map((key) => [
-          key,
-          { ...this.skills[key], ...data.skills[key] },
-        ]));
-      }
-      if (Array.isArray(data.dailyRequests) && data.dailyRequests.length) this.dailyRequests = data.dailyRequests;
-      if (data.areaTasks) this.areaTasks = { ...this.areaTasks, ...data.areaTasks };
-      if (data.ranch?.animals) this.ranch = { ...this.createRanch(), ...data.ranch };
-      if (Array.isArray(data.mailbox)) this.mailbox = data.mailbox;
-      if (data.lastDayReport) this.lastDayReport = data.lastDayReport;
-      Object.keys(this.inventory).forEach((key) => { if ((this.inventory[key] || 0) > 0) this.collections.items[key] = true; });
-      this.applyProgressDerivedStats();
-      if (!this.dailyRequests?.length) this.dailyRequests = this.createDailyRequests();
-      if (!this.areaTasks) this.areaTasks = this.createAreaTasks();
-      if (!Array.isArray(this.mailbox)) this.mailbox = this.createDailyMail();
-      this.switchMap(this.currentMapId, this.player.x, this.player.y, null);
-    } catch (e) {}
-  }
-
-  bindEvents() {
-    window.addEventListener("keydown", (e) => {
-      if (typeof document !== "undefined" && document.body?.classList.contains("help-open")) return;
-      const key = e.key.toLowerCase();
-      if (["arrowup","arrowdown","arrowleft","arrowright","w","a","s","d","e","escape","enter"," ","i","j","tab","q","g","r","f5"].includes(key)) e.preventDefault();
-      this.keys.add(key);
-
-      if (key === "enter" && this.scene === SCENE.TITLE) {
+  handleKeyDown(key) {
+    if (this.scene === SCENE.TITLE) {
+      if (key === "enter") {
+        if (this.hasSave && this.loadGame()) return;
         this.scene = SCENE.PLAYING;
-        this.showMessage("每日目标：照看农田，积累木石与金币，尽快建牧场和加工坊。", 3600);
-        return;
       }
-
-      if (this.scene === SCENE.PLAYING) {
-        if (key === "e") this.tryInteract();
-        if (key === "i") this.scene = SCENE.INVENTORY;
-        if (key === "j") this.scene = SCENE.JOURNAL;
-        if (key === "f5") this.saveGame();
-        if (key === "q") this.cycleSeed();
-        if (key === "g") this.tryGiftNpc();
-      } else if (this.scene === SCENE.DIALOGUE) {
-        if (key === "e" || key === "enter" || key === " ") this.advanceDialogue();
-        if (key === "g") this.tryGiftNpc();
-        if (key === "escape") {
-          this.scene = SCENE.PLAYING;
-          this.dialogueTarget = null;
-          this.dialogueMeta = null;
-        }
-      } else if (this.scene === SCENE.SHOP) {
-        this.handleShopInput(key);
-      } else if (this.scene === SCENE.INVENTORY) {
-        if (key === "escape" || key === "i") this.scene = SCENE.PLAYING;
-      } else if (this.scene === SCENE.JOURNAL) {
-        this.handleJournalInput(key);
-      } else if (this.scene === SCENE.FISHING) {
-        if (key === " " || key === "e") this.handleFishingInput();
-        if (key === "escape") { this.scene = SCENE.PLAYING; this.fishingState = "casting"; }
-      } else if (this.scene === SCENE.INDOOR) {
-        this.handleIndoorInput(key);
-      }
-    });
-
-    window.addEventListener("keyup", (e) => this.keys.delete(e.key.toLowerCase()));
-  }
-
-  cycleSeed() {
-    const seeds = this.getOwnedSeedKeys();
-    if (seeds.length === 0) {
-      this.showMessage("没有种子可切换。", 1600);
+      if (key === "n") this.newGame(true);
+      if (key === "l") this.loadGame();
       return;
     }
-    this.selectedSeedIndex = (this.selectedSeedIndex + 1) % seeds.length;
-    const key = seeds[this.selectedSeedIndex];
-    this.showMessage(`当前播种：${ITEMS[key].icon} ${ITEMS[key].name}`, 1400);
+
+    if (this.scene === SCENE.FISHING) {
+      this.handleFishingKey(key);
+      return;
+    }
+
+    if (this.scene !== SCENE.PLAYING) {
+      this.handleMenuKey(key);
+      return;
+    }
+
+    if (/^[1-8]$/.test(key)) {
+      this.selectedTool = Number(key) - 1;
+      this.pushMessage(`当前工具：${TOOLS[this.selectedTool].name}`);
+    } else if (key === "q") {
+      this.cycleSeed();
+    } else if (key === "r") {
+      this.selectedTool = (this.selectedTool + 1) % TOOLS.length;
+      this.pushMessage(`当前工具：${TOOLS[this.selectedTool].name}`);
+    } else if (key === "space") {
+      this.useSelectedTool();
+    } else if (key === "enter" || key === "e") {
+      this.contextInteract();
+    } else if (key === "tab") {
+      this.sideTab = (this.sideTab + 1) % SIDE_TABS.length;
+    } else if (key === "i") {
+      this.openScene(SCENE.INVENTORY);
+    } else if (key === "j") {
+      this.openScene(SCENE.JOURNAL);
+    } else if (key === "f5") {
+      this.saveGame();
+    }
   }
 
-  start() {
-    requestAnimationFrame((t) => this.loop(t));
+  handleMenuKey(key) {
+    const items = this.getMenuItems();
+    if (key === "escape") {
+      this.closeScene();
+    } else if (key === "arrowup" || key === "w") {
+      this.menuIndex = clamp(this.menuIndex - 1, 0, Math.max(0, items.length - 1));
+    } else if (key === "arrowdown" || key === "s") {
+      this.menuIndex = clamp(this.menuIndex + 1, 0, Math.max(0, items.length - 1));
+    } else if (key === "arrowleft" || key === "a") {
+      this.shiftModalTab(-1);
+    } else if (key === "arrowright" || key === "d" || key === "tab") {
+      this.shiftModalTab(1);
+    } else if (key === "enter" || key === "e" || key === "space") {
+      const item = items[this.menuIndex];
+      if (item && !item.disabled) item.run();
+    } else if (key === "f5") {
+      this.saveGame();
+    }
   }
 
-  loop(timestamp) {
-    const dt = Math.min(timestamp - this.lastTime, 100);
-    this.lastTime = timestamp;
-    this.update(dt);
-    this.render();
-    requestAnimationFrame((t) => this.loop(t));
+  shiftModalTab(delta) {
+    const tabCount = this.getModalTabCount();
+    if (tabCount <= 1) return;
+    if (this.scene === SCENE.JOURNAL) {
+      this.journalTab = (this.journalTab + delta + tabCount) % tabCount;
+    } else {
+      this.menuTab = (this.menuTab + delta + tabCount) % tabCount;
+    }
+    this.menuIndex = 0;
+  }
+
+  getModalTabCount() {
+    if (this.scene === SCENE.SHOP) return SHOP_TABS.length;
+    if (this.scene === SCENE.JOURNAL) return JOURNAL_TABS.length;
+    return 1;
+  }
+
+  openScene(scene, tab = 0) {
+    this.scene = scene;
+    this.menuIndex = 0;
+    this.menuTab = tab;
+  }
+
+  closeScene() {
+    this.scene = SCENE.PLAYING;
+    this.activeNpc = null;
+    this.menuIndex = 0;
   }
 
   update(dt) {
-    if (this.scene === SCENE.TITLE) return;
+    this.messages.forEach((message) => { message.life -= dt; });
+    this.messages = this.messages.filter((message) => message.life > 0);
 
-    const deltaGameMinutes = (dt / 1000) * 60 * TIME_SPEED;
-    this.gameMinutes += deltaGameMinutes;
-    if (this.gameMinutes >= 1440) {
-      this.advanceToNextDay(false);
+    if (this.scene === SCENE.PLAYING) {
+      this.updateTime(dt);
+      this.updateMovement(dt);
+      this.updateNpcs(dt);
+    } else if (this.scene === SCENE.FISHING) {
+      this.updateFishing(dt);
     }
+  }
 
-    this.updateMessage(dt);
-    this.updateActionAnimation(dt);
-    this.updateParticles(dt);
-    this.updateInteractables(dt);
-    this.updateFarm(deltaGameMinutes);
-    this.updateNpcs(dt);
+  updateTime(dt) {
+    this.minute += dt * 7;
+    if (this.minute >= 26 * 60) {
+      this.pushMessage("太晚了，你回到小屋休息。");
+      this.advanceDay();
+    }
+  }
 
-    if (this.scene === SCENE.PLAYING || this.scene === SCENE.INDOOR) this.updatePlayer(dt / 1000);
-    if (this.scene === SCENE.FISHING) this.updateFishing(dt);
-
+  updateMovement(dt) {
+    let dx = 0;
+    let dy = 0;
+    if (this.heldKeys.has("arrowleft") || this.heldKeys.has("a")) dx -= 1;
+    if (this.heldKeys.has("arrowright") || this.heldKeys.has("d")) dx += 1;
+    if (this.heldKeys.has("arrowup") || this.heldKeys.has("w")) dy -= 1;
+    if (this.heldKeys.has("arrowdown") || this.heldKeys.has("s")) dy += 1;
+    if (!dx && !dy) return;
+    const len = Math.hypot(dx, dy);
+    dx /= len;
+    dy /= len;
+    if (Math.abs(dx) > Math.abs(dy)) this.player.dir = dx > 0 ? "right" : "left";
+    else this.player.dir = dy > 0 ? "down" : "up";
+    const speed = this.player.speed * (this.heldKeys.has("shift") ? 1.32 : 1);
+    const next = { x: this.player.x + dx * speed * dt, y: this.player.y + dy * speed * dt };
+    if (!this.collides(next.x, this.player.y)) this.player.x = next.x;
+    if (!this.collides(this.player.x, next.y)) this.player.y = next.y;
+    this.player.step += dt * speed * 0.08;
     this.updateCamera();
-    this.checkQuests();
-    this.updateTownRank();
-  }
-
-  advanceToNextDay(rested = false) {
-    this.gameDay += 1;
-    this.gameMinutes = 6 * 60;
-    this.onNewDay(rested);
-  }
-
-  onNewDay(rested = false) {
-    const summary = `昨日 收${this.dayStats.harvested} / 采${this.dayStats.foraged} / 钓${this.dayStats.fishCaught} / 出货${this.dayStats.shippedValue}金 / 委${this.dayStats.requests}`;
-    this.lastDayReport = this.buildDayReport(this.dayStats, rested);
-    this.dailyActions = { talked: {}, gifted: {} };
-    this.currentBuff = null;
-    this.dayStats = this.createDayStats();
-    this.weather = this.tomorrowWeather || this.rollWeather(this.gameDay);
-    this.tomorrowWeather = this.rollWeather(this.gameDay + 1);
-    this.dailyRequests = this.createDailyRequests();
-    this.areaTasks = this.createAreaTasks();
-    this.mailbox = this.createDailyMail();
-    let irrigated = 0;
-    this.farmPlots.forEach((p) => {
-      p.watered = false;
-      if (this.getWeatherConfig().autoWater && p.cropKey) {
-        p.watered = true;
-        p.wateredDays += 1;
-        p.careStreak = (p.careStreak || 0) + 1;
-      }
-    });
-    if (!this.getWeatherConfig().autoWater && this.progress.irrigationLevel > 0) {
-      const quota = this.progress.irrigationLevel * 8;
-      this.farmPlots.forEach((p) => {
-        if (irrigated >= quota || !p.cropKey || p.ready || p.watered) return;
-        p.watered = true;
-        p.wateredDays += 1;
-        p.careStreak = (p.careStreak || 0) + 1;
-        irrigated += 1;
-      });
-    }
-    this.getAllInteractables().forEach((o) => {
-      if (o.collected && o.regrowTime > 0) {
-        o.collected = false;
-        o.regrowTimer = 0;
-      }
-    });
-    this.ranch.animals.forEach((animal) => {
-      animal.age += 1;
-      if (animal.fedDay !== this.gameDay - 1) animal.happy = Math.max(0, animal.happy - 3);
-    });
-    this.energy = rested ? this.maxEnergy : Math.max(44, Math.floor(this.maxEnergy * 0.72));
-    const festival = this.getFestivalInfo();
-    const dayTip = festival ? `今天是${festival.name}：${festival.desc}` : this.isMarketDay() ? "今天是集市日，出售收益更高。" : "公告牌委托已经刷新。";
-    const mailTip = this.getUnreadMail().length ? ` 邮箱有 ${this.getUnreadMail().length} 封新信。` : "";
-    const restTip = rested ? "睡了个好觉，体力已回满。" : "忙到了天亮，体力没有完全恢复。";
-    const irrigationTip = irrigated ? ` 水渠自动浇灌 ${irrigated} 块地。` : "";
-    this.showMessage(`第 ${this.gameDay} 天｜${this.getSeasonInfo().name}${this.getSeasonDay()}日：${this.getWeatherConfig().icon}${this.getWeatherConfig().name}。${dayTip}${mailTip}${restTip}${irrigationTip} ${summary}`, 5200);
-  }
-
-  updateFarm(deltaGameMinutes) {
-    this.farmPlots.forEach((plot) => {
-      if (!plot.cropKey || plot.ready) return;
-      const crop = CROPS[plot.cropKey];
-      if (!crop) return;
-      if (!plot.watered) return;
-      plot.growthMinutes += deltaGameMinutes;
-      const minutesPerStage = (crop.growDays * 1440) / crop.stages;
-      const nextStage = Math.min(crop.stages, Math.floor(plot.growthMinutes / minutesPerStage));
-      plot.stage = nextStage;
-      if (plot.stage >= crop.stages && plot.wateredDays >= crop.waterNeed) plot.ready = true;
-    });
-  }
-
-  updateTownRank() {
-    const relationScore = Object.values(this.relationship).reduce((a, b) => a + b, 0) / 14;
-    const skillScore = Object.values(this.skills).reduce((sum, skill) => sum + (skill.level - 1), 0) * 1.5;
-    const areaScore = (this.progress.areaTasksCompleted || 0) * 2 + (this.progress.forestRenown || 0) + (this.progress.harborRenown || 0) + (this.progress.highlandRenown || 0) + (this.progress.forestRelics || 0);
-    const score = this.progress.harvestCount + this.progress.forageCount + Math.floor(this.progress.totalEarned / 250) + Math.floor(this.progress.shippingValue / 300) + relationScore + this.progress.houseLevel * 2 + this.progress.farmLevel * 3 + this.progress.ranchLevel * 3 + this.progress.workshopLevel * 4 + this.progress.irrigationLevel * 3 + this.progress.projectsCompleted * 4 + this.progress.animalsRaised * 1.8 + this.progress.artisanMade * 1.2 + this.progress.requestsCompleted * 2 + this.progress.mealsCooked + skillScore + areaScore + (this.progress.bridgeRepaired ? 4 : 0);
-    this.progress.townRank = Math.max(1, Math.min(6, Math.floor(score / 8) + 1));
-  }
-
-  getWeatherConfig() {
-    return WEATHER[this.weather] || WEATHER.sunny;
-  }
-
-  isMarketDay() {
-    return this.gameDay % 5 === 0;
-  }
-
-  getSeasonIndex() {
-    return Math.floor(((this.gameDay - 1) % 112) / 28);
-  }
-
-  getSeasonInfo() {
-    return SEASONS[this.getSeasonIndex()] || SEASONS[0];
-  }
-
-  getSeasonDay() {
-    return ((this.gameDay - 1) % 28) + 1;
-  }
-
-  getFestivalInfo() {
-    const day = this.getSeasonDay();
-    return FESTIVALS.find((event) => event.day === day) || null;
-  }
-
-  getMarketMultiplier(itemKey) {
-    let multiplier = 1;
-    const hour = this.gameMinutes / 60;
-    const festival = this.getFestivalInfo();
-    const season = this.getSeasonInfo();
-    const cropKey = Object.keys(CROPS).find((key) => CROPS[key].harvest === itemKey);
-    if (this.isMarketDay()) multiplier += 0.15;
-    if ((itemKey === "fish" || itemKey === "nightFish" || itemKey === "silverFish" || itemKey === "goldKoi") && hour >= 18) multiplier += 0.18;
-    if (cropKey && season.cropBonus.includes(cropKey)) multiplier += 0.12;
-    if (festival?.name === "潮声夜市" && hour >= 18 && ITEMS[itemKey]?.sellPrice) multiplier += 0.12;
-    if (festival?.name === "丰收评鉴" && (cropKey || ["mayonnaise", "cheese", "jam", "honey", "wildHoney", "forestWax"].includes(itemKey))) multiplier += 0.15;
-    return multiplier;
-  }
-
-  getSellPrice(itemKey) {
-    return Math.max(1, Math.floor((ITEMS[itemKey]?.sellPrice || 0) * this.getMarketMultiplier(itemKey)));
-  }
-
-  getRanchCapacity() {
-    return this.progress.ranchLevel <= 0 ? 0 : 2 + this.progress.ranchLevel * 2;
-  }
-
-  getAnimalInfo(type) {
-    return ANIMALS[type];
-  }
-
-  addAnimal(type) {
-    const info = this.getAnimalInfo(type);
-    if (!info || this.ranch.animals.length >= this.getRanchCapacity()) return false;
-    const names = ["栗栗", "豆豆", "云朵", "阿米", "暖暖", "晴子", "小麦", "铃兰"];
-    this.ranch.animals.push({
-      id: `${type}-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-      type,
-      name: names[this.ranch.animals.length % names.length],
-      age: 0,
-      happy: 42,
-      fedDay: 0,
-      productDay: 0,
-    });
-    this.progress.animalsRaised += 1;
-    return true;
-  }
-
-  getRanchSummary() {
-    if (this.progress.ranchLevel <= 0) return "尚未建造牧场";
-    const counts = Object.keys(ANIMALS).map((type) => {
-      const count = this.ranch.animals.filter((animal) => animal.type === type).length;
-      return count ? `${ANIMALS[type].name}x${count}` : "";
-    }).filter(Boolean);
-    return counts.length ? counts.join(" / ") : "牧场空着";
-  }
-
-  getCompletedProjectIds() {
-    if (!Array.isArray(this.progress.completedProjects)) this.progress.completedProjects = [];
-    return this.progress.completedProjects;
-  }
-
-  getOpenProjects() {
-    const completed = new Set(this.getCompletedProjectIds());
-    return PROJECTS.filter((project) => !completed.has(project.id));
-  }
-
-  canCompleteProject(project) {
-    return Object.entries(project.requirements).every(([key, amount]) => (this.inventory[key] || 0) >= amount);
-  }
-
-  formatRequirements(requirements) {
-    return Object.entries(requirements)
-      .map(([key, amount]) => `${ITEMS[key]?.name || key}${this.inventory[key] || 0}/${amount}`)
-      .join(" · ");
-  }
-
-  applyProjectReward(project) {
-    const reward = project.reward || {};
-    if (reward.gold) {
-      this.gold += reward.gold;
-      this.progress.totalEarned += reward.gold;
-    }
-    if (reward.item) this.addItem(reward.item, reward.amount || 1);
-    if (reward.irrigationLevel) this.progress.irrigationLevel += reward.irrigationLevel;
-    if (reward.toolLevel) this.progress.toolLevel = Math.min(5, this.progress.toolLevel + reward.toolLevel);
-    if (reward.rodLevel) this.progress.rodLevel = Math.min(5, this.progress.rodLevel + reward.rodLevel);
-    if (reward.workshopLevel) this.progress.workshopLevel = Math.max(this.progress.workshopLevel, reward.workshopLevel);
-  }
-
-  tryCompleteProject() {
-    const ready = this.getOpenProjects().find((project) => this.canCompleteProject(project));
-    if (!ready) return false;
-    Object.entries(ready.requirements).forEach(([key, amount]) => this.removeItem(key, amount));
-    this.getCompletedProjectIds().push(ready.id);
-    this.progress.projectsCompleted += 1;
-    this.applyProjectReward(ready);
-    const levelUps = this.gainSkillXp("social", 8);
-    this.showMessage(`小镇工程完成：${ready.name}。${ready.desc}${this.formatLevelUps(levelUps)}`, 3600);
-    return true;
-  }
-
-  showProjectPreview() {
-    const open = this.getOpenProjects();
-    if (!open.length) {
-      this.showMessage("镇务工程都完成了，晨露镇已经很像样了。", 2600);
-      return;
-    }
-    const ready = open.find((project) => this.canCompleteProject(project));
-    const project = ready || open[0];
-    this.showMessage(`${ready ? "可提交" : "工程"}：${project.name}｜${this.formatRequirements(project.requirements)}`, 4200);
-  }
-
-  isShippableItem(key) {
-    return !!ITEMS[key]?.sellPrice && !key.startsWith("seed_") && !NON_SHIPPABLE_ITEMS.has(key);
-  }
-
-  shipAllSellables() {
-    const entries = Object.entries(this.inventory).filter(([key, count]) => count > 0 && this.isShippableItem(key));
-    if (!entries.length) {
-      this.showMessage("出货箱里没有适合出售的商品。木材、石头、干草和矿材会保留。", 2200);
-      return;
-    }
-    let total = 0;
-    let count = 0;
-    entries.forEach(([key, amount]) => {
-      const value = this.getSellPrice(key) * amount;
-      total += value;
-      count += amount;
-      this.removeItem(key, amount);
-    });
-    this.gold += total;
-    this.progress.totalEarned += total;
-    this.progress.shippingCount += count;
-    this.progress.shippingValue += total;
-    this.dayStats.shipped += count;
-    this.dayStats.shippedValue += total;
-    const levelUps = this.gainSkillXp("crafting", Math.max(3, Math.floor(count / 2)));
-    this.showMessage(`出货 ${count} 件商品，收入 ${total} 金。材料类已自动保留。${this.formatLevelUps(levelUps)}`, 3200);
-  }
-
-  careForRanch() {
-    if (this.progress.ranchLevel <= 0) {
-      this.showMessage("这里适合建牧场。去商店的投资页建造鸡舍吧。", 2200);
-      return;
-    }
-    if (!this.ranch.animals.length) {
-      this.showMessage("牧场已经建好，可以在商店投资页购买小鸡、奶牛或绵羊。", 2200);
-      return;
-    }
-    if (!this.consumeEnergy(3, "体力不足，照料动物也需要休息。")) return;
-
-    let fed = 0;
-    let products = 0;
-    const productTexts = [];
-    this.ranch.animals.forEach((animal) => {
-      const info = this.getAnimalInfo(animal.type);
-      if (!info) return;
-      if (animal.fedDay !== this.gameDay) {
-        if ((this.inventory.hay || 0) > 0) {
-          this.removeItem("hay", 1);
-          animal.fedDay = this.gameDay;
-          animal.happy = Math.min(100, animal.happy + 5);
-          fed += 1;
-        } else {
-          animal.happy = Math.max(0, animal.happy - 4);
-        }
-      }
-      const mature = animal.age >= info.matureDays;
-      if (mature && animal.fedDay === this.gameDay && animal.productDay !== this.gameDay) {
-        const rare = animal.happy >= 70 && Math.random() < 0.28 + (animal.happy - 70) / 180;
-        const product = rare ? info.rareProduct : info.product;
-        this.addItem(product, 1);
-        animal.productDay = this.gameDay;
-        animal.happy = Math.min(100, animal.happy + 2);
-        products += 1;
-        productTexts.push(ITEMS[product].name);
-      }
-    });
-
-    this.progress.forageCount += products;
-    this.dayStats.animalProducts += products;
-    const levelUps = this.gainSkillXp("crafting", 2 + products * 3);
-    const hayText = fed ? `喂食 ${fed} 只动物。` : "干草不足，没能全部喂食。";
-    const productText = products ? `获得 ${productTexts.join("、")}。` : "成熟动物明天会继续产出。";
-    this.spawnParticles(this.player.x, this.player.y - 12, "#d7b86d", 10);
-    this.showMessage(`${hayText}${productText}${this.formatLevelUps(levelUps)}`, 2600);
-  }
-
-  getSkillLevel(key) {
-    return this.skills[key]?.level || 1;
-  }
-
-  getSkillXpNeed(level) {
-    return 18 + level * 14;
-  }
-
-  gainSkillXp(key, amount) {
-    const skill = this.skills[key];
-    if (!skill || amount <= 0) return [];
-    skill.xp += amount;
-    const messages = [];
-    while (skill.xp >= this.getSkillXpNeed(skill.level)) {
-      skill.xp -= this.getSkillXpNeed(skill.level);
-      skill.level += 1;
-      messages.push(`${SKILL_INFO[key].label} Lv${skill.level}`);
-    }
-    return messages;
-  }
-
-  formatLevelUps(levelUps) {
-    return levelUps.length ? ` ｜ ${levelUps.join("、")}` : "";
-  }
-
-  getBuffValue(effect) {
-    return this.currentBuff?.day === this.gameDay && this.currentBuff.effect === effect ? this.currentBuff.amount : 0;
-  }
-
-  getHarvestBonusChance() {
-    return Math.min(0.75, 0.08 * (this.getSkillLevel("farming") - 1) + this.getBuffValue("harvest"));
-  }
-
-  getCropCareScore(plot, crop) {
-    if (!crop) return 0;
-    const waterRatio = Math.min(1.4, (plot.wateredDays || 0) / Math.max(1, crop.waterNeed));
-    const skill = (this.getSkillLevel("farming") - 1) * 0.09;
-    const seasonal = this.getSeasonInfo().cropBonus.includes(plot.cropKey) ? 0.12 : 0;
-    const irrigation = this.progress.irrigationLevel > 0 ? 0.04 : 0;
-    return Math.min(1.25, waterRatio * 0.62 + skill + seasonal + irrigation + this.getBuffValue("harvest") * 0.35);
-  }
-
-  getCropQualityPreview(plot, crop) {
-    const score = this.getCropCareScore(plot, crop);
-    if (score >= 1.12) return CROP_QUALITY.iridium;
-    if (score >= 0.92) return CROP_QUALITY.gold;
-    if (score >= 0.70) return CROP_QUALITY.silver;
-    return CROP_QUALITY.normal;
-  }
-
-  rollCropQuality(plot, crop) {
-    const score = this.getCropCareScore(plot, crop);
-    const roll = Math.random();
-    const iridiumChance = Math.max(0, score - 1.03) * 0.42;
-    const goldChance = Math.max(0, score - 0.72) * 0.48;
-    const silverChance = Math.max(0, score - 0.42) * 0.62;
-    if (roll < iridiumChance) return "iridium";
-    if (roll < iridiumChance + goldChance) return "gold";
-    if (roll < iridiumChance + goldChance + silverChance) return "silver";
-    return "normal";
-  }
-
-  getForageBonusChance() {
-    const winterBonus = this.getSeasonInfo().id === "winter" ? 0.04 : 0;
-    return Math.min(0.85, 0.12 * (this.getSkillLevel("foraging") - 1) + this.getWeatherConfig().forageBonus + winterBonus + this.getBuffValue("foraging"));
-  }
-
-  getTalkBonus() {
-    return 2 + Math.floor((this.getSkillLevel("social") - 1) / 2) + this.getBuffValue("social");
-  }
-
-  getGiftBonus(isFavorite) {
-    const festival = this.getFestivalInfo();
-    const festivalBonus = festival?.name === "花篱集" ? 2 : 0;
-    return (isFavorite ? 8 : 3) + Math.floor((this.getSkillLevel("social") - 1) / 2) + festivalBonus;
-  }
-
-  getFishingProgressMultiplier() {
-    return this.getWeatherConfig().fishingProgress + (this.getSkillLevel("fishing") - 1) * 0.06 + (this.progress.rodLevel - 1) * 0.08 + this.getBuffValue("fishing");
-  }
-
-  getRareFishChance() {
-    const seasonBonus = this.getSeasonInfo().id === "winter" ? 0.03 : 0;
-    return 0.06 + this.getWeatherConfig().rareFishBonus + seasonBonus + (this.progress.rodLevel - 1) * 0.018 + (this.getSkillLevel("fishing") - 1) * 0.03 + this.getBuffValue("fishing") * 0.35;
-  }
-
-  getCurrentMoveSpeed() {
-    if (this.energy <= 15) return this.player.speed * 0.74;
-    if (this.energy <= 35) return this.player.speed * 0.88;
-    return this.player.speed;
-  }
-
-  consumeEnergy(cost, failText = "体力不足，先回小屋休息或做料理。") {
-    const toolDiscount = 1 - Math.min(0.28, (this.progress.toolLevel - 1) * 0.07);
-    const scaledCost = Math.max(1, Math.round(cost * this.getWeatherConfig().energyScale * toolDiscount));
-    if (this.energy < scaledCost) {
-      this.showMessage(failText, 1700);
-      return false;
-    }
-    this.energy = Math.max(0, this.energy - scaledCost);
-    return true;
-  }
-
-  restoreEnergy(amount) {
-    this.energy = Math.min(this.maxEnergy, this.energy + amount);
-  }
-
-  useForestShrine(obj) {
-    if (this.progress.forestShrineDay === this.gameDay) {
-      this.showMessage("苔石祭台今天已经回应过你了。明天再带供品来。", 2200);
-      return;
-    }
-    const offering = ["wildHoney", "flower", "herb", "mushroom", "relicShard"].find((key) => (this.inventory[key] || 0) > 0);
-    if (!offering) {
-      this.showMessage("苔石祭台需要供品：野蜂蜜、花、香草、蘑菇或遗迹碎片。", 3200);
-      return;
-    }
-    this.removeItem(offering, 1);
-    this.progress.forestShrineDay = this.gameDay;
-    this.progress.forestShrineBlessings = (this.progress.forestShrineBlessings || 0) + 1;
-    this.currentBuff = { id: "forestBlessing", effect: "foraging", amount: 0.18 + Math.min(0.12, (this.progress.forestRenown || 0) * 0.01), label: "雾林祝福", day: this.gameDay };
-    this.restoreEnergy(12);
-    this.relationship["npc-ye"] = Math.min(100, (this.relationship["npc-ye"] || 0) + 2);
-    const levelUps = this.gainSkillXp("foraging", 5);
-    this.startAction("gift", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, item: offering, faceTarget: true, duration: 760 });
-    this.spawnParticles(obj.x + obj.w / 2, obj.y + 8, "#b7e3a2", 14);
-    this.showMessage(`献上 ${ITEMS[offering].name}，获得雾林祝福：今日采集更容易额外收获。${this.formatLevelUps(levelUps)}`, 3600);
-  }
-
-  drinkForestSpring(obj) {
-    if (this.progress.forestSpringDay === this.gameDay) {
-      this.showMessage("泉眼今天已经被取用过，水面正慢慢恢复清澈。", 2000);
-      return;
-    }
-    this.progress.forestSpringDay = this.gameDay;
-    const amount = 18 + Math.min(12, (this.progress.forestRenown || 0) * 2);
-    this.restoreEnergy(amount);
-    this.startAction("water", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 620 });
-    this.spawnParticles(obj.x + obj.w / 2, obj.y + obj.h / 2, "#7cc7df", 14);
-    this.showMessage(`喝下清泉，恢复 ${amount} 体力。`, 2200);
-  }
-
-  searchForestRuin(obj) {
-    if (obj.collected) {
-      const timeLeft = Math.ceil((obj.regrowTime - obj.regrowTimer) / 1000);
-      this.showMessage(`遗迹已经翻找过了，${Math.max(0, timeLeft)} 秒后雾气会带来新的线索。`, 1800);
-      return;
-    }
-    if (!this.consumeEnergy(4, "体力不足，翻找遗迹需要更专注一点。")) return;
-    obj.collected = true;
-    obj.regrowTimer = 0;
-    const bonus = Math.random() < this.getForageBonusChance();
-    const extra = bonus ? "crystal" : Math.random() < 0.45 ? "fern" : "stone";
-    this.addItem("relicShard", 1);
-    this.addItem(extra, 1);
-    this.progress.forestRelics = (this.progress.forestRelics || 0) + 1;
-    this.progress.forageCount += 2;
-    this.dayStats.foraged += 2;
-    const levelUps = this.gainSkillXp("foraging", bonus ? 11 : 8);
-    this.startAction("forage", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 820 });
-    this.spawnParticles(obj.x + obj.w / 2, obj.y + 12, "#9cc8ff", 12);
-    this.showMessage(`在遗迹里找到 ${ITEMS.relicShard.name} 和 ${ITEMS[extra].name}。${this.formatLevelUps(levelUps)}`, 2600);
-  }
-
-  clearLogjam(obj) {
-    if (obj.collected) {
-      this.showMessage("倒伏木障已经清理，林道宽敞多了。", 1600);
-      return;
-    }
-    if (!this.consumeEnergy(5, "体力不足，清理倒伏木需要斧头劲儿。")) return;
-    obj.collected = true;
-    const amount = obj.amount || 3;
-    this.addItem("wood", amount);
-    this.progress.forestRenown = (this.progress.forestRenown || 0) + 1;
-    this.progress.forageCount += amount;
-    this.dayStats.foraged += amount;
-    const levelUps = this.gainSkillXp("foraging", 7);
-    this.startAction("axe", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 760 });
-    this.spawnParticles(obj.x + obj.w / 2, obj.y + obj.h / 2, "#c08a52", 12);
-    this.showMessage(`清理木障，获得 木材x${amount}。雾林声望 +1${this.formatLevelUps(levelUps)}`, 2600);
-  }
-
-  getNpcName(id) {
-    return NPCS.find((npc) => npc.id === id)?.name || "居民";
-  }
-
-  getPendingRequests() {
-    return this.dailyRequests.filter((request) => !request.done);
-  }
-
-  getRecipeList() {
-    return RECIPES;
-  }
-
-  getWorkshopRecipes() {
-    if (this.progress.workshopLevel <= 0) return [];
-    return WORKSHOP_RECIPES.filter((recipe, index) => this.progress.workshopLevel >= 2 || index < 3);
-  }
-
-  getHouseActions() {
-    return [
-      { type: "rest", label: "休息到次日", desc: "恢复全部体力，并刷新天气与委托" },
-      { type: "save", label: "整理日记", desc: "立即手动保存当前进度" },
-      ...this.getRecipeList().map((recipe) => ({ type: "recipe", recipe, label: `做料理：${recipe.name}`, desc: recipe.desc })),
-      ...this.getWorkshopRecipes().map((recipe) => ({ type: "artisan", recipe, label: `加工：${recipe.name}`, desc: recipe.desc })),
-    ];
-  }
-
-  handleIndoorInput(key) {
-    const actions = this.getHouseActions();
-    if (key === "escape") {
-      this.scene = SCENE.PLAYING;
-      return;
-    }
-    if (key === "arrowdown" || key === "s") {
-      this.houseSelection = (this.houseSelection + 1) % actions.length;
-      return;
-    }
-    if (key === "arrowup" || key === "w") {
-      this.houseSelection = (this.houseSelection - 1 + actions.length) % actions.length;
-      return;
-    }
-    if (key === "e" || key === "enter" || key === " ") {
-      this.performHouseAction(actions[this.houseSelection]);
-    }
-  }
-
-  handleJournalInput(key) {
-    const tabCount = 5;
-    if (key === "escape" || key === "j" || key === "i") {
-      this.scene = SCENE.PLAYING;
-      return;
-    }
-    if (key === "tab" || key === "arrowright" || key === "d") {
-      this.journalTab = (this.journalTab + 1) % tabCount;
-      return;
-    }
-    if (key === "arrowleft" || key === "a") {
-      this.journalTab = (this.journalTab - 1 + tabCount) % tabCount;
-    }
-  }
-
-  performHouseAction(action) {
-    if (!action) return;
-    if (action.type === "rest") {
-      this.startAction("sleep", { duration: 700 });
-      this.advanceToNextDay(true);
-      this.scene = SCENE.PLAYING;
-      return;
-    }
-    if (action.type === "save") {
-      this.startAction("write", { duration: 560 });
-      this.saveGame();
-      return;
-    }
-    if (action.type === "recipe") this.cookRecipe(action.recipe);
-    if (action.type === "artisan") this.makeArtisan(action.recipe);
-  }
-
-  cookRecipe(recipe) {
-    if (!recipe) return;
-    const missing = Object.entries(recipe.ingredients).find(([key, count]) => (this.inventory[key] || 0) < count);
-    if (missing) {
-      this.showMessage(`材料不足：${ITEMS[missing[0]].name} x${missing[1]}`, 1700);
-      return;
-    }
-    this.startAction("cook", { duration: 820, item: recipe.id });
-    Object.entries(recipe.ingredients).forEach(([key, count]) => this.removeItem(key, count));
-    this.restoreEnergy(recipe.energy);
-    this.currentBuff = { id: recipe.id, effect: recipe.effect, amount: recipe.amount, label: recipe.name, day: this.gameDay };
-    this.progress.mealsCooked += 1;
-    this.dayStats.cooked += 1;
-    const festival = this.getFestivalInfo();
-    if (festival?.name === "灯火晚餐") this.restoreEnergy(8);
-    const skillKey = recipe.effect === "fishing" ? "fishing" : recipe.effect === "social" ? "social" : "crafting";
-    const levelUps = this.gainSkillXp(skillKey, 3);
-    this.showMessage(`做出了 ${recipe.name}，体力 +${recipe.energy}${this.formatLevelUps(levelUps)}`, 2200);
-  }
-
-  makeArtisan(recipe) {
-    if (!recipe) return;
-    if (this.progress.workshopLevel <= 0) {
-      this.showMessage("还没有加工坊，先去商店投资建造。", 1700);
-      return;
-    }
-    const missing = Object.entries(recipe.ingredients).find(([key, count]) => (this.inventory[key] || 0) < count);
-    if (missing) {
-      this.showMessage(`材料不足：${ITEMS[missing[0]].name} x${missing[1]}`, 1700);
-      return;
-    }
-    if (!this.consumeEnergy(2, "体力不足，明天再来加工吧。")) return;
-    this.startAction("craft", { duration: 820, item: recipe.result });
-    Object.entries(recipe.ingredients).forEach(([key, count]) => this.removeItem(key, count));
-    this.addItem(recipe.result, recipe.amount || 1);
-    this.progress.artisanMade += recipe.amount || 1;
-    this.dayStats.artisan += recipe.amount || 1;
-    const levelUps = this.gainSkillXp("crafting", recipe.xp || 3);
-    this.showMessage(`完成 ${ITEMS[recipe.result].name} x${recipe.amount || 1}${this.formatLevelUps(levelUps)}`, 2200);
-  }
-
-  tryCompleteRequests() {
-    const ready = [];
-    const available = { ...this.inventory };
-    this.getPendingRequests().forEach((request) => {
-      if ((available[request.item] || 0) >= request.amount) {
-        ready.push(request);
-        available[request.item] -= request.amount;
-      }
-    });
-    if (!ready.length) return false;
-
-    let totalGold = 0;
-    ready.forEach((request) => {
-      this.removeItem(request.item, request.amount);
-      this.gold += request.gold;
-      this.progress.totalEarned += request.gold;
-      totalGold += request.gold;
-      request.done = true;
-      const favorGain = request.favor + Math.floor((this.getSkillLevel("social") - 1) / 2);
-      this.relationship[request.requester] = Math.min(100, (this.relationship[request.requester] || 0) + favorGain);
-      this.progress.requestsCompleted += 1;
-      this.dayStats.requests += 1;
-    });
-
-    const levelUps = this.gainSkillXp("social", ready.length * 4);
-    this.startAction("deliver", { duration: 620 });
-    this.showMessage(`提交 ${ready.length} 份委托，获得 ${totalGold} 金${this.formatLevelUps(levelUps)}`, 2600);
-    return true;
-  }
-
-  updateMessage(dt) {
-    if (this.messageTimer > 0) {
-      this.messageTimer -= dt;
-      if (this.messageTimer <= 0) {
-        this.interactionMessage = "";
-        this.messageTimer = 0;
-      }
-    }
-  }
-
-  startAction(type, options = {}) {
-    const duration = options.duration || 520;
-    this.actionAnimation = {
-      type,
-      elapsed: 0,
-      duration,
-      target: options.target || null,
-      item: options.item || null,
-      color: options.color || null,
-      label: options.label || "",
-    };
-    if (options.faceTarget && options.target) this.faceToward(options.target.x, options.target.y);
-  }
-
-  updateActionAnimation(dt) {
-    if (!this.actionAnimation) return;
-    this.actionAnimation.elapsed += dt;
-    if (this.actionAnimation.elapsed >= this.actionAnimation.duration) this.actionAnimation = null;
-  }
-
-  getActionProgress() {
-    if (!this.actionAnimation) return 0;
-    return Math.max(0, Math.min(1, this.actionAnimation.elapsed / this.actionAnimation.duration));
-  }
-
-  faceToward(x, y) {
-    const dx = x - this.player.x;
-    const dy = y - this.player.y;
-    if (Math.abs(dx) > Math.abs(dy)) this.player.facing = dx >= 0 ? "right" : "left";
-    else this.player.facing = dy >= 0 ? "down" : "up";
-  }
-
-  updateParticles(dt) {
-    this.particles = this.particles.filter(p => p.life > 0);
-    this.particles.forEach((p) => {
-      p.x += p.vx * dt / 1000;
-      p.y += p.vy * dt / 1000;
-      p.vy += 120 * dt / 1000;
-      p.life -= dt;
-      p.alpha = p.life / p.maxLife;
-    });
-  }
-
-  spawnParticles(x, y, color, count = 8) {
-    for (let i = 0; i < count; i++) {
-      const angle = (Math.PI * 2 * i) / count + Math.random() * 0.5;
-      const speed = 60 + Math.random() * 80;
-      this.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed - 60, color, life: 600, maxLife: 600, alpha: 1, size: 4 + Math.random() * 4 });
-    }
-  }
-
-  spawnDirectedParticles(x, y, color, count = 8, direction = { x: 0, y: 1 }, spread = 0.8) {
-    const base = Math.atan2(direction.y, direction.x);
-    for (let i = 0; i < count; i++) {
-      const angle = base + (Math.random() - 0.5) * spread;
-      const speed = 70 + Math.random() * 120;
-      this.particles.push({ x, y, vx: Math.cos(angle) * speed, vy: Math.sin(angle) * speed, color, life: 480, maxLife: 480, alpha: 1, size: 2.5 + Math.random() * 3.5 });
-    }
-  }
-
-  updateInteractables(dt) {
-    this.getAllInteractables().forEach((o) => {
-      if (o.collected && o.regrowTime > 0) {
-        o.regrowTimer += dt;
-        if (o.regrowTimer >= o.regrowTime) {
-          o.collected = false;
-          o.regrowTimer = 0;
-        }
-      }
-    });
-  }
-
-  updateNpcs(dt) {
-    const hour = this.gameMinutes / 60;
-    this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
-      const scheduledTarget = this.getNpcScheduleTarget(npc, hour);
-      const target = this.canStandOnMap(npc.mapId, scheduledTarget.x, scheduledTarget.y, npc.size)
-        ? scheduledTarget
-        : this.findNearestStandablePosition(npc.mapId, scheduledTarget.x, scheduledTarget.y, npc.size);
-      const dx = target.x - npc.x;
-      const dy = target.y - npc.y;
-      const d = Math.hypot(dx, dy);
-      if (d > 8) {
-        npc.vx = (dx / d) * 35;
-        npc.vy = (dy / d) * 35;
-      } else {
-        npc.moveTimer -= dt;
-        if (npc.moveTimer <= 0) {
-          npc.moveTimer = 1500 + Math.random() * 2500;
-          const ang = Math.random() * Math.PI * 2;
-          npc.vx = Math.cos(ang) * 22;
-          npc.vy = Math.sin(ang) * 22;
-        }
-      }
-      const nx = npc.x + npc.vx * dt / 1000;
-      const ny = npc.y + npc.vy * dt / 1000;
-      if (this.canStandAt(nx, npc.y, npc.size)) npc.x = nx;
-      if (this.canStandAt(npc.x, ny, npc.size)) npc.y = ny;
-      npc.x = Math.max(50, Math.min(MAP_W * TILE_SIZE - 50, npc.x));
-      npc.y = Math.max(50, Math.min(MAP_H * TILE_SIZE - 50, npc.y));
-    });
-  }
-
-  getNpcScheduleTarget(npc, hour) {
-    if (npc.mapId === "forest") {
-      if (hour < 12) return { x: 392, y: 312 };
-      if (hour < 18) return { x: 670, y: 566 };
-      return { x: 300, y: 840 };
-    }
-    if (npc.mapId === "harbor") {
-      if (hour < 12) return { x: 820, y: 520 };
-      if (hour < 18) return { x: 742, y: 924 };
-      return { x: 816, y: 620 };
-    }
-    if (this.isMarketDay() && hour >= 12 && hour < 20) {
-      if (npc.id === "npc-chen") return { x: 500, y: 548 };
-      if (npc.id === "npc-lingling") return { x: 430, y: 560 };
-      if (npc.id === "npc-maomao") return { x: 370, y: 594 };
-      if (npc.id === "npc-mei") return { x: 492, y: 572 };
-      if (npc.id === "npc-su") return { x: 610, y: 594 };
-      return { x: 560, y: 592 };
-    }
-    if (this.weather === "rain" && hour >= 9 && hour < 18) {
-      if (npc.id === "npc-chen") return { x: 846, y: 690 };
-      if (npc.id === "npc-lingling") return { x: 620, y: 306 };
-      if (npc.id === "npc-maomao") return { x: 314, y: 584 };
-      if (npc.id === "npc-mei") return { x: 584, y: 248 };
-      if (npc.id === "npc-su") return { x: 600, y: 820 };
-      return { x: 650, y: 372 };
-    }
-    if (hour < 12) return { x: npc.baseX - 50, y: npc.baseY };
-    if (hour < 18) {
-      if (npc.id === "npc-chen") return { x: 846, y: 690 };
-      if (npc.id === "npc-lingling") return { x: 200, y: 760 };
-      if (npc.id === "npc-maomao") return { x: 660, y: 280 };
-      if (npc.id === "npc-mei") return { x: 540, y: 560 };
-      if (npc.id === "npc-su") return { x: 540, y: 810 };
-      return { x: 530, y: 680 };
-    }
-    return { x: npc.baseX + 30, y: npc.baseY + 30 };
-  }
-
-  updatePlayer(ds) {
-    if (this.scene === SCENE.INDOOR) return;
-    let mx = 0, my = 0;
-    if (this.keys.has("arrowup") || this.keys.has("w")) { my -= 1; this.player.facing = "up"; }
-    if (this.keys.has("arrowdown") || this.keys.has("s")) { my += 1; this.player.facing = "down"; }
-    if (this.keys.has("arrowleft") || this.keys.has("a")) { mx -= 1; this.player.facing = "left"; }
-    if (this.keys.has("arrowright") || this.keys.has("d")) { mx += 1; this.player.facing = "right"; }
-    if (mx === 0 && my === 0) return;
-    const len = Math.hypot(mx, my);
-    const speed = this.getCurrentMoveSpeed();
-    const nx = this.player.x + (mx / len) * speed * ds;
-    const ny = this.player.y + (my / len) * speed * ds;
-    if (this.canStandAt(nx, this.player.y, this.player.size)) this.player.x = nx;
-    if (this.canStandAt(this.player.x, ny, this.player.size)) this.player.y = ny;
-    this.player.x = Math.max(16, Math.min(MAP_W * TILE_SIZE - 16, this.player.x));
-    this.player.y = Math.max(16, Math.min(MAP_H * TILE_SIZE - 16, this.player.y));
-    this.footstepTimer += ds * speed;
-    if (this.footstepTimer > 54) this.footstepTimer = 0;
   }
 
   updateCamera() {
-    const cx = this.player.x - this.canvas.width / 2;
-    const cy = this.player.y - this.canvas.height / 2;
-    const maxX = MAP_W * TILE_SIZE - this.canvas.width;
-    const maxY = MAP_H * TILE_SIZE - this.canvas.height;
-    this.camera.x += (Math.max(0, Math.min(maxX, cx)) - this.camera.x) * 0.1;
-    this.camera.y += (Math.max(0, Math.min(maxY, cy)) - this.camera.y) * 0.1;
+    this.camera.x = clamp(this.player.x - LAYOUT.world.w / 2, 0, MAP_W * TILE - LAYOUT.world.w);
+    this.camera.y = clamp(this.player.y - LAYOUT.world.h / 2, 0, MAP_H * TILE - LAYOUT.world.h);
   }
 
-  canStandAt(x, y, size) {
-    if (this.currentMapId === "town" && !this.progress.bridgeRepaired && x > 1060 && y > 460 && y < 620) return false;
-    return this.canStandOnMap(this.currentMapId, x, y, size || this.player.size);
+  updateNpcs(dt) {
+    const hour = this.getHour();
+    this.npcs.forEach((npc, index) => {
+      const range = hour >= 18 ? 12 : 28;
+      const targetX = npc.homeX + Math.sin(this.lastTime * 0.00025 + npc.phase) * range;
+      const targetY = npc.homeY + Math.cos(this.lastTime * 0.0002 + index) * range * 0.55;
+      npc.x += (targetX - npc.x) * dt * 0.5;
+      npc.y += (targetY - npc.y) * dt * 0.5;
+    });
   }
 
-  getOwnedSeedKeys() {
-    const unlocked = this.getUnlockedSeeds();
-    return Object.keys(this.inventory).filter(k => k.startsWith("seed_") && this.inventory[k] > 0 && unlocked.includes(k));
+  collides(x, y) {
+    const halfW = 10;
+    const top = y - 7;
+    const bottom = y + 10;
+    const points = [
+      [x - halfW, top],
+      [x + halfW, top],
+      [x - halfW, bottom],
+      [x + halfW, bottom],
+    ];
+    for (const [px, py] of points) {
+      const tx = Math.floor(px / TILE);
+      const ty = Math.floor(py / TILE);
+      if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) return true;
+      const kind = this.map[ty][tx];
+      if (kind === TILE_KIND.WATER) return true;
+    }
+    for (const object of this.objects) {
+      if (!object.blocks) continue;
+      if (x > object.x - 8 && x < object.x + object.w + 8 && y > object.y + 8 && y < object.y + object.h + 10) {
+        return true;
+      }
+    }
+    for (const resource of this.resources) {
+      if (!resource.blocks) continue;
+      if (Math.hypot(x - resource.x, y - resource.y) < 20) return true;
+    }
+    return false;
   }
 
-  getUnlockedSeeds() {
-    return Object.entries(CROPS)
-      .sort((a, b) => a[1].unlock - b[1].unlock || a[1].growDays - b[1].growDays)
-      .filter(([, crop]) => crop.unlock <= this.progress.townRank)
-      .map(([, crop]) => crop.seed);
-  }
-
-  tryInteract() {
-    const plot = this.getNearestPlot();
-    if (plot) {
-      this.interactFarmPlot(plot);
+  contextInteract(allowToolFallback = true) {
+    const building = this.findNearestBuilding(54);
+    if (building) {
+      this.interactBuilding(building);
       return;
     }
-    const npc = this.getNearestNpc();
+    const npc = this.findNearestNpc(58);
     if (npc) {
-      this.startDialogue(npc);
+      this.activeNpc = npc;
+      this.openScene(SCENE.NPC);
       return;
     }
-    const obj = this.getNearestInteractable();
-    if (!obj) {
-      this.showMessage("附近没有可互动目标。", 1200);
+    const plot = this.getFacingPlot();
+    if (plot && this.isCropReady(plot)) {
+      this.harvestPlot(plot);
       return;
     }
-    this.interactWith(obj);
+    const resource = this.findNearestResource(42, (item) => item.tool === "hand" || item.type === "forage");
+    if (resource) {
+      this.collectResource(resource);
+      return;
+    }
+    if (allowToolFallback) this.useSelectedTool();
+    else this.pushMessage("附近没有可互动目标。");
   }
 
-  getNearestPlot() {
-    if (this.currentMapId !== "town") return null;
-    let best = null, minD = 72;
-    this.farmPlots.forEach((plot) => {
-      if (plot.lockedLevel > this.progress.farmLevel) return;
-      const cx = plot.x + plot.w / 2, cy = plot.y + plot.h / 2;
-      const d = Math.hypot(cx - this.player.x, cy - this.player.y);
-      if (d < minD) { minD = d; best = plot; }
-    });
-    return best;
+  interactBuilding(building) {
+    const actions = {
+      house: () => this.openScene(SCENE.HOUSE),
+      shop: () => this.openScene(SCENE.SHOP),
+      town: () => this.openScene(SCENE.TOWN),
+      requests: () => this.openScene(SCENE.REQUESTS),
+      workshop: () => this.openScene(SCENE.WORKSHOP),
+      museum: () => this.openScene(SCENE.MUSEUM),
+      ranch: () => this.openScene(SCENE.SHOP, 2),
+      shipping: () => this.shipAllSellable(),
+      mine: () => this.mineEntrance(),
+      dock: () => this.startFishing("sea"),
+    };
+    actions[building.action]?.();
   }
 
-  interactFarmPlot(plot) {
-    if (!plot.tilled) {
-      if (!this.consumeEnergy(4)) return;
-      this.startAction("hoe", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, faceTarget: true, duration: 620 });
+  mineEntrance() {
+    const found = this.projects.mineCart ? "crystal" : "ore";
+    if (!this.spendEnergy(12)) return;
+    this.addItem("stone", 4 + this.toolLevel);
+    this.addItem("ore", 2 + Math.floor(this.toolLevel / 2));
+    if (Math.random() < (this.projects.mineCart ? 0.55 : 0.24)) this.addItem(found, 1);
+    this.addSkill("mining", 8);
+    this.pushMessage("你在山洞里带回了一袋矿料。");
+  }
+
+  useSelectedTool() {
+    const tool = TOOLS[this.selectedTool];
+    if (!tool) return;
+    if (tool.id === "hand") {
+      this.contextInteract(false);
+      return;
+    }
+    if (tool.id === "hoe") this.useHoe();
+    if (tool.id === "seed") this.useSeed();
+    if (tool.id === "water") this.useWater();
+    if (tool.id === "axe") this.useAxe();
+    if (tool.id === "pick") this.usePick();
+    if (tool.id === "rod") this.tryStartFishing();
+    if (tool.id === "net") this.useNet();
+  }
+
+  useHoe() {
+    const { tx, ty } = this.getFacingTile();
+    if (!this.isFarmable(tx, ty)) {
+      this.pushMessage("这里不适合开垦。");
+      return;
+    }
+    if (!this.spendEnergy(TOOLS[1].energy)) return;
+    let plot = this.getPlot(tx, ty);
+    if (!plot) {
+      plot = { tx, ty, tilled: true, watered: false, crop: null, age: 0, quality: 0 };
+      this.plots.push(plot);
+    } else {
       plot.tilled = true;
-      const levelUps = this.gainSkillXp("farming", 2);
-      this.showMessage(`你翻松了土地。${this.formatLevelUps(levelUps)}`, 1500);
+    }
+    this.pushMessage("土地已经翻松。");
+  }
+
+  useSeed() {
+    const { tx, ty } = this.getFacingTile();
+    const plot = this.getPlot(tx, ty);
+    const crop = SEED_TO_CROP[this.selectedSeed];
+    if (!crop || !this.inventory[this.selectedSeed]) {
+      this.pushMessage("没有可播种的种子。按 Q 切换库存种子。");
       return;
     }
-    if (plot.cropKey && !plot.ready) {
-      if (!plot.watered) {
-        if (!this.consumeEnergy(2)) return;
-        this.startAction("water", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, faceTarget: true, duration: 760 });
-        plot.watered = true;
-        plot.wateredDays += 1;
-        plot.careStreak = (plot.careStreak || 0) + 1;
-        this.spawnDirectedParticles(this.player.x, this.player.y, "#67b6ff", 12, { x: plot.x + plot.w / 2 - this.player.x, y: plot.y + plot.h / 2 - this.player.y }, 0.55);
-        this.spawnParticles(plot.x + 20, plot.y + 20, "#67b6ff", 6);
-        const levelUps = this.gainSkillXp("farming", 1);
-        this.showMessage(`已浇水，作物今日会继续生长。${this.formatLevelUps(levelUps)}`, 1500);
-      } else {
-        this.showMessage("今天已经浇过水了。", 1200);
-      }
+    if (!plot || !plot.tilled || plot.crop) {
+      this.pushMessage("需要在已翻好的空地上播种。");
       return;
     }
-    if (plot.ready && plot.cropKey) {
-      if (!this.consumeEnergy(2)) return;
-      this.startAction("harvest", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, faceTarget: true, duration: 620 });
-      const crop = CROPS[plot.cropKey];
-      let amount = crop.yield[0] + Math.floor(Math.random() * (crop.yield[1] - crop.yield[0] + 1));
-      let bonusText = "";
-      if (Math.random() < this.getHarvestBonusChance()) {
-        amount += 1;
-        bonusText = " 额外丰收 +1";
-      }
-      const qualityKey = this.rollCropQuality(plot, crop);
-      const quality = CROP_QUALITY[qualityKey] || CROP_QUALITY.normal;
-      let qualityText = "";
-      if (qualityKey !== "normal") {
-        const premium = Math.max(1, Math.floor(this.getSellPrice(crop.harvest) * amount * (quality.multiplier - 1)));
-        this.gold += premium;
-        this.progress.totalEarned += premium;
-        this.progress.qualityHarvests = (this.progress.qualityHarvests || 0) + amount;
-        this.dayStats.qualityHarvests += amount;
-        this.dayStats.qualityGold += premium;
-        qualityText = ` ${quality.label}品质奖励 +${premium}金`;
-      }
-      this.addItem(crop.harvest, amount);
-      this.progress.harvestCount += amount;
-      this.dayStats.harvested += amount;
-      plot.cropKey = null;
-      plot.stage = 0;
-      plot.ready = false;
+    if (!crop.seasons.includes(this.getSeason().id) && !this.projects.greenhouse) {
+      this.pushMessage(`${crop.name}不适合${this.getSeason().name}。`);
+      return;
+    }
+    if (!this.spendEnergy(TOOLS[2].energy)) return;
+    this.removeItem(this.selectedSeed, 1);
+    plot.crop = Object.keys(CROPS).find((id) => CROPS[id] === crop);
+    plot.age = 0;
+    plot.quality = 0;
+    plot.watered = false;
+    this.pushMessage(`种下了${crop.name}。`);
+  }
+
+  useWater() {
+    const { tx, ty } = this.getFacingTile();
+    const plot = this.getPlot(tx, ty);
+    if (!plot || !plot.tilled) {
+      this.pushMessage("这里没有需要浇水的田地。");
+      return;
+    }
+    if (!this.spendEnergy(Math.max(1, TOOLS[3].energy - Math.floor(this.toolLevel / 2)))) return;
+    plot.watered = true;
+    plot.quality += 1;
+    this.pushMessage("田地浇好了。");
+  }
+
+  useAxe() {
+    const resource = this.findNearestResource(42, (item) => item.tool === "axe");
+    if (!resource) {
+      this.pushMessage("附近没有能砍的树木。");
+      return;
+    }
+    if (!this.spendEnergy(Math.max(3, TOOLS[4].energy - (this.toolLevel - 1)))) return;
+    this.collectResource(resource, 1 + Math.floor(this.toolLevel / 2));
+  }
+
+  usePick() {
+    const resource = this.findNearestResource(42, (item) => item.tool === "pick");
+    if (!resource) {
+      this.pushMessage("附近没有能敲的石块。");
+      return;
+    }
+    const projectBonus = this.projects.mineCart ? 2 : 0;
+    if (!this.spendEnergy(Math.max(3, TOOLS[5].energy - (this.toolLevel - 1) - projectBonus))) return;
+    this.collectResource(resource, this.projects.mineCart ? 2 : 1);
+  }
+
+  tryStartFishing() {
+    const { tx, ty } = this.getFacingTile();
+    const tile = this.map[ty]?.[tx];
+    if (tile === TILE_KIND.WATER || this.player.y > 43 * TILE) {
+      this.startFishing(this.player.y > 43 * TILE ? "sea" : "river");
+    } else {
+      this.pushMessage("站在水边才能钓鱼。");
+    }
+  }
+
+  useNet() {
+    const resource = this.findNearestResource(46, (item) => item.type === "bug");
+    if (!resource) {
+      this.pushMessage("附近没有可以捕捉的虫。");
+      return;
+    }
+    if (!this.spendEnergy(TOOLS[7].energy)) return;
+    this.collectResource(resource);
+    this.stats.bugs += 1;
+    this.checkAchievements();
+  }
+
+  collectResource(resource, bonus = 0) {
+    const amount = resource.amount + bonus;
+    this.addItem(resource.item, amount);
+    this.resources = this.resources.filter((item) => item.id !== resource.id);
+    this.addCollection(resource.item);
+    this.addSkill(resource.tool === "pick" ? "mining" : resource.type === "bug" ? "nature" : "foraging", 4 + amount);
+    this.pushMessage(`获得${itemName(resource.item)}x${amount}。`);
+  }
+
+  harvestPlot(plot) {
+    const crop = CROPS[plot.crop];
+    if (!crop || !this.isCropReady(plot)) return;
+    const qualityBonus = plot.quality >= crop.days + 2 ? 1 : 0;
+    const festivalBonus = this.getFestival()?.day === 21 ? 1 : 0;
+    const amount = 1 + qualityBonus + festivalBonus;
+    this.addItem(crop.harvest, amount);
+    this.addCollection(crop.harvest);
+    this.stats.harvested += amount;
+    this.addSkill("farming", crop.xp + amount);
+    this.checkAchievements();
+    if (crop.regrow) {
+      plot.age = crop.days - crop.regrow;
       plot.watered = false;
-      plot.wateredDays = 0;
-      plot.growthMinutes = 0;
-      this.spawnParticles(plot.x + 20, plot.y + 20, "#a2ff6e", 9);
-      const levelUps = this.gainSkillXp("farming", 4 + amount + quality.xp);
-      this.showMessage(`收获 ${ITEMS[crop.harvest].name} x${amount}！${qualityText}${bonusText}${this.formatLevelUps(levelUps)}`, 2600);
-      return;
-    }
-    if (!plot.cropKey) {
-      const seeds = this.getOwnedSeedKeys();
-      if (seeds.length === 0) {
-        this.showMessage("没有种子。去商店购买吧。", 1400);
-        return;
-      }
-      if (this.selectedSeedIndex >= seeds.length) this.selectedSeedIndex = 0;
-      const seedKey = seeds[this.selectedSeedIndex];
-      const cropKey = Object.keys(CROPS).find(k => CROPS[k].seed === seedKey);
-      if (!cropKey) return;
-      if (!this.consumeEnergy(1)) return;
-      this.startAction("plant", { target: { x: plot.x + plot.w / 2, y: plot.y + plot.h / 2 }, item: seedKey, faceTarget: true, duration: 560 });
-      this.removeItem(seedKey, 1);
-      plot.cropKey = cropKey;
-      plot.stage = 0;
-      plot.ready = false;
+      plot.quality = 1;
+    } else {
+      plot.crop = null;
+      plot.age = 0;
       plot.watered = false;
-      plot.growthMinutes = 0;
-      plot.wateredDays = 0;
-      plot.careStreak = 0;
-      const levelUps = this.gainSkillXp("farming", 1);
-      this.showMessage(`播种：${CROPS[cropKey].name}。记得每日浇水！${this.formatLevelUps(levelUps)}`, 1800);
+      plot.quality = 0;
     }
+    this.pushMessage(`收获${itemName(crop.harvest)}x${amount}。`);
   }
 
-  getNearestNpc() {
-    let best = null, minD = INTERACT_DISTANCE;
-    this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
-      const d = Math.hypot(npc.x - this.player.x, npc.y - this.player.y);
-      if (d < minD) { minD = d; best = npc; }
-    });
-    return best;
+  isFarmable(tx, ty) {
+    return tx >= 8 && tx <= 31 && ty >= 17 && ty <= 35 && this.map[ty]?.[tx] === TILE_KIND.FARM;
   }
 
-  getNearestInteractable() {
-    let best = null, minD = INTERACT_DISTANCE;
-    this.interactables.forEach((obj) => {
-      const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
-      const d = Math.hypot(cx - this.player.x, cy - this.player.y);
-      if (d < minD) { minD = d; best = obj; }
-    });
-    return best;
+  getPlot(tx, ty) {
+    return this.plots.find((plot) => plot.tx === tx && plot.ty === ty);
   }
 
-  interactWith(obj) {
-    const blockReason = this.getInteractableBlockReason(obj);
-    if (blockReason) {
-      this.showMessage(blockReason, 2200);
-      return;
-    }
-    if (obj.type === "house") {
-      this.startAction("enter", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 420 });
-      this.houseSelection = 0;
-      this.scene = SCENE.INDOOR;
-      return;
-    }
-    if (obj.type === "warp") {
-      this.startAction("walk", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 360 });
-      this.switchMap(obj.targetMap, obj.targetX, obj.targetY, `来到 ${this.worlds[obj.targetMap].name}`);
-      return;
-    }
-    if (obj.type === "shop") {
-      const h = this.gameMinutes / 60;
-      const closeHour = this.isMarketDay() ? 22 : 20;
-      if (h < 8 || h >= closeHour) {
-        this.showMessage(`商店营业时间 08:00 - ${String(closeHour).padStart(2, "0")}:00。`, 1800);
-        return;
-      }
-      this.startAction("shop", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 420 });
-      this.scene = SCENE.SHOP;
-      this.shopMode = "buy";
-      this.shopSelection = 0;
-      return;
-    }
-    if (obj.type === "sign") {
-      this.startAction("read", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 520 });
-      if (this.tryCompleteRequests()) return;
-      const pending = this.getPendingRequests();
-      if (!pending.length) {
-        this.showMessage("今天的委托都完成了，镇上的大家对你很满意。", 2600);
-        return;
-      }
-      const preview = pending.slice(0, 2).map((request) => `${this.getNpcName(request.requester)}要 ${ITEMS[request.item].name}x${request.amount}`).join(" / ");
-      this.showMessage(`公告牌：${preview}`, 3600);
-      return;
-    }
-    if (obj.type === "trailboard") {
-      this.startAction("read", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 520 });
-      this.tryCompleteAreaTask(obj.areaId || this.currentMapId);
-      return;
-    }
-    if (obj.type === "mailbox") {
-      this.startAction("read", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 520 });
-      this.readMailbox();
-      return;
-    }
-    if (obj.type === "shrine") {
-      this.useForestShrine(obj);
-      return;
-    }
-    if (obj.type === "spring") {
-      this.drinkForestSpring(obj);
-      return;
-    }
-    if (obj.type === "ruin") {
-      this.searchForestRuin(obj);
-      return;
-    }
-    if (obj.type === "logjam") {
-      this.clearLogjam(obj);
-      return;
-    }
-    if (obj.type === "ranch") {
-      this.startAction("feed", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 680 });
-      this.careForRanch();
-      return;
-    }
-    if (obj.type === "shipping") {
-      this.startAction("ship", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 660 });
-      this.shipAllSellables();
-      return;
-    }
-    if (obj.type === "project") {
-      this.startAction("build", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 700 });
-      if (!this.tryCompleteProject()) this.showProjectPreview();
-      return;
-    }
-    if (obj.type === "fishspot") {
-      if (!this.consumeEnergy(4, "体力不足，钓鱼前先回家歇会儿。")) return;
-      this.startAction("cast", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 820 });
-      this.scene = SCENE.FISHING;
-      this.fishingState = "casting";
-      this.fishingTimer = 1200 + Math.random() * 2400;
-      this.fishingProgress = 0;
-      this.fishingBarY = 180;
-      this.fishingFishY = 140;
-      return;
-    }
-    if (obj.type === "bridge") {
-      if (this.progress.bridgeRepaired) {
-        this.showMessage("旧桥已修复，东区资源更丰富。", 1600);
-        return;
-      }
-      const enough = this.gold >= 450 && (this.inventory.wood || 0) >= 20 && (this.inventory.stone || 0) >= 14;
-      if (!enough) {
-        this.showMessage("修桥需要 450金 + 木材20 + 石头14。", 2200);
-        return;
-      }
-      this.gold -= 450;
-      this.startAction("build", { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: 780 });
-      this.removeItem("wood", 20);
-      this.removeItem("stone", 14);
-      this.progress.bridgeRepaired = true;
-      this.progress.eastUnlocked = true;
-      this.showMessage("旧桥修复完成！东区解锁。", 2600);
-      return;
-    }
-    if (obj.type === "firefly") {
-      const hour = this.gameMinutes / 60;
-      if (hour < 18 && hour > 5) {
-        this.showMessage("萤火群要到傍晚以后才会亮起来。", 1800);
-        return;
-      }
-    }
-
-    if (obj.collected) {
-      const timeLeft = Math.ceil((obj.regrowTime - obj.regrowTimer) / 1000);
-      this.showMessage(`${obj.name} 已采集，${Math.max(0, timeLeft)}秒后恢复。`, 1300);
-      return;
-    }
-
-    if (!this.consumeEnergy(2)) return;
-    const actionType = obj.type === "tree" || obj.type === "resinTap" ? "axe" : obj.type === "stone" || obj.type === "crystal" || obj.type === "ore" ? "pickaxe" : "forage";
-    this.startAction(actionType, { target: { x: obj.x + obj.w / 2, y: obj.y + obj.h / 2 }, faceTarget: true, duration: actionType === "forage" ? 560 : 720 });
-    obj.collected = true;
-    obj.regrowTimer = 0;
-    let totalAmount = 0;
-    let gainedText = "";
-    if (obj.item) {
-      let amount = obj.amount || 1;
-      if (Math.random() < this.getForageBonusChance()) amount += 1;
-      this.addItem(obj.item, amount);
-      totalAmount += amount;
-      gainedText = `获得 ${ITEMS[obj.item].name} x${amount}`;
-    }
-    if (obj.extraItem) {
-      const extraAmount = Math.random() < this.getForageBonusChance() ? 2 : 1;
-      this.addItem(obj.extraItem, extraAmount);
-      totalAmount += extraAmount;
-      gainedText += ` ${ITEMS[obj.extraItem].name} x${extraAmount}`;
-    }
-    this.progress.forageCount += totalAmount;
-    this.dayStats.foraged += totalAmount;
-    const levelUps = this.gainSkillXp("foraging", 3 + totalAmount);
-    this.showMessage(`${gainedText}${this.formatLevelUps(levelUps)}`, 1800);
-    this.spawnParticles(obj.x + obj.w / 2, obj.y, "#88ff88", 7);
+  getFacingPlot() {
+    const { tx, ty } = this.getFacingTile();
+    return this.getPlot(tx, ty);
   }
 
-  addItem(key, amount) {
-    this.inventory[key] = (this.inventory[key] || 0) + amount;
-    if (amount > 0) this.collections.items[key] = true;
-  }
-
-  removeItem(key, amount) {
-    this.inventory[key] = (this.inventory[key] || 0) - amount;
-    if (this.inventory[key] <= 0) delete this.inventory[key];
-  }
-
-  tryGiftNpc() {
-    const npc = this.getNearestNpc();
-    if (!npc) {
-      this.showMessage("附近没有居民。", 1200);
-      return;
-    }
-    if (this.dailyActions.gifted[npc.id] === this.gameDay) {
-      this.showMessage(`${npc.name} 今天已经收过礼物了。`, 1600);
-      return;
-    }
-    const candidate = npc.likes.find(k => (this.inventory[k] || 0) > 0) || Object.keys(this.inventory).find(k => !k.startsWith("seed_"));
-    if (!candidate) {
-      this.showMessage("背包里没有可赠送物品。", 1500);
-      return;
-    }
-    this.startAction("gift", { target: { x: npc.x, y: npc.y }, item: candidate, faceTarget: true, duration: 650 });
-    this.removeItem(candidate, 1);
-    const likeBonus = this.getGiftBonus(npc.likes.includes(candidate));
-    this.relationship[npc.id] = Math.min(100, (this.relationship[npc.id] || 0) + likeBonus);
-    this.dailyActions.gifted[npc.id] = this.gameDay;
-    const levelUps = this.gainSkillXp("social", npc.likes.includes(candidate) ? 5 : 3);
-    this.showMessage(`送出 ${ITEMS[candidate]?.name || candidate}，${npc.name} 好感 +${likeBonus}${this.formatLevelUps(levelUps)}`, 2200);
-  }
-
-  startDialogue(npc) {
-    this.startAction("talk", { target: { x: npc.x, y: npc.y }, faceTarget: true, duration: 540 });
-    let talkLevelUps = [];
-    if (this.dailyActions.talked[npc.id] !== this.gameDay) {
-      this.relationship[npc.id] = Math.min(100, (this.relationship[npc.id] || 0) + this.getTalkBonus());
-      this.dailyActions.talked[npc.id] = this.gameDay;
-      talkLevelUps = this.gainSkillXp("social", 2);
-    }
-    const h = this.gameMinutes / 60;
-    const favor = this.relationship[npc.id] || 0;
-    const profile = this.getNpcProfile(npc);
-    const meta = this.getDialogueMeta(npc, profile, h, favor);
-    const pages = [];
-    pages.push(this.getNpcGreeting(npc, profile, h, favor));
-    pages.push(this.getWorldAwareDialogue(npc, h));
-    pages.push(this.pickDialogueLine(profile.topics, this.gameDay + Math.floor(h) + npc.id.length));
-    const personalLine = this.getNpcPersonalDialogue(npc, favor);
-    if (personalLine) pages.push(personalLine);
-
-    if (npc.id === "npc-lingling" && this.progress.harvestCount >= 10) pages.push("我看见你收成越来越稳了。下一步可以把田地分区：快熟作物保现金，高价作物等集市日集中卖。");
-    if (npc.id === "npc-maomao") pages.push("按 G 可以送礼物。别急着把所有鱼卖掉，留一两条喜欢的鱼，聊天时送出去很划算。");
-    if (npc.id === "npc-zhuang" && this.progress.bridgeRepaired) pages.push("旧桥通了以后，东区资源别只看眼前。每天顺路敲石、砍木，比缺材料时硬等舒服很多。");
-    if (npc.id === "npc-ye") {
-      const forestTask = this.getAreaTask("forest");
-      pages.push("高地的入口在雾林北边。镇子名望够了以后，那条路会从风景变成真正的路线。");
-      if (forestTask && !forestTask.done) pages.push(`林务站今天贴着「${forestTask.title}」：${this.formatAreaTaskProgress(forestTask)}。做完它，森林会更像你的日常路线。`);
-    }
-    if (npc.id === "npc-lan") pages.push("月湾和镇子之间来回很快。缺钱时先去码头看鱼点，再捡贝壳和珊瑚，收益不会太空。");
-    if (npc.id === "npc-mei") pages.push(this.progress.workshopLevel ? "加工坊已经能用了，就别让水果、牛奶和蜂蜜睡在背包里。把它们变成商品，价格会更像样。" : "等手头宽裕了，建个加工坊吧。日子会从卖原料，变成做真正有名气的手作。");
-    if (npc.id === "npc-su") pages.push(this.progress.ranchLevel ? `你的牧场现在是：${this.getRanchSummary()}。每天喂干草，动物心情好时会回报更好的产物。` : "农场不只有作物。先建牧场，再买小鸡，现金流会比单靠田地更稳。");
-    if (this.weather === "rain") pages.push("下雨天能省下浇水的体力。把那点体力拿去采集、钓鱼或跑委托，整天会更赚。");
-    if (this.isMarketDay()) pages.push("今天是集市日，适合集中卖高价值货。普通物品也能卖，但加工品和稀有鱼更配得上这个日子。");
-    const request = this.getPendingRequests().find((entry) => entry.requester === npc.id);
-    if (request) pages.push(`如果你愿意，今天可以帮我准备 ${ITEMS[request.item].name} x${request.amount}。去公告牌交付，大家会把这件事记在心里。`);
-    pages.push(`${profile.giftHint}。好感越高，对话会更具体，也更容易知道谁真正需要什么。`);
-    if (talkLevelUps.length) pages.push(`交流越来越熟练了：${talkLevelUps.join("、")}`);
-
-    this.dialogueTarget = npc;
-    this.dialoguePages = pages;
-    this.dialoguePage = 0;
-    this.dialogueMeta = meta;
-    this.dialoguePageStartedAt = this.lastTime;
-    this.scene = SCENE.DIALOGUE;
-  }
-
-  advanceDialogue() {
-    const text = this.dialoguePages[this.dialoguePage] || "";
-    if (!this.isDialoguePageFullyRevealed(text)) {
-      this.dialoguePageStartedAt = -Infinity;
-      return;
-    }
-    this.dialoguePage += 1;
-    if (this.dialoguePage >= this.dialoguePages.length) {
-      this.scene = SCENE.PLAYING;
-      this.dialogueTarget = null;
-      this.dialogueMeta = null;
-      this.dialoguePageStartedAt = 0;
-      return;
-    }
-    this.dialoguePageStartedAt = this.lastTime;
-  }
-
-  getNpcProfile(npc) {
-    return NPC_PROFILES[npc.id] || {
-      role: "小镇居民",
-      mood: "平和",
-      motto: "日子会慢慢变好的。",
-      giftHint: `喜欢 ${npc.likes.map((key) => ITEMS[key]?.name || key).join("、")}`,
-      portrait: { hair: "#5a4a3f", coat: npc.color, accent: npc.hatColor, skin: "#d9a77f", bg: ["#eee2c6", "#9db586"] },
-      topics: ["今天也适合把小事做好。"],
-    };
-  }
-
-  getDialogueMeta(npc, profile, hour, favor) {
-    const request = this.getPendingRequests().find((entry) => entry.requester === npc.id);
-    const mood = this.weather === "rain" ? "雨日闲谈" : this.isMarketDay() ? "集市忙碌" : favor >= 70 ? "亲近" : hour >= 18 ? "傍晚放松" : profile.mood;
+  getFacingTile(distancePx = 26) {
+    let ox = 0;
+    let oy = 0;
+    if (this.player.dir === "left") ox = -distancePx;
+    if (this.player.dir === "right") ox = distancePx;
+    if (this.player.dir === "up") oy = -distancePx;
+    if (this.player.dir === "down") oy = distancePx;
     return {
-      role: profile.role,
-      mood,
-      motto: profile.motto,
-      giftHint: profile.giftHint,
-      location: this.worlds[npc.mapId]?.name || this.getCurrentMapName(),
-      requestText: request ? `${ITEMS[request.item].name} x${request.amount}` : "暂无个人委托",
-      favor,
+      tx: clamp(Math.floor((this.player.x + ox) / TILE), 0, MAP_W - 1),
+      ty: clamp(Math.floor((this.player.y + oy) / TILE), 0, MAP_H - 1),
     };
   }
 
-  pickDialogueLine(lines, seed = 0) {
-    if (!lines?.length) return "";
-    return lines[Math.abs(seed) % lines.length];
+  isCropReady(plot) {
+    const crop = CROPS[plot.crop];
+    return Boolean(crop && plot.age >= crop.days);
   }
 
-  getNpcGreeting(npc, profile, hour, favor) {
-    const period = hour < 11 ? "早上" : hour < 17 ? "下午" : hour < 20 ? "傍晚" : "夜里";
-    if (favor >= 70) return `${period}好，${this.player.name}。${profile.motto} 你最近做的事，镇上其实都看在眼里。`;
-    if (favor >= 35) return `${period}好，来得正好。${profile.motto} 今天要不要听一点实用的建议？`;
-    return `${period}好。我是${npc.name}，${profile.role}。${profile.motto}`;
+  findNearestBuilding(maxDistance) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const object of this.objects) {
+      const px = clamp(this.player.x, object.x, object.x + object.w);
+      const py = clamp(this.player.y, object.y, object.y + object.h);
+      const d = Math.hypot(this.player.x - px, this.player.y - py);
+      if (d < maxDistance && d < bestDistance) {
+        best = object;
+        bestDistance = d;
+      }
+    }
+    return best;
   }
 
-  getWorldAwareDialogue(npc, hour) {
-    if (npc.mapId === "forest") return hour < 16 ? "雾林白天适合找香草、蘑菇和松脂；傍晚以后，萤火和遗迹会更有存在感。" : "傍晚后的雾林会安静下来。带着体力深入，别让回程变成负担。";
-    if (npc.mapId === "harbor") return hour < 18 ? "月湾白天适合钓鱼和捡潮汐物，码头路线短，适合补当天现金流。" : "晚上海风会更冷，但夜钓收益往往更漂亮。记得留体力给收竿。";
-    if (hour < 12) return "早上先处理农田最稳：播种、浇水、收成，再决定今天跑商还是探索。";
-    if (hour < 18) return "下午适合把路线拉长：商店、公告牌、工程板、采集点可以串成一圈。";
-    return "晚上适合收尾：出货、送礼、夜钓，或者回小屋把料理和加工安排好。";
+  findNearestNpc(maxDistance) {
+    return this.findNearest(this.npcs, maxDistance);
   }
 
-  getNpcPersonalDialogue(npc, favor) {
-    if (npc.id === "npc-chen") return this.progress.townRank >= 4 ? "现在镇子等级上来了，我会把进货做得更像样。高价值种子贵，但它们配得上规划好的田。" : "现在别急着全买贵种子。先用萝卜和土豆滚资金，田稳了，钱包才稳。";
-    if (npc.id === "npc-lingling") return favor >= 40 ? "我最近在记录你种过的作物。农田整齐以后，远远看过去会像一块会呼吸的布。" : "你路过花田时可以慢一点，颜色会告诉你今天的风从哪边来。";
-    if (npc.id === "npc-maomao") return "钓鱼不是只看运气。天气、时间、地点都算数，真正会钓的人是在安排概率。";
-    if (npc.id === "npc-zhuang") return "建筑最怕只看结果。材料、路线、时间都安排好，工程就像农田一样会长出来。";
-    if (npc.id === "npc-ye") return "森林不是素材堆。祭台、泉眼、遗迹、委托站各有节奏，跑顺了才像真正懂这片林子。";
-    if (npc.id === "npc-lan") return "港口的东西看起来零散，其实都能进账。鱼、贝壳、珊瑚，够你撑过很多缺钱的下午。";
-    if (npc.id === "npc-mei") return "一个好农场最后都会变成好厨房和好货架。会加工，才算真的会经营。";
-    if (npc.id === "npc-su") return "动物不是摆设。每天喂、每天看，牧场才会从成本变成稳定的底气。";
-    return "";
+  findNearestResource(maxDistance, predicate = () => true) {
+    return this.findNearest(this.resources.filter(predicate), maxDistance);
   }
 
-  isDialoguePageFullyRevealed(text) {
-    if (this.dialoguePageStartedAt === -Infinity) return true;
-    const count = Math.floor(Math.max(0, this.lastTime - this.dialoguePageStartedAt) / 14) + 1;
-    return count >= String(text).length;
+  findNearest(list, maxDistance) {
+    let best = null;
+    let bestDistance = Infinity;
+    for (const item of list) {
+      const d = distance(this.player, item);
+      if (d < maxDistance && d < bestDistance) {
+        best = item;
+        bestDistance = d;
+      }
+    }
+    return best;
   }
 
-  getVisibleDialogueText(text) {
-    if (this.dialoguePageStartedAt === -Infinity) return String(text);
-    const count = Math.floor(Math.max(0, this.lastTime - this.dialoguePageStartedAt) / 14) + 1;
-    return String(text).slice(0, count);
-  }
-
-  getShopBuyList() {
-    return [...this.getUnlockedSeeds(), "hay", "wood", "stone"];
-  }
-
-  getUpgradeList() {
-    return [
-      { id: "house", name: "小屋升级", desc: `Lv${this.progress.houseLevel}→Lv${this.progress.houseLevel + 1} / 体力上限提升`, cost: { gold: 280 + this.progress.houseLevel * 180, wood: 14 + this.progress.houseLevel * 4, stone: 8 + this.progress.houseLevel * 3 }, can: () => this.progress.houseLevel < 4, apply: () => { this.progress.houseLevel += 1; this.applyProgressDerivedStats(); } },
-      { id: "farm", name: "农场扩建", desc: `Lv${this.progress.farmLevel}→Lv${this.progress.farmLevel + 1} / 解锁更多地块`, cost: { gold: 260 + this.progress.farmLevel * 150, wood: 10 + this.progress.farmLevel * 5 }, can: () => this.progress.farmLevel < 3, apply: () => { this.progress.farmLevel += 1; } },
-      { id: "bridge", name: "修复旧桥", desc: this.progress.bridgeRepaired ? "已完成" : "解锁东区资源区", cost: { gold: 450, wood: 20, stone: 14 }, can: () => !this.progress.bridgeRepaired, apply: () => { this.progress.bridgeRepaired = true; this.progress.eastUnlocked = true; } },
-      { id: "ranch", name: this.progress.ranchLevel ? "牧场扩建" : "建造牧场", desc: `Lv${this.progress.ranchLevel}→Lv${this.progress.ranchLevel + 1} / 容量 ${this.getRanchCapacity()}→${2 + (this.progress.ranchLevel + 1) * 2}`, cost: { gold: 360 + this.progress.ranchLevel * 260, wood: 18 + this.progress.ranchLevel * 8, stone: 6 + this.progress.ranchLevel * 5 }, can: () => this.progress.ranchLevel < 3, apply: () => { this.progress.ranchLevel += 1; } },
-      { id: "workshop", name: this.progress.workshopLevel ? "加工坊扩建" : "建造加工坊", desc: `Lv${this.progress.workshopLevel}→Lv${this.progress.workshopLevel + 1} / 解锁更多手作`, cost: { gold: 420 + this.progress.workshopLevel * 320, wood: 16 + this.progress.workshopLevel * 8, stone: 10 + this.progress.workshopLevel * 5 }, can: () => this.progress.workshopLevel < 2, apply: () => { this.progress.workshopLevel += 1; } },
-      { id: "tool", name: "工具组升级", desc: `Lv${this.progress.toolLevel}→Lv${this.progress.toolLevel + 1} / 所有劳作更省体力`, cost: { gold: 220 + this.progress.toolLevel * 180, wood: 8 + this.progress.toolLevel * 4, stone: 10 + this.progress.toolLevel * 5, crystal: this.progress.toolLevel >= 3 ? 1 : 0 }, can: () => this.progress.toolLevel < 5, apply: () => { this.progress.toolLevel += 1; } },
-      { id: "rod", name: "鱼竿升级", desc: `Lv${this.progress.rodLevel}→Lv${this.progress.rodLevel + 1} / 钓鱼条更稳定`, cost: { gold: 200 + this.progress.rodLevel * 160, wood: 8 + this.progress.rodLevel * 3, shell: this.progress.rodLevel >= 2 ? 2 : 0, coral: this.progress.rodLevel >= 3 ? 1 : 0 }, can: () => this.progress.rodLevel < 5, apply: () => { this.progress.rodLevel += 1; } },
-      { id: "chicken", name: "购买小鸡", desc: `牧场容量 ${this.ranch.animals.length}/${this.getRanchCapacity()}`, cost: ANIMALS.chicken.cost, can: () => this.progress.ranchLevel > 0 && this.ranch.animals.length < this.getRanchCapacity(), apply: () => { this.addAnimal("chicken"); } },
-      { id: "cow", name: "购买奶牛", desc: `牧场容量 ${this.ranch.animals.length}/${this.getRanchCapacity()}`, cost: ANIMALS.cow.cost, can: () => this.progress.ranchLevel >= 2 && this.ranch.animals.length < this.getRanchCapacity(), apply: () => { this.addAnimal("cow"); } },
-      { id: "sheep", name: "购买绵羊", desc: `牧场容量 ${this.ranch.animals.length}/${this.getRanchCapacity()}`, cost: ANIMALS.sheep.cost, can: () => this.progress.ranchLevel >= 3 && this.ranch.animals.length < this.getRanchCapacity(), apply: () => { this.addAnimal("sheep"); } },
-    ].filter(u => u.can());
-  }
-
-  handleShopInput(key) {
-    const modes = ["buy", "sell", "upgrade"];
-    if (key === "tab") {
-      this.shopMode = modes[(modes.indexOf(this.shopMode) + 1) % modes.length];
-      this.shopSelection = 0;
+  cycleSeed() {
+    const seeds = Object.keys(this.inventory).filter((id) => ITEMS[id]?.type === "seed" && this.inventory[id] > 0);
+    if (!seeds.length) {
+      this.pushMessage("背包里没有种子。");
       return;
     }
+    const index = seeds.indexOf(this.selectedSeed);
+    this.selectedSeed = seeds[(index + 1 + seeds.length) % seeds.length];
+    this.pushMessage(`当前种子：${itemName(this.selectedSeed)}。`);
+  }
+
+  spendEnergy(amount) {
+    const scaled = Math.ceil(amount * WEATHER[this.weather].energy);
+    if (this.energy < scaled) {
+      this.pushMessage("体力不足，回家吃点东西或睡一觉吧。");
+      return false;
+    }
+    this.energy = Math.max(0, this.energy - scaled);
+    return true;
+  }
+
+  addItem(id, amount = 1) {
+    this.inventory[id] = (this.inventory[id] || 0) + amount;
+    this.addCollection(id);
+  }
+
+  removeItem(id, amount = 1) {
+    if ((this.inventory[id] || 0) < amount) return false;
+    this.inventory[id] -= amount;
+    if (this.inventory[id] <= 0) delete this.inventory[id];
+    return true;
+  }
+
+  addCollection(id) {
+    if (ITEMS[id]) this.collections[id] = true;
+    this.checkAchievements();
+  }
+
+  addSkill(skill, xp) {
+    if (!SKILLS[skill]) return;
+    const before = this.getSkillLevel(skill);
+    this.stats[skill] = (this.stats[skill] || 0) + xp;
+    const after = this.getSkillLevel(skill);
+    if (after > before) {
+      for (let level = before + 1; level <= after; level++) {
+        this.applySkillReward(skill, level);
+      }
+    }
+  }
+
+  getSkillLevel(skill) {
+    const xp = this.stats?.[skill] || 0;
+    let level = 1;
+    for (let i = 1; i < SKILL_THRESHOLDS.length; i++) {
+      if (xp >= SKILL_THRESHOLDS[i]) level = i + 1;
+    }
+    return clamp(level, 1, SKILL_THRESHOLDS.length);
+  }
+
+  getSkillProgress(skill) {
+    const level = this.getSkillLevel(skill);
+    const xp = this.stats?.[skill] || 0;
+    const current = SKILL_THRESHOLDS[level - 1] || 0;
+    const next = SKILL_THRESHOLDS[level] || current;
+    return next === current ? 1 : clamp((xp - current) / (next - current), 0, 1);
+  }
+
+  applySkillReward(skill, level) {
+    this.skillRewards[skill] = Math.max(this.skillRewards[skill] || 0, level);
+    const info = SKILLS[skill];
+    const reward = info.reward(level) || {};
+    this.grantReward(reward);
+    this.pushMessage(`${info.name}提升到 Lv${level}。`);
+  }
+
+  grantReward(reward = {}) {
+    if (reward.gold) {
+      this.gold += reward.gold;
+      this.stats.earned += reward.gold;
+    }
+    if (reward.item) this.addItem(reward.item, reward.amount || 1);
+    if (reward.maxEnergy) {
+      this.maxEnergy += reward.maxEnergy;
+      this.energy = Math.min(this.maxEnergy, this.energy + reward.maxEnergy);
+    }
+    if (reward.decor) {
+      this.decor += reward.decor;
+      this.updateTownRank();
+    }
+  }
+
+  refreshMail() {
+    const known = new Set(this.mail.map((mail) => mail.id));
+    MAIL_TEMPLATES.forEach((template) => {
+      if (!known.has(template.id) && template.condition(this)) {
+        this.mail.unshift({
+          id: template.id,
+          from: template.from,
+          title: template.title,
+          body: template.body,
+          reward: template.reward,
+          day: this.day,
+          read: false,
+          claimed: false,
+        });
+      }
+    });
+  }
+
+  getUnreadMail() {
+    return this.mail.filter((mail) => !mail.read || (!mail.claimed && mail.reward));
+  }
+
+  checkAchievements() {
+    if (!this.achievements) return;
+    ACHIEVEMENTS.forEach((achievement) => {
+      if (this.achievements[achievement.id]) return;
+      if (!achievement.done(this)) return;
+      this.achievements[achievement.id] = { day: this.day };
+      this.grantReward(achievement.reward);
+      this.pushMessage(`成就达成：${achievement.title}`);
+    });
+  }
+
+  getSellPrice(id) {
+    const item = ITEMS[id];
+    if (!item?.sell) return 0;
+    let price = item.sell;
+    if (item.type === "crop" && this.getSeason().id === "autumn") price *= 1.08;
+    if (item.type === "fish" && this.getFestival()?.day === 14 && this.getHour() >= 18) price *= 1.25;
+    if (item.type === "artisan" && this.projects.artisan) price *= 1.18;
+    if (this.getFestival()?.day === 21 && ["crop", "artisan"].includes(item.type)) price *= 1.2;
+    return Math.round(price);
+  }
+
+  shipAllSellable() {
+    const entries = Object.entries(this.inventory).filter(([id, count]) => count > 0 && this.getSellPrice(id) > 0 && !ITEMS[id].keep);
+    if (!entries.length) {
+      this.pushMessage("没有适合出货的商品。材料会默认保留。");
+      return;
+    }
+    for (const [id, count] of entries) {
+      this.shipping[id] = (this.shipping[id] || 0) + count;
+      delete this.inventory[id];
+    }
+    const total = entries.reduce((sum, [id, count]) => sum + this.getSellPrice(id) * count, 0);
+    this.pushMessage(`已放入出货箱，预计收入 ${total} 金。`);
+  }
+
+  advanceDay() {
+    const shippedValue = Object.entries(this.shipping).reduce((sum, [id, count]) => sum + this.getSellPrice(id) * count, 0);
+    const shippedCount = Object.values(this.shipping).reduce((sum, count) => sum + count, 0);
+    this.gold += shippedValue;
+    this.stats.earned += shippedValue;
+    this.stats.shipped += shippedCount;
+    this.shipping = {};
+
+    const rain = WEATHER[this.weather].autoWater;
+    let grown = 0;
+    for (const plot of this.plots) {
+      if (!plot.crop) {
+        plot.watered = false;
+        continue;
+      }
+      const crop = CROPS[plot.crop];
+      const inSeason = crop.seasons.includes(this.getSeason().id);
+      if (!inSeason && !this.projects.greenhouse && this.getSeason().id !== "winter") {
+        plot.crop = null;
+        plot.age = 0;
+        plot.watered = false;
+        continue;
+      }
+      if (plot.watered || rain) {
+        plot.age += this.getSeason().id === "winter" && plot.crop !== "winterRoot" ? 0.5 : 1;
+        grown += 1;
+      }
+      plot.watered = false;
+    }
+    if (this.projects.canal) {
+      this.plots.filter((plot) => plot.crop && !plot.watered).slice(0, 10 + this.townRank * 2).forEach((plot) => { plot.watered = true; });
+    }
+
+    let animalGoods = 0;
+    for (const animal of this.animals) {
+      animal.age += 1;
+      const fed = this.removeItem("hay", 1);
+      animal.mood = clamp((animal.mood || 55) + (fed ? 6 : -12), 0, 100);
+      if (fed && animal.age >= animal.mature) {
+        this.addItem(animal.product, animal.mood > 75 ? 2 : 1);
+        animalGoods += animal.mood > 75 ? 2 : 1;
+      }
+    }
+
+    this.lastReport = {
+      day: this.day,
+      shippedValue,
+      shippedCount,
+      grown,
+      animalGoods,
+      grade: shippedValue > 600 ? "A" : shippedValue > 260 ? "B" : shippedValue > 80 ? "C" : "D",
+    };
+    this.day += 1;
+    this.stats.daysPlayed += 1;
+    this.minute = 6 * 60;
+    this.weather = this.tomorrowWeather;
+    this.tomorrowWeather = this.rollWeather();
+    this.energy = this.maxEnergy;
+    this.generateDailyContent();
+    this.generateResources();
+    this.updateTownRank();
+    this.refreshMail();
+    this.checkAchievements();
+    this.saveGame(false);
+    this.scene = SCENE.PLAYING;
+    this.player.x = 16 * TILE + 16;
+    this.player.y = 22 * TILE + 16;
+    this.updateCamera();
+    this.pushMessage(`新的一天开始。昨日出货 ${shippedValue} 金，评级 ${this.lastReport.grade}。`);
+  }
+
+  rollWeather() {
+    const rng = makeRng((this.day + 1) * 571 + this.getSeasonIndex() * 37);
+    const roll = rng();
+    if (roll < 0.18) return "rain";
+    if (roll < 0.32) return "windy";
+    if (roll < 0.43) return "mist";
+    return "sunny";
+  }
+
+  updateTownRank() {
+    const projectScore = Object.values(this.projects).filter(Boolean).length * 20;
+    const donateScore = Object.keys(this.donated).length * (this.projects.museum ? 4 : 3);
+    const socialScore = Object.values(this.relationships).reduce((sum, value) => sum + value, 0) / 8;
+    const decorScore = this.decor * 6;
+    const rank = clamp(1 + Math.floor((projectScore + donateScore + socialScore + decorScore) / 70), 1, 6);
+    if (rank > this.townRank) this.pushMessage(`星禾镇评价提升到 ${rank} 级。`);
+    this.townRank = Math.max(this.townRank, rank);
+  }
+
+  startFishing(area = "river") {
+    if (!this.spendEnergy(Math.max(3, TOOLS[6].energy - this.rodLevel))) return;
+    if (this.inventory.bait) this.removeItem("bait", 1);
+    this.scene = SCENE.FISHING;
+    this.fishing = {
+      area,
+      phase: "waiting",
+      timer: 0.9 + Math.random() * 1.4,
+      fishY: 145,
+      barY: 150,
+      barVel: 0,
+      progress: 34,
+      difficulty: area === "sea" ? 1.15 : 1,
+      result: null,
+    };
+  }
+
+  handleFishingKey(key) {
+    if (!this.fishing) return;
     if (key === "escape") {
       this.scene = SCENE.PLAYING;
+      this.fishing = null;
       return;
     }
-
-    const buyList = this.getShopBuyList();
-    const sellList = Object.keys(this.inventory).filter(k => (this.inventory[k] || 0) > 0 && ITEMS[k]?.sellPrice > 0);
-    const upgradeList = this.getUpgradeList();
-    const list = this.shopMode === "buy" ? buyList : this.shopMode === "sell" ? sellList : upgradeList;
-    if (list.length === 0) return;
-
-    if (key === "arrowdown" || key === "s") this.shopSelection = (this.shopSelection + 1) % list.length;
-    if (key === "arrowup" || key === "w") this.shopSelection = (this.shopSelection - 1 + list.length) % list.length;
-
-    if (key === "e" || key === "enter") {
-      if (this.shopMode === "buy") {
-        const itemKey = list[this.shopSelection];
-        const price = ITEMS[itemKey].buyPrice;
-        if (this.gold < price) return this.showMessage("金币不足。", 1200);
-        this.startAction("buy", { duration: 520, item: itemKey });
-        this.gold -= price;
-        this.addItem(itemKey, 1);
-        this.showMessage(`购买 ${ITEMS[itemKey].name} -${price}金`, 1400);
-      } else if (this.shopMode === "sell") {
-        const itemKey = list[this.shopSelection];
-        const price = this.getSellPrice(itemKey);
-        this.startAction("sell", { duration: 520, item: itemKey });
-        this.removeItem(itemKey, 1);
-        this.gold += price;
-        this.progress.totalEarned += price;
-        this.showMessage(`卖出 ${ITEMS[itemKey].name} +${price}金`, 1400);
-      } else {
-        const up = list[this.shopSelection];
-        const c = up.cost;
-        const missing = Object.entries(c).filter(([, amount]) => amount > 0).find(([key, amount]) => {
-          if (key === "gold") return this.gold < amount;
-          return (this.inventory[key] || 0) < amount;
-        });
-        if (missing) {
-          return this.showMessage("材料或金币不足。", 1500);
-        }
-        this.startAction("build", { duration: 680, item: up.id });
-        Object.entries(c).filter(([, amount]) => amount > 0).forEach(([key, amount]) => {
-          if (key === "gold") this.gold -= amount;
-          else this.removeItem(key, amount);
-        });
-        up.apply();
-        this.showMessage(`完成：${up.name}！`, 1800);
-      }
+    if ((key === "space" || key === "enter" || key === "e") && this.fishing.phase === "bite") {
+      this.fishing.phase = "reeling";
+      this.fishing.progress = 38;
+      this.pushMessage("上钩了，按住 Space 控制绿色钓条。");
     }
-  }
-
-  handleFishingInput() {
-    if (this.fishingState === "biting") {
-      this.startAction("reel", { duration: 650 });
-      this.fishingState = "reeling";
-      this.fishingBarY = 180;
-      this.fishingFishY = 80 + Math.random() * 180;
-      this.fishingProgress = 18 + (this.getSkillLevel("fishing") - 1) * 4 + Math.round(this.getBuffValue("fishing") * 30);
-    } else if (this.fishingState === "reeling") {
-      this.startAction("reel", { duration: 280 });
-      this.fishingBarVel = -120;
-    } else if (this.fishingState === "result") {
+    if ((key === "space" || key === "enter" || key === "e") && this.fishing.phase === "result") {
       this.scene = SCENE.PLAYING;
-      this.fishingState = "casting";
+      this.fishing = null;
     }
   }
 
   updateFishing(dt) {
-    if (this.fishingState === "casting") {
-      this.fishingTimer -= dt;
-      if (this.fishingTimer <= 0) {
-        this.fishingState = "biting";
-        this.fishingTimer = 2200;
-        this.showMessage("鱼咬钩！按 E 或 空格！", 0);
+    const fish = this.fishing;
+    if (!fish) return;
+    if (fish.phase === "waiting") {
+      fish.timer -= dt * WEATHER[this.weather].fish;
+      if (fish.timer <= 0) {
+        fish.phase = "bite";
+        fish.timer = 1.35;
       }
-    } else if (this.fishingState === "biting") {
-      this.fishingTimer -= dt;
-      if (this.fishingTimer <= 0) {
-        this.fishingState = "casting";
-        this.fishingTimer = 1400 + Math.random() * 2200;
+    } else if (fish.phase === "bite") {
+      fish.timer -= dt;
+      if (fish.timer <= 0) {
+        fish.phase = "result";
+        fish.result = { fail: true, text: "鱼脱钩了。" };
       }
-    } else if (this.fishingState === "reeling") {
-      this.fishingFishY += this.fishingFishDir * 60 * dt / 1000;
-      if (this.fishingFishY < 60 || this.fishingFishY > 260) this.fishingFishDir *= -1;
-      this.fishingBarVel += 200 * dt / 1000;
-      this.fishingBarY += this.fishingBarVel * dt / 1000;
-      this.fishingBarY = Math.max(60, Math.min(260, this.fishingBarY));
-      const overlap = this.fishingBarY <= this.fishingFishY && this.fishingFishY <= this.fishingBarY + 50;
-      this.fishingProgress += overlap ? dt * 0.05 * this.getFishingProgressMultiplier() : -dt * 0.04;
-      this.fishingProgress = Math.max(0, Math.min(100, this.fishingProgress));
-      if (this.fishingProgress >= 100) this.catchFish();
-      else if (this.fishingProgress <= 0 && !overlap) {
-        this.fishingState = "casting";
-        this.fishingTimer = 1400 + Math.random() * 2200;
+    } else if (fish.phase === "reeling") {
+      const t = this.lastTime * 0.003;
+      fish.fishY += Math.sin(t * fish.difficulty) * 70 * dt + (Math.random() - 0.5) * 90 * dt * fish.difficulty;
+      fish.fishY = clamp(fish.fishY, 24, 286);
+      fish.barVel += (this.heldKeys.has("space") ? -520 : 420) * dt;
+      fish.barVel *= 0.88;
+      fish.barY += fish.barVel * dt;
+      fish.barY = clamp(fish.barY, 18, 266);
+      const overlap = fish.fishY > fish.barY && fish.fishY < fish.barY + 62;
+      fish.progress += (overlap ? 32 : -24 * fish.difficulty) * dt * (this.rodLevel > 1 ? 1.12 : 1);
+      fish.progress = clamp(fish.progress, 0, 100);
+      if (fish.progress >= 100) this.completeFishing();
+      if (fish.progress <= 0) {
+        fish.phase = "result";
+        fish.result = { fail: true, text: "没能收线成功。" };
       }
     }
   }
 
-  catchFish() {
-    const hour = this.gameMinutes / 60;
-    const night = hour >= 19 || hour < 5;
-    const rareChance = this.getRareFishChance();
-    let key = "fish";
-    if (this.currentMapId === "harbor") {
-      if (Math.random() < rareChance + 0.08) key = "goldKoi";
-      else if (night && Math.random() < 0.45) key = "nightFish";
-      else if (Math.random() < 0.48 || this.weather === "rain") key = "silverFish";
-    } else if (this.currentMapId === "highlands") {
-      if (Math.random() < rareChance + 0.12) key = "goldKoi";
-      else if (Math.random() < 0.28) key = "silverFish";
-      else if (night && Math.random() < 0.34) key = "nightFish";
-    } else if (this.currentMapId === "forest") {
-      if (night && Math.random() < 0.5) key = "nightFish";
-      else if ((this.weather === "rain" || this.weather === "mist") && Math.random() < 0.36) key = "silverFish";
-    } else if (Math.random() < rareChance) key = "goldKoi";
-    else if (night && Math.random() < 0.55) key = "nightFish";
-    else if ((this.weather === "rain" || this.weather === "mist") && Math.random() < 0.32) key = "silverFish";
-    this.addItem(key, 1);
-    this.progress.fishCaught += 1;
-    this.dayStats.fishCaught += 1;
-    const xp = key === "goldKoi" ? 10 : key === "nightFish" ? 7 : 5;
-    const levelUps = this.gainSkillXp("fishing", xp);
-    this.fishingResult = { name: ITEMS[key].name, icon: ITEMS[key].icon, value: this.getSellPrice(key) };
-    this.fishingState = "result";
-    this.startAction("catch", { duration: 760, item: key });
-    this.spawnParticles(this.canvas.width / 2, 300, "#4fa8e0", 10);
-    this.showMessage(`钓到 ${ITEMS[key].name}${this.formatLevelUps(levelUps)}`, 2200);
+  completeFishing() {
+    const fish = this.fishing;
+    const hour = this.getHour();
+    const rare = Math.random() < (0.08 + this.rodLevel * 0.03 + (this.weather === "rain" || this.weather === "mist" ? 0.06 : 0) + (this.projects.dock ? 0.05 : 0) + (this.projects.pearlDiving ? 0.04 : 0));
+    let item = fish.area === "sea" ? "seaBass" : "riverFish";
+    if (fish.area === "sea") {
+      if (rare && this.getSeason().id === "summer") item = "tuna";
+      else if (rare && hour >= 18) item = "nightFish";
+      else if (rare) item = "crab";
+    }
+    if (fish.area === "river") {
+      if (rare && this.getSeason().id === "winter") item = "glacierTrout";
+      else if (rare && this.weather === "rain") item = "catfish";
+      else if (rare && hour >= 18) item = "nightFish";
+      else if (rare) item = "koi";
+    }
+    this.addItem(item, 1);
+    this.addCollection(item);
+    this.stats.fish += 1;
+    this.addSkill("fishing", 8 + (rare ? 6 : 0));
+    this.checkAchievements();
+    fish.phase = "result";
+    fish.result = { item, text: `钓到${itemName(item)}。` };
   }
 
-  checkQuests() {
-    this.quests.forEach((q) => {
-      if (!q.done && q.check()) {
-        q.done = true;
-        let msg = `任务完成：${q.title}`;
-        if (q.reward.gold) {
-          this.gold += q.reward.gold;
-          this.progress.totalEarned += q.reward.gold;
-          msg += ` +${q.reward.gold}金`;
-        }
-        if (q.reward.item) {
-          this.addItem(q.reward.item, q.reward.amount || 1);
-          msg += ` +${ITEMS[q.reward.item].name}x${q.reward.amount || 1}`;
-        }
-        this.showMessage(msg, 3200);
+  getMenuItems() {
+    if (this.scene === SCENE.SHOP) return this.getShopItems();
+    if (this.scene === SCENE.HOUSE) return this.getHouseItems();
+    if (this.scene === SCENE.WORKSHOP) return this.getWorkshopItems();
+    if (this.scene === SCENE.TOWN) return this.getProjectItems();
+    if (this.scene === SCENE.REQUESTS) return this.getRequestItems();
+    if (this.scene === SCENE.MUSEUM) return this.getMuseumItems();
+    if (this.scene === SCENE.NPC) return this.getNpcItems();
+    if (this.scene === SCENE.INVENTORY) return this.getInventoryItems();
+    if (this.scene === SCENE.MAIL) return this.getMailItems();
+    return [];
+  }
+
+  getShopItems() {
+    if (this.menuTab === 0) {
+      const season = this.getSeason();
+      const cropIds = Object.keys(CROPS).filter((id) => {
+        if (id === "tea" && !this.projects.garden) return false;
+        if (this.projects.greenhouse || this.projects.seedBank) return true;
+        return CROPS[id].seasons.includes(season.id);
+      });
+      return cropIds.map((id) => {
+        const crop = CROPS[id];
+        const price = ITEMS[crop.seed].buy;
+        return {
+          label: ITEMS[crop.seed].name,
+          detail: `${crop.days}天成熟${crop.regrow ? `，${crop.regrow}天再生` : ""}。库存 ${this.inventory[crop.seed] || 0}`,
+          right: `${price}金`,
+          disabled: this.gold < price,
+          run: () => this.buyItem(crop.seed, price, 1),
+        };
+      });
+    }
+    if (this.menuTab === 1) {
+      return [
+        { label: "升级工具组", detail: `斧、镐、水壶效率提升。当前 Lv${this.toolLevel}`, right: `${360 * this.toolLevel}金 / 矿石x${4 * this.toolLevel}`, disabled: this.gold < 360 * this.toolLevel || (this.inventory.ore || 0) < 4 * this.toolLevel, run: () => this.upgradeTool() },
+        { label: "升级钓竿", detail: `钓条更稳，稀有鱼概率提高。当前 Lv${this.rodLevel}`, right: `${300 * this.rodLevel}金 / 木材x${6 * this.rodLevel}`, disabled: this.gold < 300 * this.rodLevel || (this.inventory.wood || 0) < 6 * this.rodLevel, run: () => this.upgradeRod() },
+        { label: "购买鱼饵x5", detail: "钓鱼等待时间更短。", right: "36金", disabled: this.gold < 36, run: () => this.buyItem("bait", 36, 5) },
+      ];
+    }
+    if (this.menuTab === 2) {
+      const unlocked = this.projects.coop;
+      return [
+        { label: "干草x10", detail: "动物每天需要一份干草。", right: unlocked ? "38金" : "52金", disabled: this.gold < (unlocked ? 38 : 52), run: () => this.buyItem("hay", unlocked ? 38 : 52, 10) },
+        { label: "小鸡", detail: "2天长成，产出鸡蛋。", right: "260金 / 木材x8", disabled: !unlocked || this.gold < 260 || (this.inventory.wood || 0) < 8, run: () => this.buyAnimal("小鸡", "egg", 2, 260, { wood: 8 }) },
+        { label: "鸭子", detail: "3天长成，产出鸭蛋。", right: "380金 / 干草x8", disabled: !unlocked || this.gold < 380 || (this.inventory.hay || 0) < 8, run: () => this.buyAnimal("鸭子", "duckEgg", 3, 380, { hay: 8 }) },
+        { label: "奶牛", detail: "4天长成，产出牛奶。", right: "560金 / 干草x10", disabled: !unlocked || this.gold < 560 || (this.inventory.hay || 0) < 10, run: () => this.buyAnimal("奶牛", "milk", 4, 560, { hay: 10 }) },
+        { label: "绵羊", detail: "5天长成，产出羊毛。", right: "720金 / 干草x14", disabled: !unlocked || this.gold < 720 || (this.inventory.hay || 0) < 14, run: () => this.buyAnimal("绵羊", "wool", 5, 720, { hay: 14 }) },
+      ];
+    }
+    return [
+      { label: "窗边花架", detail: "小屋装饰 +1，小镇评价略升。", right: "180金 / 花x2", disabled: this.gold < 180 || (this.inventory.flower || 0) < 2, run: () => this.buyDecor(180, { flower: 2 }) },
+      { label: "木质书柜", detail: "小屋装饰 +1，居民聊天更容易获得提示。", right: "240金 / 木材x10", disabled: this.gold < 240 || (this.inventory.wood || 0) < 10, run: () => this.buyDecor(240, { wood: 10 }) },
+      { label: "海蓝地毯", detail: "小屋装饰 +2。", right: "360金 / 贝壳x4", disabled: this.gold < 360 || (this.inventory.shell || 0) < 4, run: () => this.buyDecor(360, { shell: 4 }, 2) },
+    ];
+  }
+
+  buyItem(id, price, amount) {
+    if (this.gold < price) return;
+    this.gold -= price;
+    this.addItem(id, amount);
+    this.pushMessage(`购买${itemName(id)}x${amount}。`);
+  }
+
+  upgradeTool() {
+    const cost = 360 * this.toolLevel;
+    const ore = 4 * this.toolLevel;
+    if (this.gold < cost || !this.removeItem("ore", ore)) return;
+    this.gold -= cost;
+    this.toolLevel += 1;
+    this.pushMessage(`工具组升级到 Lv${this.toolLevel}。`);
+  }
+
+  upgradeRod() {
+    const cost = 300 * this.rodLevel;
+    const wood = 6 * this.rodLevel;
+    if (this.gold < cost || !this.removeItem("wood", wood)) return;
+    this.gold -= cost;
+    this.rodLevel += 1;
+    this.pushMessage(`钓竿升级到 Lv${this.rodLevel}。`);
+  }
+
+  buyAnimal(name, product, mature, price, req) {
+    if (this.gold < price || !hasAll(this.inventory, req)) return;
+    Object.entries(req).forEach(([id, amount]) => this.removeItem(id, amount));
+    this.gold -= price;
+    this.animals.push({ name, product, mature, age: 0, mood: 60 });
+    this.checkAchievements();
+    this.pushMessage(`${name}搬进牧场了。`);
+  }
+
+  buyDecor(price, req, amount = 1) {
+    if (this.gold < price || !hasAll(this.inventory, req)) return;
+    Object.entries(req).forEach(([id, count]) => this.removeItem(id, count));
+    this.gold -= price;
+    this.decor += amount;
+    this.updateTownRank();
+    this.refreshMail();
+    this.checkAchievements();
+    this.pushMessage(`小屋装饰提升到 ${this.decor}。`);
+  }
+
+  getHouseItems() {
+    const recipes = RECIPES.filter((recipe) => recipe.station === "house").map((recipe) => ({
+      label: `料理：${recipe.name}`,
+      detail: formatReq(recipe.ingredients),
+      right: `${itemName(recipe.result)}x${recipe.amount}`,
+      disabled: !hasAll(this.inventory, recipe.ingredients),
+      run: () => this.craftRecipe(recipe),
+    }));
+    return [
+      { label: "睡到明天", detail: "结算出货、恢复体力、刷新委托与资源。", right: "结束当天", run: () => this.advanceDay() },
+      { label: "查看邮箱", detail: `${this.getUnreadMail().length} 封未读或未领取回礼。`, right: "邮件", run: () => this.openScene(SCENE.MAIL) },
+      { label: "整理背包", detail: "打开库存，选择食物可食用，选择商品可放入出货箱。", right: "I", run: () => this.openScene(SCENE.INVENTORY) },
+      { label: "升级小屋", detail: `当前 Lv${this.houseLevel}，提升最大体力。`, right: `${420 * this.houseLevel}金 / 木材x${18 * this.houseLevel}`, disabled: this.gold < 420 * this.houseLevel || (this.inventory.wood || 0) < 18 * this.houseLevel, run: () => this.upgradeHouse() },
+      ...recipes,
+      { label: "保存游戏", detail: "立即写入本地存档。", right: "F5", run: () => this.saveGame() },
+    ];
+  }
+
+  upgradeHouse() {
+    const cost = 420 * this.houseLevel;
+    const wood = 18 * this.houseLevel;
+    if (this.gold < cost || !this.removeItem("wood", wood)) return;
+    this.gold -= cost;
+    this.houseLevel += 1;
+    this.maxEnergy += 16;
+    this.energy = this.maxEnergy;
+    this.pushMessage(`小屋升级到 Lv${this.houseLevel}，体力上限提升。`);
+  }
+
+  getWorkshopItems() {
+    return RECIPES.filter((recipe) => recipe.station === "workshop").map((recipe) => ({
+      label: recipe.name,
+      detail: formatReq(recipe.ingredients),
+      right: `${itemName(recipe.result)}x${recipe.amount}`,
+      disabled: !hasAll(this.inventory, recipe.ingredients),
+      run: () => this.craftRecipe(recipe),
+    }));
+  }
+
+  craftRecipe(recipe) {
+    if (!hasAll(this.inventory, recipe.ingredients)) return;
+    Object.entries(recipe.ingredients).forEach(([id, amount]) => this.removeItem(id, amount));
+    this.addItem(recipe.result, recipe.amount);
+    this.stats.crafted += recipe.amount;
+    this.addSkill("crafting", recipe.xp);
+    this.checkAchievements();
+    this.pushMessage(`制作了${itemName(recipe.result)}x${recipe.amount}。`);
+  }
+
+  getProjectItems() {
+    return PROJECTS.map((project) => {
+      const done = this.projects[project.id];
+      return {
+        label: `${done ? "已完成" : hasAll(this.inventory, project.req) ? "可提交" : "建设中"}：${project.name}`,
+        detail: done ? project.desc : formatReq(project.req),
+        right: done ? "完成" : `奖励 ${project.reward.gold}金`,
+        disabled: done || !hasAll(this.inventory, project.req),
+        run: () => this.completeProject(project),
+      };
+    });
+  }
+
+  completeProject(project) {
+    if (this.projects[project.id] || !hasAll(this.inventory, project.req)) return;
+    Object.entries(project.req).forEach(([id, amount]) => this.removeItem(id, amount));
+    this.projects[project.id] = true;
+    this.gold += project.reward.gold;
+    if (project.reward.item) this.addItem(project.reward.item, project.reward.amount || 1);
+    this.townRank += project.reward.rank || 0;
+    this.updateTownRank();
+    this.generateResources();
+    this.refreshMail();
+    this.checkAchievements();
+    this.pushMessage(`${project.name}完成了。${project.desc}`);
+  }
+
+  getRequestItems() {
+    return this.dailyRequests.map((request) => {
+      const npc = VILLAGERS.find((item) => item.id === request.npc);
+      return {
+        label: `${request.done ? "已完成" : "委托"}：${request.title}`,
+        detail: `${npc?.name || ""}需要${itemName(request.item)}x${request.amount}`,
+        right: `${request.gold}金 / 好感+${request.favor}`,
+        disabled: request.done || (this.inventory[request.item] || 0) < request.amount,
+        run: () => this.completeRequest(request),
+      };
+    });
+  }
+
+  completeRequest(request) {
+    if (request.done || !this.removeItem(request.item, request.amount)) return;
+    request.done = true;
+    this.gold += request.gold;
+    this.relationships[request.npc] = clamp((this.relationships[request.npc] || 0) + request.favor, 0, 100);
+    this.stats.requests += 1;
+    this.addSkill("social", 6);
+    this.updateTownRank();
+    this.refreshMail();
+    this.checkAchievements();
+    this.pushMessage(`完成委托：${request.title}，获得 ${request.gold} 金。`);
+  }
+
+  getMuseumItems() {
+    const candidates = Object.keys(this.inventory).filter((id) => this.inventory[id] > 0 && ITEMS[id] && COLLECTION_TYPES.includes(ITEMS[id].type) && !this.donated[id]);
+    if (!candidates.length) {
+      return [{ label: "暂无可捐赠藏品", detail: "钓鱼、捕虫、采集、挖矿和收获都会填充图鉴。", disabled: true, run: () => {} }];
+    }
+    return candidates.map((id) => ({
+      label: `捐赠：${itemName(id)}`,
+      detail: `分类：${ITEMS[id].type}，库存 ${this.inventory[id]}`,
+      right: "评价+",
+      run: () => this.donateItem(id),
+    }));
+  }
+
+  donateItem(id) {
+    if (this.donated[id] || !this.removeItem(id, 1)) return;
+    this.donated[id] = true;
+    this.stats.donated += 1;
+    const reward = this.stats.donated % 5 === 0 ? 160 : 46;
+    this.gold += reward;
+    this.updateTownRank();
+    this.refreshMail();
+    this.checkAchievements();
+    this.pushMessage(`博物馆收下了${itemName(id)}，回赠 ${reward} 金。`);
+  }
+
+  getNpcItems() {
+    const npc = this.activeNpc;
+    if (!npc) return [];
+    const items = [{
+      label: `聊天：${npc.name}`,
+      detail: npc.talks[(this.day + npc.id.length) % npc.talks.length],
+      right: "好感+1",
+      run: () => {
+        this.relationships[npc.id] = clamp((this.relationships[npc.id] || 0) + 1, 0, 100);
+        this.pushMessage(`${npc.name}：${npc.talks[(this.day + npc.id.length) % npc.talks.length]}`);
+      },
+    }];
+    const giftables = Object.keys(this.inventory).filter((id) => this.inventory[id] > 0 && ITEMS[id]?.type !== "seed").slice(0, 12);
+    giftables.forEach((id) => {
+      const loved = npc.loves.includes(id);
+      items.push({
+        label: `赠送：${itemName(id)}`,
+        detail: loved ? "很喜欢的礼物" : "普通礼物",
+        right: loved ? "好感+10" : "好感+3",
+        disabled: this.giftedToday[npc.id],
+        run: () => this.giveGift(npc, id, loved ? 10 : 3),
+      });
+    });
+    return items;
+  }
+
+  giveGift(npc, id, favor) {
+    if (this.giftedToday[npc.id] || !this.removeItem(id, 1)) return;
+    this.giftedToday[npc.id] = true;
+    const festival = this.getFestival()?.day === 7 && ["flower", "berry", "jam", "tea"].includes(id);
+    this.relationships[npc.id] = clamp((this.relationships[npc.id] || 0) + favor + (festival ? 4 : 0), 0, 100);
+    this.addSkill("social", favor);
+    this.updateTownRank();
+    this.refreshMail();
+    this.checkAchievements();
+    this.pushMessage(`${npc.name}收下了${itemName(id)}。`);
+  }
+
+  getInventoryItems() {
+    const entries = Object.entries(this.inventory).filter(([, count]) => count > 0).sort((a, b) => itemName(a[0]).localeCompare(itemName(b[0]), "zh-CN"));
+    if (!entries.length) return [{ label: "背包空空", detail: "今天适合去森林、海边或农田找点东西。", disabled: true, run: () => {} }];
+    return entries.map(([id, count]) => {
+      const food = ITEMS[id]?.energy;
+      const sell = this.getSellPrice(id);
+      return {
+        label: `${itemName(id)} x${count}`,
+        detail: food ? `食用恢复 ${food} 体力` : sell && !ITEMS[id].keep ? `放入出货箱，单价 ${sell} 金` : ITEMS[id]?.keep ? "建设、制作与升级材料" : "收藏或委托物品",
+        right: food ? "食用" : sell && !ITEMS[id].keep ? "出货1" : "",
+        run: () => {
+          if (food) this.eatFood(id);
+          else if (sell && !ITEMS[id].keep) this.shipOne(id);
+        },
+      };
+    });
+  }
+
+  getMailItems() {
+    if (!this.mail.length) {
+      return [{ label: "邮箱里暂时没有信", detail: "完成工程、提升评价、改变天气或捐赠藏品后会收到新信。", disabled: true, run: () => {} }];
+    }
+    return this.mail.map((mail) => ({
+      label: `${mail.read ? "已读" : "新信"}：${mail.title}`,
+      detail: `${mail.from} · ${mail.body.length > 34 ? `${mail.body.slice(0, 34)}...` : mail.body}`,
+      right: mail.reward && !mail.claimed ? "领取回礼" : "",
+      run: () => this.readMail(mail),
+    }));
+  }
+
+  readMail(mail) {
+    mail.read = true;
+    if (mail.reward && !mail.claimed) {
+      this.grantReward(mail.reward);
+      mail.claimed = true;
+      this.pushMessage(`领取了${mail.from}的回礼。`);
+    } else {
+      this.pushMessage(`${mail.from}：${mail.title}`);
+    }
+  }
+
+  eatFood(id) {
+    const food = ITEMS[id];
+    if (!food?.energy || !this.removeItem(id, 1)) return;
+    const boost = this.getFestival()?.day === 28 ? 1.25 : 1;
+    this.energy = clamp(this.energy + Math.round(food.energy * boost), 0, this.maxEnergy);
+    this.pushMessage(`吃下${itemName(id)}，体力恢复。`);
+  }
+
+  shipOne(id) {
+    if (!this.removeItem(id, 1)) return;
+    this.shipping[id] = (this.shipping[id] || 0) + 1;
+    this.pushMessage(`${itemName(id)}放入出货箱。`);
+  }
+
+  saveGame(showMessage = true) {
+    const data = {
+      day: this.day,
+      minute: this.minute,
+      weather: this.weather,
+      tomorrowWeather: this.tomorrowWeather,
+      gold: this.gold,
+      energy: this.energy,
+      maxEnergy: this.maxEnergy,
+      player: this.player,
+      selectedTool: this.selectedTool,
+      selectedSeed: this.selectedSeed,
+      inventory: this.inventory,
+      shipping: this.shipping,
+      relationships: this.relationships,
+      giftedToday: this.giftedToday,
+      projects: this.projects,
+      achievements: this.achievements,
+      skillRewards: this.skillRewards,
+      mail: this.mail,
+      collections: this.collections,
+      donated: this.donated,
+      animals: this.animals,
+      decor: this.decor,
+      houseLevel: this.houseLevel,
+      toolLevel: this.toolLevel,
+      rodLevel: this.rodLevel,
+      townRank: this.townRank,
+      stats: this.stats,
+      plots: this.plots,
+      resources: this.resources,
+      dailyRequests: this.dailyRequests,
+      lastReport: this.lastReport,
+    };
+    localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    this.hasSave = true;
+    if (showMessage) this.pushMessage("游戏已保存。");
+  }
+
+  loadGame() {
+    const raw = localStorage.getItem(SAVE_KEY);
+    if (!raw) return false;
+    try {
+      const data = JSON.parse(raw);
+      this.newGame(true);
+      Object.assign(this, {
+        day: data.day,
+        minute: data.minute,
+        weather: data.weather,
+        tomorrowWeather: data.tomorrowWeather,
+        gold: data.gold,
+        energy: data.energy,
+        maxEnergy: data.maxEnergy,
+        player: data.player,
+        selectedTool: data.selectedTool,
+        selectedSeed: data.selectedSeed,
+        inventory: data.inventory || {},
+        shipping: data.shipping || {},
+        relationships: data.relationships || {},
+        giftedToday: data.giftedToday || {},
+        projects: data.projects || {},
+        achievements: data.achievements || {},
+        skillRewards: data.skillRewards || {},
+        mail: data.mail || [],
+        collections: data.collections || {},
+        donated: data.donated || {},
+        animals: data.animals || [],
+        decor: data.decor || 0,
+        houseLevel: data.houseLevel || 1,
+        toolLevel: data.toolLevel || 1,
+        rodLevel: data.rodLevel || 1,
+        townRank: data.townRank || 1,
+        stats: data.stats || this.stats,
+        plots: data.plots || this.plots,
+        resources: data.resources || this.resources,
+        dailyRequests: data.dailyRequests || this.dailyRequests,
+        lastReport: data.lastReport || null,
+      });
+      Object.keys(SKILLS).forEach((skill) => {
+        if (typeof this.stats[skill] !== "number") this.stats[skill] = 0;
+      });
+      ["earned", "shipped", "harvested", "fish", "bugs", "requests", "crafted", "donated", "daysPlayed"].forEach((key) => {
+        if (typeof this.stats[key] !== "number") this.stats[key] = 0;
+      });
+      this.refreshMail();
+      this.checkAchievements();
+      this.scene = SCENE.PLAYING;
+      this.updateCamera();
+      this.pushMessage("已读取存档。");
+      return true;
+    } catch (error) {
+      console.error(error);
+      this.pushMessage("存档读取失败，将开始新游戏。");
+      this.newGame(true);
+      return false;
+    }
+  }
+
+  getSeasonIndex() {
+    return Math.floor((this.day - 1) / 28) % SEASONS.length;
+  }
+
+  getSeason() {
+    return SEASONS[this.getSeasonIndex()];
+  }
+
+  getSeasonDay() {
+    return ((this.day - 1) % 28) + 1;
+  }
+
+  getFestival() {
+    return FESTIVALS.find((festival) => festival.day === this.getSeasonDay()) || null;
+  }
+
+  getHour() {
+    return Math.floor(this.minute / 60);
+  }
+
+  getTimeText() {
+    const hour = Math.floor(this.minute / 60);
+    const minute = Math.floor(this.minute % 60);
+    return `${String(hour).padStart(2, "0")}:${String(minute).padStart(2, "0")}`;
+  }
+
+  getTownScore() {
+    return Object.values(this.projects).filter(Boolean).length * 20 + Object.keys(this.donated).length * 3 + this.decor * 6 + Math.round(Object.values(this.relationships).reduce((a, b) => a + b, 0) / 8);
+  }
+
+  pushMessage(text, life = 4.5) {
+    this.messages.unshift({ text, life });
+    this.messages = this.messages.slice(0, 5);
+  }
+
+  render() {
+    const ctx = this.ctx;
+    ctx.clearRect(0, 0, WIDTH, HEIGHT);
+    if (this.scene === SCENE.TITLE) {
+      this.renderTitle();
+      return;
+    }
+    this.renderTopHud();
+    this.renderWorld();
+    this.renderSidePanel();
+    this.renderBottomBar();
+    if (this.scene === SCENE.FISHING) this.renderFishing();
+    else if (this.scene !== SCENE.PLAYING) this.renderModal();
+  }
+
+  renderTitle() {
+    const ctx = this.ctx;
+    const grad = ctx.createLinearGradient(0, 0, 0, HEIGHT);
+    grad.addColorStop(0, "#9bd3e7");
+    grad.addColorStop(0.46, "#bde0c3");
+    grad.addColorStop(1, "#ead7a7");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    this.drawLandscape();
+    this.panel(230, 122, 660, 410, 18, "rgba(247,240,221,0.92)", "rgba(31,45,42,0.14)");
+    ctx.textAlign = "center";
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 48px 'Microsoft YaHei', sans-serif";
+    ctx.fillText("星禾镇物语", WIDTH / 2, 205);
+    ctx.font = "18px 'Microsoft YaHei', sans-serif";
+    ctx.fillStyle = UI.inkSoft;
+    ctx.fillText("四季农场、邻里日常、收藏图鉴和镇务建设", WIDTH / 2, 244);
+    ctx.font = "15px 'Microsoft YaHei', sans-serif";
+    const lines = [
+      "新版界面把任务与地图彻底分区：顶部状态栏、左侧世界、右侧管理、底部工具栏。",
+      "经营农场，拜访居民，完成公告委托，把星禾镇一步步建设成有生命的小镇。",
+      this.hasSave ? "Enter 读取存档  ·  N 新游戏  ·  L 读取存档" : "Enter 开始新游戏",
+    ];
+    lines.forEach((line, index) => ctx.fillText(line, WIDTH / 2, 302 + index * 32));
+    this.panel(390, 440, 340, 48, 24, UI.dark, "rgba(255,255,255,0.18)");
+    ctx.fillStyle = UI.cream;
+    ctx.font = "bold 17px 'Microsoft YaHei', sans-serif";
+    ctx.fillText(this.hasSave ? "按 Enter 继续生活" : "按 Enter 抵达星禾镇", WIDTH / 2, 471);
+    ctx.textAlign = "left";
+  }
+
+  drawLandscape() {
+    const ctx = this.ctx;
+    ctx.fillStyle = "rgba(70,116,92,0.26)";
+    for (let i = 0; i < 12; i++) {
+      ctx.beginPath();
+      ctx.arc(40 + i * 106, 520 + Math.sin(i) * 16, 120, Math.PI, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.fillStyle = "rgba(72,122,76,0.5)";
+    ctx.fillRect(0, 548, WIDTH, 172);
+    for (let i = 0; i < 38; i++) {
+      const x = i * 34 + (i % 2) * 12;
+      ctx.fillStyle = i % 3 === 0 ? "#d3b15f" : "#6d9d61";
+      ctx.fillRect(x, 590 + (i % 5) * 4, 18, 68);
+    }
+  }
+
+  renderTopHud() {
+    const ctx = this.ctx;
+    this.panel(0, 0, WIDTH, LAYOUT.top.h, 0, "#f8efd9", "rgba(31,45,42,0.16)");
+    const season = this.getSeason();
+    const weather = WEATHER[this.weather];
+    const festival = this.getFestival();
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 19px 'Microsoft YaHei', sans-serif";
+    ctx.fillText("星禾镇物语", 20, 34);
+    this.pill(172, 12, 142, 30, season.accent, `${season.name} ${this.getSeasonDay()}日`);
+    this.pill(324, 12, 94, 30, UI.dark, this.getTimeText());
+    this.pill(428, 12, 104, 30, UI.water, `${weather.icon} ${weather.name}`);
+    this.pill(542, 12, 110, 30, UI.sun, `${this.gold} 金`);
+    this.drawBar(664, 17, 156, 16, this.energy / this.maxEnergy, UI.leaf, "rgba(31,45,42,0.13)");
+    ctx.fillStyle = UI.ink;
+    ctx.font = "12px 'Microsoft YaHei', sans-serif";
+    ctx.fillText(`体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 674, 30);
+    this.pill(842, 12, 98, 30, "#6f8c73", `评价 Lv${this.townRank}`);
+    this.pill(950, 12, 150, 30, festival ? "#b57949" : "#839b89", festival ? festival.name : `明日 ${WEATHER[this.tomorrowWeather].name}`);
+  }
+
+  renderWorld() {
+    const ctx = this.ctx;
+    const r = LAYOUT.world;
+    ctx.save();
+    ctx.beginPath();
+    ctx.rect(r.x, r.y, r.w, r.h);
+    ctx.clip();
+    ctx.fillStyle = "#7dad6a";
+    ctx.fillRect(r.x, r.y, r.w, r.h);
+
+    const startX = Math.floor(this.camera.x / TILE);
+    const endX = Math.ceil((this.camera.x + r.w) / TILE);
+    const startY = Math.floor(this.camera.y / TILE);
+    const endY = Math.ceil((this.camera.y + r.h) / TILE);
+    for (let ty = startY; ty <= endY; ty++) {
+      for (let tx = startX; tx <= endX; tx++) {
+        if (tx < 0 || ty < 0 || tx >= MAP_W || ty >= MAP_H) continue;
+        this.drawTile(tx, ty, r.x + tx * TILE - this.camera.x, r.y + ty * TILE - this.camera.y);
+      }
+    }
+
+    this.plots.forEach((plot) => this.drawPlot(plot));
+    const entities = [
+      ...this.objects,
+      ...this.resources,
+      ...this.npcs.map((npc) => ({ ...npc, kind: "npc" })),
+      { kind: "player", x: this.player.x, y: this.player.y },
+    ];
+    entities.sort((a, b) => this.entityBottom(a) - this.entityBottom(b));
+    entities.forEach((entity) => this.drawEntity(entity));
+    this.drawInteractionHint();
+    ctx.restore();
+    ctx.strokeStyle = "rgba(31,45,42,0.22)";
+    ctx.strokeRect(r.x + 0.5, r.y + 0.5, r.w - 1, r.h - 1);
+  }
+
+  drawTile(tx, ty, sx, sy) {
+    const ctx = this.ctx;
+    const kind = this.map[ty][tx];
+    const colors = TILE_COLORS[kind] || TILE_COLORS[TILE_KIND.GRASS];
+    ctx.fillStyle = (tx + ty) % 2 === 0 ? colors[0] : colors[1];
+    ctx.fillRect(sx, sy, TILE, TILE);
+    if (kind === TILE_KIND.WATER) {
+      ctx.strokeStyle = "rgba(255,255,255,0.18)";
+      ctx.beginPath();
+      ctx.moveTo(sx + 4, sy + 17 + Math.sin(this.lastTime * 0.002 + tx) * 2);
+      ctx.quadraticCurveTo(sx + 16, sy + 12, sx + 29, sy + 17 + Math.cos(this.lastTime * 0.002 + ty) * 2);
+      ctx.stroke();
+    } else if (kind === TILE_KIND.FOREST || kind === TILE_KIND.GRASS || kind === TILE_KIND.FLOWER) {
+      ctx.fillStyle = kind === TILE_KIND.FLOWER ? "rgba(245,221,126,0.42)" : "rgba(255,255,255,0.07)";
+      if ((tx * 13 + ty * 7) % 5 === 0) ctx.fillRect(sx + 8, sy + 8, 3, 12);
+      if ((tx * 11 + ty * 3) % 7 === 0) ctx.fillRect(sx + 22, sy + 18, 3, 8);
+    }
+  }
+
+  drawPlot(plot) {
+    const sx = LAYOUT.world.x + plot.tx * TILE - this.camera.x;
+    const sy = LAYOUT.world.y + plot.ty * TILE - this.camera.y;
+    if (sx < -TILE || sy < LAYOUT.world.y - TILE || sx > LAYOUT.world.w || sy > LAYOUT.world.y + LAYOUT.world.h) return;
+    const ctx = this.ctx;
+    if (plot.tilled) {
+      this.panel(sx + 3, sy + 4, TILE - 6, TILE - 7, 5, plot.watered ? "#6f5d4b" : "#815e43", "rgba(255,255,255,0.09)");
+      ctx.strokeStyle = "rgba(42,27,16,0.2)";
+      ctx.beginPath();
+      ctx.moveTo(sx + 8, sy + 13);
+      ctx.lineTo(sx + 25, sy + 13);
+      ctx.moveTo(sx + 9, sy + 22);
+      ctx.lineTo(sx + 24, sy + 21);
+      ctx.stroke();
+    }
+    if (plot.crop) {
+      const crop = CROPS[plot.crop];
+      const progress = clamp(plot.age / crop.days, 0, 1);
+      const cx = sx + TILE / 2;
+      const base = sy + 24;
+      ctx.strokeStyle = "#3f733d";
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(cx, base);
+      ctx.lineTo(cx, base - 7 - progress * 13);
+      ctx.stroke();
+      ctx.fillStyle = progress >= 1 ? "#e0bd58" : "#69a85d";
+      ctx.beginPath();
+      ctx.ellipse(cx - 5, base - 7 - progress * 8, 6 + progress * 3, 4 + progress * 2, -0.5, 0, Math.PI * 2);
+      ctx.ellipse(cx + 5, base - 9 - progress * 8, 6 + progress * 3, 4 + progress * 2, 0.5, 0, Math.PI * 2);
+      ctx.fill();
+      if (progress >= 1) {
+        ctx.fillStyle = "#f2d06e";
+        ctx.beginPath();
+        ctx.arc(cx, base - 22, 4, 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }
+  }
+
+  entityBottom(entity) {
+    if (entity.kind === "building") return entity.y + entity.h;
+    return entity.y + 16;
+  }
+
+  drawEntity(entity) {
+    if (entity.kind === "building") return this.drawBuilding(entity);
+    if (entity.kind === "tree") return this.drawTree(entity);
+    if (entity.kind === "rock" || entity.kind === "ore") return this.drawRock(entity);
+    if (entity.kind === "forage") return this.drawForage(entity);
+    if (entity.kind === "bug") return this.drawBug(entity);
+    if (entity.kind === "npc") return this.drawNpc(entity);
+    if (entity.kind === "player") return this.drawPlayer();
+  }
+
+  drawBuilding(building) {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + building.x - this.camera.x;
+    const y = LAYOUT.world.y + building.y - this.camera.y;
+    if (x > LAYOUT.world.w + 80 || x + building.w < -80 || y > HEIGHT || y + building.h < LAYOUT.world.y - 80) return;
+    this.shadow(x + building.w / 2, y + building.h, building.w * 0.42, 12, 0.2);
+    this.panel(x + 8, y + 28, building.w - 16, building.h - 24, 8, building.color, "rgba(31,45,42,0.18)");
+    ctx.fillStyle = building.roof;
+    ctx.beginPath();
+    ctx.moveTo(x, y + 36);
+    ctx.lineTo(x + building.w / 2, y + 4);
+    ctx.lineTo(x + building.w, y + 36);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.24)";
+    ctx.fillRect(x + 18, y + 48, 18, 18);
+    ctx.fillRect(x + building.w - 36, y + 48, 18, 18);
+    ctx.fillStyle = "rgba(70,45,32,0.55)";
+    ctx.fillRect(x + building.w / 2 - 10, y + building.h - 32, 20, 32);
+    ctx.fillStyle = UI.cream;
+    ctx.font = "12px 'Microsoft YaHei', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(building.name, x + building.w / 2, y + 26);
+    ctx.textAlign = "left";
+  }
+
+  drawTree(tree) {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + tree.x - this.camera.x;
+    const y = LAYOUT.world.y + tree.y - this.camera.y;
+    this.shadow(x, y + 11, 17, 5, 0.18);
+    ctx.fillStyle = "#7c5234";
+    ctx.fillRect(x - 4, y - 3, 8, 24);
+    ctx.fillStyle = "#3f7e48";
+    ctx.beginPath();
+    ctx.arc(x, y - 12, 20, 0, Math.PI * 2);
+    ctx.arc(x - 13, y - 3, 15, 0, Math.PI * 2);
+    ctx.arc(x + 13, y - 2, 15, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  drawRock(rock) {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + rock.x - this.camera.x;
+    const y = LAYOUT.world.y + rock.y - this.camera.y;
+    this.shadow(x, y + 10, 14, 5, 0.16);
+    ctx.fillStyle = rock.item === "crystal" ? "#9ebfc7" : rock.type === "ore" ? "#78888e" : "#888d88";
+    ctx.beginPath();
+    ctx.moveTo(x - 15, y + 10);
+    ctx.lineTo(x - 9, y - 8);
+    ctx.lineTo(x + 8, y - 13);
+    ctx.lineTo(x + 16, y + 5);
+    ctx.lineTo(x + 8, y + 15);
+    ctx.closePath();
+    ctx.fill();
+    if (rock.type === "ore") {
+      ctx.fillStyle = rock.item === "crystal" ? "#e0fbff" : "#c9e4ed";
+      ctx.fillRect(x + 2, y - 5, 5, 5);
+    }
+  }
+
+  drawForage(item) {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + item.x - this.camera.x;
+    const y = LAYOUT.world.y + item.y - this.camera.y;
+    const color = {
+      flower: "#e9c760",
+      herb: "#6ab46d",
+      berry: "#d35d70",
+      mushroom: "#d99b79",
+      shell: "#f0dfbd",
+      coral: "#e98171",
+      seaweed: "#4f8d61",
+      pinecone: "#8f6a44",
+      pearl: "#e6d8f2",
+      honey: "#dcae45",
+    }[item.item] || "#f0dfbd";
+    this.shadow(x, y + 8, 9, 3, 0.12);
+    ctx.fillStyle = color;
+    ctx.beginPath();
+    ctx.arc(x, y, item.item === "shell" ? 7 : 6, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.35)";
+    ctx.fillRect(x - 1, y - 4, 3, 3);
+  }
+
+  drawBug(bug) {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + bug.x - this.camera.x + Math.sin(this.lastTime * 0.004 + bug.sway) * 4;
+    const y = LAYOUT.world.y + bug.y - this.camera.y + Math.cos(this.lastTime * 0.005 + bug.sway) * 3;
+    ctx.fillStyle = bug.item === "firefly" ? "#f2dd75" : bug.item === "beetle" ? "#3d5b45" : bug.item === "cicada" ? "#b58d55" : bug.item === "snowMoth" ? "#d7e8f0" : "#d789ad";
+    ctx.beginPath();
+    ctx.ellipse(x - 4, y, 6, 4, 0.4, 0, Math.PI * 2);
+    ctx.ellipse(x + 4, y, 6, 4, -0.4, 0, Math.PI * 2);
+    ctx.fill();
+    if (bug.item === "firefly") {
+      ctx.strokeStyle = "rgba(242,221,117,0.45)";
+      ctx.beginPath();
+      ctx.arc(x, y, 14 + Math.sin(this.lastTime * 0.006) * 3, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+  }
+
+  drawNpc(npc) {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + npc.x - this.camera.x;
+    const y = LAYOUT.world.y + npc.y - this.camera.y;
+    this.shadow(x, y + 15, 13, 4, 0.16);
+    this.panel(x - 10, y - 8, 20, 26, 7, npc.color, "rgba(255,255,255,0.2)");
+    ctx.fillStyle = "#efc9a5";
+    ctx.beginPath();
+    ctx.arc(x, y - 17, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = npc.color;
+    ctx.fillRect(x - 12, y - 27, 24, 7);
+    ctx.fillStyle = UI.cream;
+    ctx.font = "10px 'Microsoft YaHei', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(npc.name, x, y - 34);
+    ctx.textAlign = "left";
+  }
+
+  drawPlayer() {
+    const ctx = this.ctx;
+    const x = LAYOUT.world.x + this.player.x - this.camera.x;
+    const y = LAYOUT.world.y + this.player.y - this.camera.y;
+    const bob = Math.sin(this.player.step) * 1.5;
+    this.shadow(x, y + 17, 14, 4, 0.22);
+    ctx.strokeStyle = "#2f4b46";
+    ctx.lineWidth = 4;
+    ctx.lineCap = "round";
+    ctx.beginPath();
+    ctx.moveTo(x - 7, y + 10 + bob);
+    ctx.lineTo(x - 10, y + 20 - bob);
+    ctx.moveTo(x + 7, y + 10 - bob);
+    ctx.lineTo(x + 10, y + 20 + bob);
+    ctx.stroke();
+    this.panel(x - 12, y - 8 + bob, 24, 30, 9, "#4f7fa2", "rgba(255,255,255,0.22)");
+    ctx.fillStyle = "#efc9a5";
+    ctx.beginPath();
+    ctx.arc(x, y - 19 + bob, 11, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = "#825543";
+    ctx.fillRect(x - 13, y - 28 + bob, 26, 8);
+    ctx.fillStyle = "#2f4b46";
+    if (this.player.dir === "left" || this.player.dir === "right") {
+      ctx.fillRect(x + (this.player.dir === "left" ? -5 : 4), y - 20 + bob, 3, 3);
+    } else {
+      ctx.fillRect(x - 5, y - 20 + bob, 3, 3);
+      ctx.fillRect(x + 3, y - 20 + bob, 3, 3);
+    }
+  }
+
+  drawInteractionHint() {
+    const building = this.findNearestBuilding(54);
+    const npc = this.findNearestNpc(58);
+    const resource = this.findNearestResource(42, () => true);
+    let text = "";
+    if (building) text = `E 进入 ${building.name}`;
+    else if (npc) text = `E 与 ${npc.name}交谈`;
+    else if (resource && resource.tool === "hand") text = `E 拾取 ${itemName(resource.item)}`;
+    else if (resource) text = `${resource.tool === "axe" ? "斧头" : resource.tool === "pick" ? "矿镐" : "捕虫网"} 可获取 ${itemName(resource.item)}`;
+    const plot = this.getFacingPlot();
+    if (!text && plot?.crop && this.isCropReady(plot)) text = `E 收获 ${CROPS[plot.crop].name}`;
+    if (!text) return;
+    const x = LAYOUT.world.x + this.player.x - this.camera.x;
+    const y = LAYOUT.world.y + this.player.y - this.camera.y - 58;
+    this.panel(x - 70, y, 140, 26, 13, "rgba(31,45,42,0.78)");
+    this.ctx.fillStyle = UI.cream;
+    this.ctx.font = "12px 'Microsoft YaHei', sans-serif";
+    this.ctx.textAlign = "center";
+    this.ctx.fillText(text, x, y + 17);
+    this.ctx.textAlign = "left";
+  }
+
+  renderSidePanel() {
+    const ctx = this.ctx;
+    const r = LAYOUT.side;
+    this.panel(r.x, r.y, r.w, r.h, 0, "#f6ecd3", "rgba(31,45,42,0.18)");
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 18px 'Microsoft YaHei', sans-serif";
+    ctx.fillText("管理面板", r.x + 18, r.y + 31);
+    SIDE_TABS.forEach((tab, index) => {
+      const x = r.x + 16 + index * 68;
+      this.panel(x, r.y + 46, 58, 26, 13, index === this.sideTab ? UI.dark : "rgba(31,45,42,0.08)");
+      ctx.fillStyle = index === this.sideTab ? UI.cream : UI.inkSoft;
+      ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(tab, x + 29, r.y + 63);
+    });
+    ctx.textAlign = "left";
+    if (this.sideTab === 0) this.renderGoalsPanel(r);
+    if (this.sideTab === 1) this.renderPeoplePanel(r);
+    if (this.sideTab === 2) this.renderBagPanel(r);
+    if (this.sideTab === 3) this.renderCollectionPanel(r);
+  }
+
+  renderGoalsPanel(r) {
+    const ctx = this.ctx;
+    let y = r.y + 100;
+    this.sectionTitle("今日节奏", r.x + 18, y);
+    y += 24;
+    const festival = this.getFestival();
+    const lines = [
+      festival ? `节日：${festival.name}，${festival.desc}` : `明日天气：${WEATHER[this.tomorrowWeather].name}`,
+      `出货箱：${Object.values(this.shipping).reduce((a, b) => a + b, 0)} 件，预计 ${Object.entries(this.shipping).reduce((sum, [id, count]) => sum + this.getSellPrice(id) * count, 0)} 金`,
+      `牧场：${this.animals.length} 只，干草 ${this.inventory.hay || 0}`,
+      `邮箱：${this.getUnreadMail().length} 封待读，成就 ${Object.keys(this.achievements).length}/${ACHIEVEMENTS.length}`,
+    ];
+    lines.forEach((line) => {
+      this.wrapText(line, r.x + 20, y, 260, 17, UI.inkSoft, "12px 'Microsoft YaHei'");
+      y += 28;
+    });
+    const topSkills = Object.keys(SKILLS).sort((a, b) => this.getSkillLevel(b) - this.getSkillLevel(a)).slice(0, 2);
+    topSkills.forEach((skill) => {
+      const info = SKILLS[skill];
+      const level = this.getSkillLevel(skill);
+      this.drawBar(r.x + 20, y + 3, 92, 7, this.getSkillProgress(skill), info.color, "rgba(31,45,42,0.12)");
+      ctx.fillStyle = UI.inkSoft;
+      ctx.font = "11px 'Microsoft YaHei', sans-serif";
+      ctx.fillText(`${info.name} Lv${level}`, r.x + 122, y + 10);
+      y += 17;
+    });
+    this.sectionTitle("公告委托", r.x + 18, y + 8);
+    y += 36;
+    this.dailyRequests.slice(0, 3).forEach((request) => {
+      const ready = !request.done && (this.inventory[request.item] || 0) >= request.amount;
+      this.panel(r.x + 16, y, 266, 44, 8, request.done ? "rgba(111,155,102,0.18)" : ready ? "rgba(215,173,97,0.2)" : "rgba(31,45,42,0.06)");
+      ctx.fillStyle = UI.ink;
+      ctx.font = "bold 12px 'Microsoft YaHei', sans-serif";
+      ctx.fillText(`${request.done ? "完成" : ready ? "可交" : "委托"} ${request.title}`, r.x + 28, y + 18);
+      ctx.fillStyle = UI.inkSoft;
+      ctx.font = "11px 'Microsoft YaHei', sans-serif";
+      ctx.fillText(`${itemName(request.item)} ${this.inventory[request.item] || 0}/${request.amount}  ·  ${request.gold}金`, r.x + 28, y + 36);
+      y += 50;
+    });
+    this.sectionTitle("镇务工程", r.x + 18, y + 8);
+    y += 36;
+    const project = PROJECTS.find((item) => !this.projects[item.id]) || PROJECTS[PROJECTS.length - 1];
+    this.panel(r.x + 16, y, 266, 76, 8, "rgba(31,45,42,0.06)");
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 13px 'Microsoft YaHei', sans-serif";
+    ctx.fillText(project.name, r.x + 28, y + 20);
+    ctx.fillStyle = UI.inkSoft;
+    ctx.font = "11px 'Microsoft YaHei', sans-serif";
+    this.wrapText(formatReq(project.req), r.x + 28, y + 42, 236, 15, UI.inkSoft, "11px 'Microsoft YaHei'");
+  }
+
+  renderPeoplePanel(r) {
+    let y = r.y + 96;
+    VILLAGERS.forEach((npc) => {
+      const favor = this.relationships[npc.id] || 0;
+      this.panel(r.x + 16, y, 266, 58, 8, "rgba(31,45,42,0.06)");
+      this.ctx.fillStyle = npc.color;
+      this.ctx.beginPath();
+      this.ctx.arc(r.x + 38, y + 28, 13, 0, Math.PI * 2);
+      this.ctx.fill();
+      this.ctx.fillStyle = UI.ink;
+      this.ctx.font = "bold 13px 'Microsoft YaHei', sans-serif";
+      this.ctx.fillText(npc.name, r.x + 58, y + 22);
+      this.ctx.fillStyle = UI.inkSoft;
+      this.ctx.font = "11px 'Microsoft YaHei', sans-serif";
+      this.ctx.fillText(npc.role, r.x + 58, y + 39);
+      this.drawBar(r.x + 160, y + 24, 90, 8, favor / 100, npc.color, "rgba(31,45,42,0.12)");
+      this.ctx.fillText(String(favor), r.x + 256, y + 31);
+      y += 66;
+    });
+  }
+
+  renderBagPanel(r) {
+    const entries = Object.entries(this.inventory).filter(([, count]) => count > 0).slice(0, 13);
+    let y = r.y + 96;
+    this.sectionTitle(`背包 ${entries.length} 类`, r.x + 18, y);
+    y += 26;
+    entries.forEach(([id, count]) => {
+      this.panel(r.x + 16, y, 266, 30, 8, "rgba(31,45,42,0.055)");
+      this.ctx.fillStyle = UI.ink;
+      this.ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      this.ctx.fillText(itemName(id), r.x + 28, y + 20);
+      this.ctx.fillStyle = UI.inkSoft;
+      this.ctx.textAlign = "right";
+      this.ctx.fillText(`x${count}`, r.x + 266, y + 20);
+      this.ctx.textAlign = "left";
+      y += 36;
+    });
+    if (!entries.length) this.wrapText("背包空空。去采集、钓鱼、耕种或挖矿吧。", r.x + 20, y, 250, 18);
+  }
+
+  renderCollectionPanel(r) {
+    const collected = Object.keys(this.collections).length;
+    const donated = Object.keys(this.donated).length;
+    let y = r.y + 96;
+    this.sectionTitle("图鉴与博物馆", r.x + 18, y);
+    y += 30;
+    this.panel(r.x + 16, y, 266, 70, 8, "rgba(31,45,42,0.06)");
+    this.ctx.fillStyle = UI.ink;
+    this.ctx.font = "bold 18px 'Microsoft YaHei', sans-serif";
+    this.ctx.fillText(`${collected} 已发现`, r.x + 30, y + 28);
+    this.ctx.fillStyle = UI.inkSoft;
+    this.ctx.font = "12px 'Microsoft YaHei', sans-serif";
+    this.ctx.fillText(`${donated} 件已捐赠，评价分 ${this.getTownScore()}`, r.x + 30, y + 52);
+    y += 92;
+    COLLECTION_TYPES.forEach((type) => {
+      const count = Object.keys(this.collections).filter((id) => ITEMS[id]?.type === type).length;
+      const label = { fish: "鱼类", bug: "虫类", forage: "采集", material: "矿木", crop: "作物", artisan: "手作", ranch: "牧场" }[type];
+      this.panel(r.x + 16, y, 266, 34, 8, "rgba(31,45,42,0.055)");
+      this.ctx.fillStyle = UI.ink;
+      this.ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      this.ctx.fillText(label, r.x + 28, y + 22);
+      this.ctx.fillStyle = UI.inkSoft;
+      this.ctx.textAlign = "right";
+      this.ctx.fillText(`${count} 种`, r.x + 266, y + 22);
+      this.ctx.textAlign = "left";
+      y += 40;
+    });
+  }
+
+  sectionTitle(text, x, y) {
+    this.ctx.fillStyle = UI.ink;
+    this.ctx.font = "bold 14px 'Microsoft YaHei', sans-serif";
+    this.ctx.fillText(text, x, y);
+  }
+
+  renderBottomBar() {
+    const ctx = this.ctx;
+    const r = LAYOUT.bottom;
+    this.panel(r.x, r.y, r.w, r.h, 0, "#efe2c4", "rgba(31,45,42,0.18)");
+    TOOLS.forEach((tool, index) => {
+      const x = 18 + index * 78;
+      const active = index === this.selectedTool;
+      this.panel(x, r.y + 11, 68, 52, 8, active ? UI.dark : "rgba(255,255,255,0.34)", active ? "rgba(255,255,255,0.2)" : "rgba(31,45,42,0.12)");
+      ctx.fillStyle = active ? UI.cream : UI.ink;
+      ctx.font = "bold 12px 'Microsoft YaHei', sans-serif";
+      ctx.textAlign = "center";
+      ctx.fillText(`${index + 1}. ${tool.name}`, x + 34, r.y + 30);
+      ctx.font = "10px 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = active ? "rgba(255,245,214,0.75)" : UI.inkSoft;
+      ctx.fillText(tool.hint, x + 34, r.y + 47);
+    });
+    ctx.textAlign = "left";
+    this.panel(656, r.y + 11, 166, 52, 8, "rgba(255,255,255,0.35)");
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 12px 'Microsoft YaHei', sans-serif";
+    ctx.fillText("当前种子", 670, r.y + 30);
+    ctx.fillStyle = UI.inkSoft;
+    ctx.font = "11px 'Microsoft YaHei', sans-serif";
+    ctx.fillText(`${itemName(this.selectedSeed)} x${this.inventory[this.selectedSeed] || 0}`, 670, r.y + 48);
+    this.panel(834, r.y + 11, 268, 52, 8, "rgba(31,45,42,0.08)");
+    const hints = ["E 交互", "Space 使用工具", "Q 种子", "R 工具", "Tab 面板", "I 背包", "J 日志"];
+    ctx.fillStyle = UI.inkSoft;
+    ctx.font = "11px 'Microsoft YaHei', sans-serif";
+    this.wrapText(hints.join("  ·  "), 848, r.y + 30, 238, 16, UI.inkSoft, "11px 'Microsoft YaHei'");
+    this.renderMessages();
+  }
+
+  renderMessages() {
+    const ctx = this.ctx;
+    let y = LAYOUT.world.y + LAYOUT.world.h - 20;
+    this.messages.slice(0, 3).forEach((message) => {
+      const width = clamp(ctx.measureText(message.text).width + 28, 180, 560);
+      this.panel(16, y - 27, width, 26, 13, "rgba(31,45,42,0.76)");
+      ctx.fillStyle = UI.cream;
+      ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      ctx.fillText(message.text, 30, y - 10);
+      y -= 32;
+    });
+  }
+
+  renderModal() {
+    const ctx = this.ctx;
+    ctx.fillStyle = "rgba(18,31,29,0.38)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    const config = this.getModalConfig();
+    const x = (WIDTH - config.w) / 2;
+    const y = (HEIGHT - config.h) / 2;
+    this.panel(x, y, config.w, config.h, 16, "rgba(248,240,221,0.97)", "rgba(255,255,255,0.4)");
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 22px 'Microsoft YaHei', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText(config.title, WIDTH / 2, y + 38);
+    ctx.textAlign = "left";
+    if (config.subtitle) {
+      ctx.fillStyle = UI.inkSoft;
+      ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      ctx.fillText(config.subtitle, x + 28, y + 62);
+    }
+    this.renderModalTabs(x, y, config.w);
+    if (this.scene === SCENE.JOURNAL) this.renderJournalContent(x, y, config.w, config.h);
+    else this.renderMenuContent(x, y, config.w, config.h);
+    ctx.fillStyle = UI.inkSoft;
+    ctx.font = "12px 'Microsoft YaHei', sans-serif";
+    ctx.textAlign = "center";
+    ctx.fillText("↑↓ 选择  ·  Enter/E 确认  ·  Esc 返回", WIDTH / 2, y + config.h - 18);
+    ctx.textAlign = "left";
+  }
+
+  getModalConfig() {
+    const npcName = this.activeNpc?.name || "居民";
+    const configs = {
+      [SCENE.SHOP]: { title: "星禾杂货与集市", subtitle: "左右或 Tab 切换分类。", w: 690, h: 500 },
+      [SCENE.HOUSE]: { title: "小屋安排", subtitle: `小屋 Lv${this.houseLevel}，装饰 ${this.decor}，明日 ${WEATHER[this.tomorrowWeather].name}。`, w: 690, h: 500 },
+      [SCENE.WORKSHOP]: { title: "工坊制作", subtitle: "把原料加工成更高价值的商品或工具消耗品。", w: 690, h: 500 },
+      [SCENE.TOWN]: { title: "镇务工程", subtitle: "长期建设会改变地图、商店、产出和小镇评价。", w: 760, h: 540 },
+      [SCENE.REQUESTS]: { title: "公告委托", subtitle: "每日刷新，完成后立即获得金币与居民好感。", w: 720, h: 500 },
+      [SCENE.MUSEUM]: { title: "星禾博物馆", subtitle: "首次发现的鱼、虫、作物、矿物和手作都可以捐赠。", w: 690, h: 500 },
+      [SCENE.NPC]: { title: npcName, subtitle: `${this.activeNpc?.role || ""} · 好感 ${this.relationships[this.activeNpc?.id] || 0}/100`, w: 650, h: 500 },
+      [SCENE.INVENTORY]: { title: "背包与出货", subtitle: "食物可食用，商品可逐个放入出货箱；材料默认保留。", w: 690, h: 500 },
+      [SCENE.MAIL]: { title: "小屋邮箱", subtitle: "阅读信件可领取居民、镇务所和博物馆寄来的回礼。", w: 690, h: 500 },
+      [SCENE.JOURNAL]: { title: "生活日志", subtitle: "左右或 Tab 切换日志页面。", w: 760, h: 540 },
+    };
+    return configs[this.scene] || { title: "菜单", w: 650, h: 480 };
+  }
+
+  renderModalTabs(x, y, w) {
+    const tabs = this.scene === SCENE.SHOP ? SHOP_TABS : this.scene === SCENE.JOURNAL ? JOURNAL_TABS : [];
+    if (!tabs.length) return;
+    const active = this.scene === SCENE.JOURNAL ? this.journalTab : this.menuTab;
+    tabs.forEach((tab, index) => {
+      const tabW = 86;
+      const tx = x + 28 + index * (tabW + 8);
+      this.panel(tx, y + 76, tabW, 28, 14, active === index ? UI.dark : "rgba(31,45,42,0.08)");
+      this.ctx.fillStyle = active === index ? UI.cream : UI.inkSoft;
+      this.ctx.font = "12px 'Microsoft YaHei', sans-serif";
+      this.ctx.textAlign = "center";
+      this.ctx.fillText(tab, tx + tabW / 2, y + 94);
+    });
+    this.ctx.textAlign = "left";
+  }
+
+  renderMenuContent(x, y, w, h) {
+    const ctx = this.ctx;
+    const items = this.getMenuItems();
+    const startY = y + (this.getModalTabCount() > 1 ? 122 : 86);
+    const rowH = 52;
+    const maxRows = Math.floor((h - (startY - y) - 50) / rowH);
+    const start = clamp(this.menuIndex - Math.floor(maxRows / 2), 0, Math.max(0, items.length - maxRows));
+    items.slice(start, start + maxRows).forEach((item, offset) => {
+      const index = start + offset;
+      const rowY = startY + offset * rowH;
+      const active = index === this.menuIndex;
+      this.panel(x + 28, rowY, w - 56, rowH - 8, 9, active ? "rgba(31,45,42,0.12)" : "rgba(31,45,42,0.055)", active ? "rgba(31,45,42,0.18)" : "rgba(31,45,42,0.08)");
+      ctx.fillStyle = item.disabled ? "rgba(31,45,42,0.35)" : UI.ink;
+      ctx.font = "bold 13px 'Microsoft YaHei', sans-serif";
+      ctx.fillText(item.label, x + 44, rowY + 19);
+      ctx.font = "11px 'Microsoft YaHei', sans-serif";
+      ctx.fillStyle = item.disabled ? "rgba(31,45,42,0.32)" : UI.inkSoft;
+      ctx.fillText(item.detail || "", x + 44, rowY + 37);
+      if (item.right) {
+        ctx.textAlign = "right";
+        ctx.fillStyle = item.disabled ? "rgba(31,45,42,0.32)" : UI.clay;
+        ctx.fillText(item.right, x + w - 44, rowY + 27);
+        ctx.textAlign = "left";
       }
     });
   }
 
-  showMessage(text, duration) {
-    this.interactionMessage = text;
-    this.messageTimer = duration;
+  renderJournalContent(x, y, w, h) {
+    const ctx = this.ctx;
+    const contentX = x + 38;
+    let yy = y + 126;
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 15px 'Microsoft YaHei', sans-serif";
+    if (this.journalTab === 0) {
+      ctx.fillText(`${this.getSeason().name} ${this.getSeasonDay()}日 · 第 ${this.day} 天`, contentX, yy);
+      yy += 30;
+      this.wrapText(this.getSeason().desc, contentX, yy, w - 76, 20);
+      yy += 58;
+      FESTIVALS.forEach((festival) => {
+        const active = festival.day === this.getSeasonDay();
+        this.panel(contentX, yy, w - 76, 38, 8, active ? "rgba(215,173,97,0.22)" : "rgba(31,45,42,0.055)");
+        ctx.fillStyle = active ? UI.ink : UI.inkSoft;
+        ctx.font = active ? "bold 12px 'Microsoft YaHei'" : "12px 'Microsoft YaHei'";
+        ctx.fillText(`${festival.day}日  ${festival.name}：${festival.desc}`, contentX + 14, yy + 24);
+        yy += 46;
+      });
+    } else if (this.journalTab === 1) {
+      const rows = [
+        `金币 ${this.gold}，累计收入 ${this.stats.earned}`,
+        `出货 ${this.stats.shipped} 件，收获 ${this.stats.harvested} 件，钓鱼 ${this.stats.fish} 次，捕虫 ${this.stats.bugs} 次`,
+        `工具 Lv${this.toolLevel}，钓竿 Lv${this.rodLevel}，小屋 Lv${this.houseLevel}，装饰 ${this.decor}`,
+        `牧场 ${this.animals.length} 只：${this.animals.map((animal) => `${animal.name}${animal.age >= animal.mature ? "" : "(幼年)"}`).join("、") || "暂无"}`,
+        this.lastReport ? `昨日评级 ${this.lastReport.grade}：出货 ${this.lastReport.shippedValue} 金，作物成长 ${this.lastReport.grown} 块，牧场产物 ${this.lastReport.animalGoods} 件` : "还没有昨日结算。",
+      ];
+      rows.forEach((line) => {
+        this.panel(contentX, yy, w - 76, 44, 8, "rgba(31,45,42,0.055)");
+        this.wrapText(line, contentX + 14, yy + 18, w - 104, 16, UI.ink, "12px 'Microsoft YaHei'");
+        yy += 52;
+      });
+    } else if (this.journalTab === 2) {
+      Object.entries(SKILLS).forEach(([id, info]) => {
+        const level = this.getSkillLevel(id);
+        const xp = this.stats[id] || 0;
+        this.panel(contentX, yy, w - 76, 44, 8, "rgba(31,45,42,0.055)");
+        ctx.fillStyle = UI.ink;
+        ctx.font = "bold 12px 'Microsoft YaHei'";
+        ctx.fillText(`${info.name} Lv${level}`, contentX + 14, yy + 18);
+        this.drawBar(contentX + 110, yy + 13, 190, 8, this.getSkillProgress(id), info.color, "rgba(31,45,42,0.12)");
+        ctx.fillStyle = UI.inkSoft;
+        ctx.font = "11px 'Microsoft YaHei'";
+        ctx.fillText(`${xp} 经验`, contentX + 324, yy + 19);
+        yy += 50;
+      });
+    } else if (this.journalTab === 3) {
+      PROJECTS.forEach((project) => {
+        const done = this.projects[project.id];
+        this.panel(contentX, yy, w - 76, 42, 8, done ? "rgba(111,155,102,0.18)" : "rgba(31,45,42,0.055)");
+        ctx.fillStyle = UI.ink;
+        ctx.font = "bold 12px 'Microsoft YaHei'";
+        ctx.fillText(`${done ? "完成" : "未完成"} · ${project.name}`, contentX + 14, yy + 18);
+        ctx.fillStyle = UI.inkSoft;
+        ctx.font = "11px 'Microsoft YaHei'";
+        ctx.fillText(done ? project.desc : formatReq(project.req), contentX + 14, yy + 34);
+        yy += 48;
+      });
+    } else if (this.journalTab === 4) {
+      const entries = Object.keys(this.collections).sort((a, b) => itemName(a).localeCompare(itemName(b), "zh-CN"));
+      this.wrapText(`已发现 ${entries.length} 种，已捐赠 ${Object.keys(this.donated).length} 种。`, contentX, yy, w - 76, 18);
+      yy += 34;
+      entries.slice(0, 48).forEach((id, index) => {
+        const col = index % 3;
+        const row = Math.floor(index / 3);
+        const bx = contentX + col * 220;
+        const by = yy + row * 34;
+        this.panel(bx, by, 200, 28, 7, this.donated[id] ? "rgba(111,155,102,0.16)" : "rgba(31,45,42,0.055)");
+        ctx.fillStyle = UI.ink;
+        ctx.font = "11px 'Microsoft YaHei'";
+        ctx.fillText(`${this.donated[id] ? "捐" : "藏"} ${itemName(id)}`, bx + 10, by + 18);
+      });
+    } else {
+      ACHIEVEMENTS.forEach((achievement) => {
+        const done = this.achievements[achievement.id];
+        this.panel(contentX, yy, w - 76, 42, 8, done ? "rgba(111,155,102,0.18)" : "rgba(31,45,42,0.055)");
+        ctx.fillStyle = done ? UI.ink : UI.inkSoft;
+        ctx.font = "bold 12px 'Microsoft YaHei'";
+        ctx.fillText(`${done ? "达成" : "未达成"} · ${achievement.title}`, contentX + 14, yy + 18);
+        ctx.font = "11px 'Microsoft YaHei'";
+        ctx.fillText(achievement.desc, contentX + 14, yy + 34);
+        yy += 48;
+      });
+    }
   }
 
-  roundedRect(x, y, w, h, r = 10) {
-    const { ctx } = this;
-    const radius = Math.min(r, w / 2, h / 2);
+  renderFishing() {
+    const ctx = this.ctx;
+    const fish = this.fishing;
+    ctx.fillStyle = "rgba(18,31,38,0.5)";
+    ctx.fillRect(0, 0, WIDTH, HEIGHT);
+    const x = 410;
+    const y = 150;
+    this.panel(x, y, 300, 420, 18, "rgba(239,246,244,0.97)", "rgba(255,255,255,0.36)");
+    ctx.textAlign = "center";
+    ctx.fillStyle = UI.ink;
+    ctx.font = "bold 22px 'Microsoft YaHei'";
+    ctx.fillText(fish.area === "sea" ? "月湾钓鱼" : "溪流钓鱼", x + 150, y + 42);
+    if (fish.phase === "waiting" || fish.phase === "bite") {
+      ctx.fillStyle = fish.phase === "bite" ? UI.red : UI.water;
+      ctx.font = "bold 16px 'Microsoft YaHei'";
+      ctx.fillText(fish.phase === "bite" ? "上钩了！按 Space！" : "等待浮标动静...", x + 150, y + 208);
+      ctx.strokeStyle = "rgba(94,157,184,0.35)";
+      for (let i = 0; i < 4; i++) {
+        ctx.beginPath();
+        ctx.arc(x + 150, y + 205, 30 + i * 18 + Math.sin(this.lastTime * 0.004 + i) * 3, 0, Math.PI * 2);
+        ctx.stroke();
+      }
+    }
+    if (fish.phase === "reeling") {
+      const trackX = x + 72;
+      const trackY = y + 78;
+      this.panel(trackX, trackY, 56, 270, 24, "rgba(94,157,184,0.16)", "rgba(94,157,184,0.28)");
+      this.panel(trackX + 76, trackY, 42, 270, 18, "rgba(31,45,42,0.1)");
+      const fishY = trackY + fish.fishY;
+      ctx.fillStyle = UI.water;
+      ctx.beginPath();
+      ctx.ellipse(trackX + 28, fishY, 17, 10, 0, 0, Math.PI * 2);
+      ctx.fill();
+      const barY = trackY + fish.barY;
+      this.panel(trackX + 8, barY, 40, 62, 16, "rgba(111,155,102,0.72)", "rgba(255,255,255,0.18)");
+      this.panel(trackX + 80, trackY + 270 * (1 - fish.progress / 100), 34, Math.max(8, 270 * (fish.progress / 100)), 14, fish.progress > 55 ? UI.leaf : UI.sun);
+      ctx.fillStyle = UI.inkSoft;
+      ctx.font = "12px 'Microsoft YaHei'";
+      ctx.fillText("按住 Space 上升，松开下降", x + 150, y + 380);
+    }
+    if (fish.phase === "result") {
+      ctx.fillStyle = fish.result?.fail ? UI.red : UI.leaf;
+      ctx.font = "bold 20px 'Microsoft YaHei'";
+      ctx.fillText(fish.result?.text || "", x + 150, y + 210);
+      ctx.fillStyle = UI.inkSoft;
+      ctx.font = "13px 'Microsoft YaHei'";
+      ctx.fillText("按 Enter 返回", x + 150, y + 246);
+    }
+    ctx.textAlign = "left";
+  }
+
+  panel(x, y, w, h, radius = 8, fill = UI.paper, stroke = "") {
+    const ctx = this.ctx;
+    ctx.save();
     ctx.beginPath();
-    ctx.moveTo(x + radius, y);
-    ctx.lineTo(x + w - radius, y);
-    ctx.quadraticCurveTo(x + w, y, x + w, y + radius);
-    ctx.lineTo(x + w, y + h - radius);
-    ctx.quadraticCurveTo(x + w, y + h, x + w - radius, y + h);
-    ctx.lineTo(x + radius, y + h);
-    ctx.quadraticCurveTo(x, y + h, x, y + h - radius);
-    ctx.lineTo(x, y + radius);
-    ctx.quadraticCurveTo(x, y, x + radius, y);
-    ctx.closePath();
-  }
-
-  fillRoundRect(x, y, w, h, r, fill, stroke = "") {
-    const { ctx } = this;
-    this.roundedRect(x, y, w, h, r);
+    this.roundRectPath(x, y, w, h, radius);
     ctx.fillStyle = fill;
     ctx.fill();
     if (stroke) {
       ctx.strokeStyle = stroke;
       ctx.stroke();
     }
-  }
-
-  drawSoftPanel(x, y, w, h, options = {}) {
-    const { ctx } = this;
-    const fill = options.fill || UI.paper;
-    const stroke = options.stroke || "rgba(255,255,255,0.45)";
-    ctx.save();
-    ctx.shadowColor = options.shadow || UI.shadow;
-    ctx.shadowBlur = options.blur ?? 18;
-    ctx.shadowOffsetY = options.offsetY ?? 8;
-    this.fillRoundRect(x, y, w, h, options.radius ?? 12, fill, stroke);
     ctx.restore();
-    if (options.accent) {
-      this.fillRoundRect(x + 10, y + 8, 4, h - 16, 3, options.accent);
-    }
-    if (options.gloss !== false) {
-      ctx.save();
-      ctx.strokeStyle = options.light || "rgba(255,255,255,0.18)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(x + (options.radius ?? 12), y + 1.5);
-      ctx.lineTo(x + w - (options.radius ?? 12), y + 1.5);
-      ctx.stroke();
-      ctx.restore();
-    }
   }
 
-  drawBar(x, y, w, h, ratio, color, back = "rgba(32,52,47,0.12)") {
-    const { ctx } = this;
-    this.fillRoundRect(x, y, w, h, h / 2, back, "rgba(255,255,255,0.10)");
-    const fillW = Math.max(h, w * Math.max(0, Math.min(1, ratio)));
-    this.fillRoundRect(x, y, fillW, h, h / 2, color);
-    ctx.fillStyle = "rgba(255,255,255,0.20)";
-    this.roundedRect(x + 2, y + 2, Math.max(0, fillW - 4), Math.max(1, h * 0.32), h / 2);
+  pill(x, y, w, h, fill, text) {
+    this.panel(x, y, w, h, h / 2, fill, "rgba(255,255,255,0.16)");
+    this.ctx.fillStyle = fill === UI.dark ? UI.cream : "#fff7df";
+    if (fill === UI.sun || fill === "#839b89") this.ctx.fillStyle = UI.ink;
+    this.ctx.font = "bold 12px 'Microsoft YaHei', sans-serif";
+    this.ctx.textAlign = "center";
+    this.ctx.fillText(text, x + w / 2, y + h / 2 + 4);
+    this.ctx.textAlign = "left";
+  }
+
+  roundRectPath(x, y, w, h, radius) {
+    const r = Math.min(radius, w / 2, h / 2);
+    const ctx = this.ctx;
+    ctx.moveTo(x + r, y);
+    ctx.lineTo(x + w - r, y);
+    ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+    ctx.lineTo(x + w, y + h - r);
+    ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+    ctx.lineTo(x + r, y + h);
+    ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+    ctx.lineTo(x, y + r);
+    ctx.quadraticCurveTo(x, y, x + r, y);
+  }
+
+  drawBar(x, y, w, h, value, fill, bg) {
+    this.panel(x, y, w, h, h / 2, bg);
+    this.panel(x, y, Math.max(h, w * clamp(value, 0, 1)), h, h / 2, fill);
+  }
+
+  shadow(x, y, rx, ry, alpha) {
+    const ctx = this.ctx;
+    ctx.fillStyle = `rgba(22,33,30,${alpha})`;
+    ctx.beginPath();
+    ctx.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2);
     ctx.fill();
   }
 
-  wrapText(text, maxWidth, font) {
-    const { ctx } = this;
+  wrapText(text, x, y, maxWidth, lineHeight = 18, color = UI.inkSoft, font = "12px 'Microsoft YaHei'") {
+    const ctx = this.ctx;
+    ctx.fillStyle = color;
     ctx.font = font;
-    const lines = [];
-    let current = "";
-    for (const char of String(text)) {
-      const next = current + char;
-      if (ctx.measureText(next).width > maxWidth && current) {
-        lines.push(current);
-        current = char;
+    const chars = String(text).split("");
+    let line = "";
+    let yy = y;
+    for (const char of chars) {
+      const test = line + char;
+      if (ctx.measureText(test).width > maxWidth && line) {
+        ctx.fillText(line, x, yy);
+        line = char;
+        yy += lineHeight;
       } else {
-        current = next;
+        line = test;
       }
     }
-    if (current) lines.push(current);
-    return lines;
-  }
-
-  noise(tx, ty, salt = 0) {
-    const n = Math.sin(tx * 127.1 + ty * 311.7 + salt * 74.7) * 43758.5453;
-    return n - Math.floor(n);
-  }
-
-  drawGroundShadow(x, y, w, h, alpha = 0.22) {
-    const { ctx } = this;
-    ctx.save();
-    ctx.fillStyle = `rgba(31, 38, 33, ${alpha})`;
-    ctx.beginPath();
-    ctx.ellipse(x, y, w, h, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  getLightState() {
-    const hour = this.gameMinutes / 60;
-    const morning = Math.max(0, 1 - Math.abs(hour - 7.2) / 2.8);
-    const evening = Math.max(0, 1 - Math.abs(hour - 18.4) / 2.8);
-    const night = hour >= 20 || hour < 5;
-    return {
-      warm: Math.max(morning, evening),
-      night,
-      soft: hour >= 11 && hour <= 15 ? 0.16 : 0.08,
-      shadow: night ? 0.38 : 0.18 + Math.max(morning, evening) * 0.10,
-      glow: night ? "rgba(116,150,178,0.12)" : `rgba(255,218,150,${0.05 + Math.max(morning, evening) * 0.12})`,
-    };
-  }
-
-  drawTerrainTuft(x, y, scale = 1, color = "rgba(41,86,43,0.34)", lean = 1) {
-    const { ctx } = this;
-    ctx.save();
-    ctx.strokeStyle = color;
-    ctx.lineWidth = Math.max(1, 1.1 * scale);
-    ctx.lineCap = "round";
-    for (let i = 0; i < 5; i++) {
-      const ox = (i - 2) * 2.2 * scale;
-      const h = (8 + (i % 2) * 4) * scale;
-      ctx.beginPath();
-      ctx.moveTo(x + ox, y);
-      ctx.quadraticCurveTo(x + ox + lean * 2 * scale, y - h * 0.58, x + ox + lean * 4 * scale, y - h);
-      ctx.stroke();
-    }
-    ctx.restore();
-  }
-
-  drawPebble(x, y, scale = 1, fill = "rgba(79,83,77,0.22)") {
-    const { ctx } = this;
-    ctx.save();
-    ctx.fillStyle = fill;
-    ctx.beginPath();
-    ctx.ellipse(x, y, 3.5 * scale, 2.1 * scale, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.10)";
-    ctx.beginPath();
-    ctx.ellipse(x - 1 * scale, y - 0.8 * scale, 1.3 * scale, 0.7 * scale, -0.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.restore();
-  }
-
-  drawLeafMass(cx, cy, rx, ry, palette, salt = 0, alpha = 1) {
-    const { ctx } = this;
-    const grad = ctx.createRadialGradient(cx - rx * 0.32, cy - ry * 0.42, 3, cx, cy, Math.max(rx, ry));
-    grad.addColorStop(0, palette[0]);
-    grad.addColorStop(0.58, palette[1]);
-    grad.addColorStop(1, palette[2] || palette[1]);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(cx, cy, rx, ry, -0.08, 0, Math.PI * 2);
-    ctx.fill();
-    for (let i = 0; i < 7; i++) {
-      const n = this.noise(cx * 0.03 + i, cy * 0.03 + salt, i);
-      ctx.fillStyle = i % 3 === 0 ? "rgba(255,244,184,0.12)" : "rgba(25,57,31,0.10)";
-      ctx.beginPath();
-      ctx.ellipse(cx - rx * 0.42 + n * rx * 0.88, cy - ry * 0.45 + this.noise(i, salt, cx) * ry * 0.82, rx * (0.10 + n * 0.06), ry * 0.07, n * Math.PI, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-  }
-
-  getTilePalette(tile) {
-    const seasonId = this.getSeasonInfo().id;
-    const grass = seasonId === "autumn" ? ["#9fb76f", "#789b59", "#d2aa69"] : seasonId === "winter" ? ["#9eb9ad", "#7f9d92", "#dce7dd"] : ["#91bd78", "#6fa061", "#c9d79a"];
-    const darkGrass = seasonId === "autumn" ? ["#738c54", "#566f47", "#b68256"] : seasonId === "winter" ? ["#77998e", "#5e7d75", "#d9e6de"] : ["#6f9b63", "#4f7a4a", "#b7cf85"];
-    const palettes = {
-      [TILE.GRASS]: grass,
-      [TILE.FLOWER]: grass,
-      [TILE.DARK_GRASS]: darkGrass,
-      [TILE.PATH]: ["#dcc9a5", "#c8ae82", "#f0dfbd"],
-      [TILE.SAND]: ["#e5d7af", "#cfbd8d", "#f4e7bf"],
-      [TILE.WATER]: ["#79b4cc", "#4d8eaa", "#c4e5ea"],
-      [TILE.WOOD_FLOOR]: ["#bc9260", "#9f744a", "#ddba83"],
-      [TILE.FARM_SOIL]: ["#8a6650", "#654635", "#b18866"],
-    };
-    return palettes[tile] || palettes[TILE.GRASS];
-  }
-
-  drawTileSurface(tile, px, py, tx, ty) {
-    const { ctx } = this;
-    const [light, base, highlight] = this.getTilePalette(tile);
-    const lightState = this.getLightState();
-    const grad = ctx.createLinearGradient(px, py, px + TILE_SIZE, py + TILE_SIZE);
-    grad.addColorStop(0, light);
-    grad.addColorStop(0.58, base);
-    grad.addColorStop(1, light);
-    ctx.fillStyle = grad;
-    ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-
-    const seed = this.noise(tx, ty, 1);
-    const grain = this.noise(tx, ty, 8);
-    ctx.fillStyle = `rgba(255,244,198,${0.018 + grain * 0.025})`;
-    ctx.fillRect(px + 1, py + 1, TILE_SIZE - 2, TILE_SIZE - 2);
-    ctx.fillStyle = `rgba(18,31,26,${0.025 + this.noise(tx, ty, 9) * 0.035})`;
-    ctx.fillRect(px + 3 + (seed * 11) % 8, py + 4 + (grain * 17) % 8, 16 + (seed * 9) % 16, 2);
-
-    ctx.fillStyle = "rgba(28,35,31,0.07)";
-    ctx.fillRect(px, py + TILE_SIZE - 1, TILE_SIZE, 1);
-    ctx.fillStyle = "rgba(255,255,255,0.06)";
-    ctx.fillRect(px, py, TILE_SIZE, 1);
-
-    if (tile === TILE.GRASS || tile === TILE.DARK_GRASS || tile === TILE.FLOWER) {
-      const tuftColor = tile === TILE.DARK_GRASS ? "rgba(215,231,174,0.20)" : "rgba(35,83,42,0.28)";
-      for (let i = 0; i < 7; i++) {
-        const bx = px + 6 + ((seed * 113 + i * 13) % 37);
-        const by = py + 13 + ((seed * 79 + i * 9) % 27);
-        const scale = 0.68 + this.noise(tx + i, ty, 2) * 0.36;
-        this.drawTerrainTuft(bx, by, scale, tuftColor, i % 2 ? -1 : 1);
-      }
-      if (tile === TILE.FLOWER || seed > 0.72) {
-        const bloomCount = tile === TILE.FLOWER ? 4 : 1;
-        for (let i = 0; i < bloomCount; i++) {
-          const bx = px + 10 + ((seed * 37 + i * 12) % 28);
-          const by = py + 12 + ((seed * 29 + i * 10) % 24);
-          ctx.fillStyle = i % 3 === 0 ? "rgba(234,150,151,0.78)" : i % 3 === 1 ? "rgba(242,210,133,0.72)" : "rgba(184,207,238,0.62)";
-          ctx.beginPath();
-          ctx.arc(bx, by, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "rgba(255,248,210,0.66)";
-          ctx.fillRect(bx - 0.8, by - 0.8, 1.6, 1.6);
-        }
-      }
-      ctx.fillStyle = lightState.glow;
-      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-    }
-
-    if (tile === TILE.PATH || tile === TILE.SAND || tile === TILE.FARM_SOIL) {
-      ctx.fillStyle = tile === TILE.FARM_SOIL ? "rgba(63,39,28,0.18)" : "rgba(98,76,52,0.12)";
-      for (let i = 0; i < 8; i++) {
-        const sx = px + 6 + ((seed * 101 + i * 13) % 36);
-        const sy = py + 8 + ((seed * 83 + i * 9) % 31);
-        ctx.fillRect(sx, sy, 4 + (i % 2) * 4, 1.4);
-        if (i % 3 === 0) this.drawPebble(sx + 6, sy + 6, 0.72, tile === TILE.SAND ? "rgba(126,99,67,0.16)" : "rgba(84,70,55,0.18)");
-      }
-      if (tile === TILE.FARM_SOIL) {
-        ctx.strokeStyle = "rgba(43,27,20,0.24)";
-        for (let i = 1; i < 4; i++) {
-          ctx.beginPath();
-          ctx.moveTo(px + 5, py + i * 12);
-          ctx.lineTo(px + TILE_SIZE - 5, py + i * 12 + 2);
-          ctx.stroke();
-        }
-        ctx.strokeStyle = "rgba(199,151,103,0.18)";
-        ctx.beginPath();
-        ctx.moveTo(px + 6, py + 9);
-        ctx.lineTo(px + TILE_SIZE - 8, py + 6);
-        ctx.stroke();
-      }
-    }
-
-    if (tile === TILE.WATER) {
-      const water = ctx.createLinearGradient(px, py, px, py + TILE_SIZE);
-      water.addColorStop(0, "rgba(255,255,255,0.24)");
-      water.addColorStop(0.42, "rgba(91,164,190,0.28)");
-      water.addColorStop(1, "rgba(20,66,90,0.26)");
-      ctx.fillStyle = water;
-      ctx.fillRect(px, py, TILE_SIZE, TILE_SIZE);
-      ctx.strokeStyle = "rgba(232,248,246,0.48)";
-      ctx.lineWidth = 1.4;
-      for (let i = 0; i < 3; i++) {
-        const wave = Math.sin((tx + ty + this.gameMinutes * 0.05 + i * 2) * 0.8) * 2;
-        ctx.beginPath();
-        ctx.moveTo(px + 5, py + 11 + i * 12 + wave);
-        ctx.bezierCurveTo(px + 17, py + 6 + i * 12 + wave, px + 29, py + 18 + i * 12 + wave, px + 44, py + 12 + i * 12 + wave);
-        ctx.stroke();
-      }
-      if (seed > 0.62 && !lightState.night) {
-        ctx.fillStyle = "rgba(255,247,198,0.35)";
-        ctx.fillRect(px + 12 + (seed * 17) % 18, py + 12 + (grain * 21) % 20, 5, 1.5);
-      }
-    }
-
-    if (tile === TILE.WOOD_FLOOR) {
-      ctx.strokeStyle = "rgba(68,45,29,0.34)";
-      for (let i = 1; i < 5; i++) {
-        ctx.beginPath();
-        ctx.moveTo(px, py + i * 10);
-        ctx.lineTo(px + TILE_SIZE, py + i * 10 + (i % 2));
-        ctx.stroke();
-      }
-      ctx.fillStyle = "rgba(255,238,190,0.16)";
-      ctx.fillRect(px + 6, py + 7, 24, 2);
-      ctx.fillStyle = "rgba(69,44,26,0.18)";
-      ctx.fillRect(px + 10 + (seed * 20) % 24, py + 22, 3, 3);
-    }
-
-    ctx.fillStyle = "rgba(255,255,255,0.055)";
-    ctx.fillRect(px + 2, py + 2, TILE_SIZE - 4, 1);
-    if (highlight && this.noise(tx, ty, 3) > 0.88 && tile !== TILE.WATER) {
-      ctx.fillStyle = `${highlight}55`;
-      ctx.fillRect(px + 8, py + 8, 8, 2);
-    }
-  }
-
-  render() {
-    const { ctx, canvas } = this;
-    ctx.clearRect(0, 0, canvas.width, canvas.height);
-    if (this.scene === SCENE.TITLE) return this.renderTitle();
-    if (this.scene === SCENE.INDOOR) { this.renderIndoor(); this.renderMessage(); return; }
-    if (this.scene === SCENE.SHOP) { this.renderGame(); this.renderShop(); return; }
-    if (this.scene === SCENE.DIALOGUE) { this.renderGame(); this.renderDialogue(); this.renderMessage(); return; }
-    if (this.scene === SCENE.INVENTORY) { this.renderGame(); this.renderInventory(); return; }
-    if (this.scene === SCENE.JOURNAL) { this.renderGame(); this.renderJournal(); return; }
-    if (this.scene === SCENE.FISHING) { this.renderGame(); this.renderFishing(); return; }
-    this.renderGame();
-  }
-
-  renderGame() {
-    const { ctx } = this;
-    this.renderSkyBackdrop();
-
-    ctx.save();
-    ctx.translate(-Math.round(this.camera.x), -Math.round(this.camera.y));
-    this.renderTileMap();
-    this.renderTerrainDetailOverlay();
-    if (this.currentMapId === "town") this.renderFarmPlots();
-    this.renderInteractables();
-    this.renderNpcs();
-    this.renderPlayer();
-    this.renderActionEffects();
-    this.renderParticles();
-    this.renderForegroundCanopy();
-    ctx.restore();
-
-    this.renderNightOverlay();
-    this.renderWeatherEffects();
-    this.renderWorldLighting();
-    this.renderCinematicVignette();
-    this.renderHud();
-    this.renderQuestTracker();
-    this.renderSkillPanel();
-    this.renderMessage();
-  }
-
-  renderSkyBackdrop() {
-    const { ctx, canvas } = this;
-    const hour = this.gameMinutes / 60;
-    const base = getSkyColor(hour);
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, base);
-    grad.addColorStop(0.58, hour >= 18 || hour < 6 ? "#2d4050" : "#bdd3cf");
-    grad.addColorStop(1, hour >= 18 || hour < 6 ? "#26352f" : "#cfd7bd");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    const celestialX = ((hour - 5) / 18) * canvas.width;
-    const celestialY = hour >= 18 || hour < 6 ? 72 : 58;
-    const glow = ctx.createRadialGradient(celestialX, celestialY, 4, celestialX, celestialY, 120);
-    glow.addColorStop(0, hour >= 18 || hour < 6 ? "rgba(225,232,214,0.34)" : "rgba(255,231,158,0.38)");
-    glow.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = glow;
-    ctx.beginPath();
-    ctx.arc(celestialX, celestialY, 120, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = hour >= 18 || hour < 6 ? "rgba(235,240,219,0.78)" : "rgba(255,224,142,0.90)";
-    ctx.beginPath();
-    ctx.arc(celestialX, celestialY, hour >= 18 || hour < 6 ? 11 : 16, 0, Math.PI * 2);
-    ctx.fill();
-
-    ctx.fillStyle = hour >= 18 || hour < 6 ? "rgba(190,205,215,0.10)" : "rgba(255,255,255,0.26)";
-    for (let i = 0; i < 5; i++) {
-      const cloudX = (i * 230 + this.lastTime * 0.012) % (canvas.width + 180) - 120;
-      const cloudY = 38 + (i % 3) * 34;
-      ctx.beginPath();
-      ctx.ellipse(cloudX, cloudY, 46, 12, 0, 0, Math.PI * 2);
-      ctx.ellipse(cloudX + 36, cloudY - 4, 32, 10, 0, 0, Math.PI * 2);
-      ctx.ellipse(cloudX + 70, cloudY + 2, 40, 11, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    const hillY = canvas.height - 76;
-    ctx.fillStyle = hour >= 18 || hour < 6 ? "rgba(36,58,62,0.24)" : "rgba(64,98,76,0.18)";
-    ctx.beginPath();
-    ctx.moveTo(0, hillY + 28);
-    for (let x = 0; x <= canvas.width + 80; x += 80) {
-      ctx.quadraticCurveTo(x + 36, hillY - 28 + Math.sin(x * 0.03) * 12, x + 80, hillY + 20);
-    }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-    ctx.fillStyle = hour >= 18 || hour < 6 ? "rgba(24,46,45,0.18)" : "rgba(75,112,83,0.13)";
-    ctx.beginPath();
-    ctx.moveTo(0, hillY + 54);
-    for (let x = 0; x <= canvas.width + 90; x += 90) {
-      ctx.quadraticCurveTo(x + 42, hillY + 3 + Math.sin(x * 0.025) * 8, x + 90, hillY + 42);
-    }
-    ctx.lineTo(canvas.width, canvas.height);
-    ctx.lineTo(0, canvas.height);
-    ctx.closePath();
-    ctx.fill();
-    ctx.restore();
-  }
-
-  renderCinematicVignette() {
-    const { ctx, canvas } = this;
-    const vignette = ctx.createRadialGradient(canvas.width / 2, canvas.height / 2, canvas.width * 0.24, canvas.width / 2, canvas.height / 2, canvas.width * 0.72);
-    vignette.addColorStop(0, "rgba(255,255,255,0)");
-    vignette.addColorStop(0.72, "rgba(31,38,33,0.04)");
-    vignette.addColorStop(1, "rgba(16,24,22,0.22)");
-    ctx.fillStyle = vignette;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-  }
-
-  renderTileMap() {
-    const { ctx } = this;
-    const startTX = Math.floor(this.camera.x / TILE_SIZE);
-    const startTY = Math.floor(this.camera.y / TILE_SIZE);
-    const endTX = Math.ceil((this.camera.x + this.canvas.width) / TILE_SIZE);
-    const endTY = Math.ceil((this.camera.y + this.canvas.height) / TILE_SIZE);
-
-    for (let ty = startTY; ty <= endTY; ty++) {
-      for (let tx = startTX; tx <= endTX; tx++) {
-        if (ty < 0 || ty >= MAP_H || tx < 0 || tx >= MAP_W) continue;
-        const tile = this.tileMap[ty][tx];
-        const px = tx * TILE_SIZE, py = ty * TILE_SIZE;
-        this.drawTileSurface(tile, px, py, tx, ty);
-      }
-    }
-  }
-
-  renderTerrainDetailOverlay() {
-    const { ctx } = this;
-    const startTX = Math.floor(this.camera.x / TILE_SIZE);
-    const startTY = Math.floor(this.camera.y / TILE_SIZE);
-    const endTX = Math.ceil((this.camera.x + this.canvas.width) / TILE_SIZE);
-    const endTY = Math.ceil((this.camera.y + this.canvas.height) / TILE_SIZE);
-    ctx.save();
-    for (let ty = startTY; ty <= endTY; ty++) {
-      for (let tx = startTX; tx <= endTX; tx++) {
-        if (ty < 0 || ty >= MAP_H || tx < 0 || tx >= MAP_W) continue;
-        const tile = this.tileMap[ty][tx];
-        const px = tx * TILE_SIZE;
-        const py = ty * TILE_SIZE;
-        const n = this.noise(tx, ty, 21);
-        if ((tile === TILE.GRASS || tile === TILE.DARK_GRASS || tile === TILE.FLOWER) && n > 0.34) {
-          const clusterCount = tile === TILE.DARK_GRASS ? 3 : 2;
-          for (let i = 0; i < clusterCount; i++) {
-            const x = px + 8 + ((n * 97 + i * 15) % 34);
-            const y = py + 22 + ((n * 73 + i * 11) % 22);
-            const color = tile === TILE.DARK_GRASS ? "rgba(206,224,154,0.25)" : "rgba(36,86,42,0.24)";
-            this.drawTerrainTuft(x, y, 0.82 + this.noise(tx + i, ty, 24) * 0.55, color, i % 2 ? -1 : 1);
-          }
-          if (this.currentMapId === "forest" && n > 0.72) {
-            ctx.fillStyle = "rgba(122,88,48,0.18)";
-            ctx.beginPath();
-            ctx.ellipse(px + 14 + n * 18, py + 18 + n * 12, 7, 2.2, n, 0, Math.PI * 2);
-            ctx.fill();
-          }
-        } else if ((tile === TILE.PATH || tile === TILE.SAND) && n > 0.46) {
-          this.drawPebble(px + 9 + (n * 31) % 30, py + 10 + (n * 43) % 28, 0.72 + n * 0.28, tile === TILE.SAND ? "rgba(119,91,55,0.18)" : "rgba(79,66,48,0.18)");
-        } else if (tile === TILE.WATER && n > 0.68) {
-          ctx.fillStyle = "rgba(255,255,255,0.20)";
-          ctx.fillRect(px + 10 + (n * 21) % 24, py + 18 + (n * 37) % 18, 10, 1.5);
-        }
-      }
-    }
-    ctx.restore();
-  }
-
-  renderForegroundCanopy() {
-    if (!["forest", "town", "highlands"].includes(this.currentMapId)) return;
-    const { ctx, canvas } = this;
-    const baseX = this.camera.x;
-    const baseY = this.camera.y;
-    const forest = this.currentMapId === "forest";
-    const palette = forest ? ["#6fa262", "#477c49", "#2f5b36"] : ["#8ab96e", "#5e9457", "#3f6f42"];
-    ctx.save();
-    ctx.globalAlpha = forest ? 0.42 : 0.24;
-    for (let i = 0; i < (forest ? 12 : 7); i++) {
-      const top = i % 2 === 0;
-      const x = baseX - 70 + (i * 151) % (canvas.width + 160);
-      const y = baseY + (top ? -28 - (i % 3) * 10 : canvas.height - 22 + (i % 2) * 16);
-      this.drawLeafMass(x, y, 60 + (i % 3) * 18, 24 + (i % 2) * 7, palette, i, 0.72);
-    }
-    ctx.globalAlpha = forest ? 0.22 : 0.14;
-    for (let i = 0; i < 8; i++) {
-      this.drawTerrainTuft(baseX + 26 + i * 128, baseY + canvas.height - 8, 1.3, "rgba(231,239,180,0.32)", i % 2 ? -1 : 1);
-    }
-    ctx.restore();
-  }
-
-  renderFarmPlots() {
-    const { ctx } = this;
-    this.farmPlots.forEach((p) => {
-      const unlocked = p.lockedLevel <= this.progress.farmLevel;
-      const plotGrad = ctx.createLinearGradient(p.x, p.y, p.x, p.y + p.h);
-      if (unlocked && p.tilled) {
-        plotGrad.addColorStop(0, "#9a7358");
-        plotGrad.addColorStop(1, "#634534");
-      } else if (unlocked) {
-        plotGrad.addColorStop(0, "rgba(103,142,76,0.86)");
-        plotGrad.addColorStop(1, "rgba(67,102,58,0.86)");
-      } else {
-        plotGrad.addColorStop(0, "rgba(62,68,62,0.62)");
-        plotGrad.addColorStop(1, "rgba(32,38,35,0.62)");
-      }
-      this.drawGroundShadow(p.x + p.w / 2, p.y + p.h - 1, p.w * 0.42, 4, 0.10);
-      this.fillRoundRect(p.x, p.y, p.w, p.h, 8, plotGrad, "rgba(255,255,255,0.18)");
-      if (!unlocked) {
-        ctx.fillStyle = "rgba(248,241,216,0.86)";
-        ctx.font = "12px sans-serif";
-        ctx.textAlign = "center";
-        ctx.fillText("Lv" + p.lockedLevel, p.x + p.w / 2, p.y + 27);
-        ctx.textAlign = "left";
-        return;
-      }
-      if (p.tilled) {
-        ctx.strokeStyle = "rgba(76,48,33,0.18)";
-        ctx.lineWidth = 1;
-        for (let i = 1; i < 4; i++) {
-          ctx.beginPath();
-          ctx.moveTo(p.x + 7, p.y + i * 10);
-          ctx.lineTo(p.x + p.w - 7, p.y + i * 10 + 2);
-          ctx.stroke();
-        }
-      }
-      if (p.cropKey) {
-        const crop = CROPS[p.cropKey];
-        const s = p.ready ? crop.stages : p.stage;
-        const height = 6 + (s / crop.stages) * 24;
-        const cx = p.x + 22;
-        const baseY = p.y + p.h - 8;
-        ctx.strokeStyle = p.ready ? "#6f7e38" : "#4f8551";
-        ctx.lineWidth = 3;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.moveTo(cx, baseY);
-        ctx.lineTo(cx, baseY - height - 5);
-        ctx.stroke();
-        const leafColor = p.ready ? "#8fa74d" : "#73b66d";
-        ctx.fillStyle = leafColor;
-        for (let i = 0; i < Math.max(2, s + 1); i++) {
-          const side = i % 2 === 0 ? -1 : 1;
-          const ly = baseY - 8 - i * 5;
-          ctx.beginPath();
-          ctx.ellipse(cx + side * (5 + i), ly, 8, 4, side * -0.55, 0, Math.PI * 2);
-          ctx.fill();
-        }
-        if (p.ready) {
-          const produceColor = crop.harvest === "blueberry" ? "#4d679d" : crop.harvest === "strawberry" ? "#c94f5c" : crop.harvest === "pumpkin" ? "#d98b3e" : crop.harvest === "melon" ? "#82b46d" : crop.harvest === "grape" ? "#7c5b9f" : "#e5c564";
-          ctx.fillStyle = produceColor;
-          ctx.beginPath();
-          ctx.ellipse(cx, baseY - height - 8, 9, 7, 0.1, 0, Math.PI * 2);
-          ctx.fill();
-          ctx.fillStyle = "rgba(255,245,190,0.30)";
-          ctx.beginPath();
-          ctx.ellipse(cx - 3, baseY - height - 11, 3, 1.6, -0.3, 0, Math.PI * 2);
-          ctx.fill();
-          const quality = this.getCropQualityPreview(p, crop);
-          if (quality.short) {
-            this.fillRoundRect(p.x + p.w - 16, p.y + 4, 13, 13, 6, "rgba(31,42,38,0.72)");
-            ctx.fillStyle = quality.color;
-            ctx.font = "10px serif";
-            ctx.textAlign = "center";
-            ctx.fillText(quality.short, p.x + p.w - 9.5, p.y + 14);
-            ctx.textAlign = "left";
-          }
-        }
-      }
-      if (p.watered) {
-        const water = ctx.createLinearGradient(p.x, p.y, p.x + p.w, p.y + p.h);
-        water.addColorStop(0, "rgba(155,205,231,0.34)");
-        water.addColorStop(1, "rgba(83,141,181,0.20)");
-        this.fillRoundRect(p.x + 3, p.y + 3, p.w - 6, p.h - 6, 7, water);
-      }
-    });
-  }
-
-  renderInteractables() {
-    const { ctx } = this;
-    [...this.interactables].sort((a, b) => (a.y + a.h) - (b.y + b.h)).forEach((obj) => {
-      if (obj.type === "tree") this.drawTree(obj);
-      else if (obj.type === "bush") this.drawBush(obj);
-      else if (obj.type === "flower") this.drawFlower(obj);
-      else if (obj.type === "herb") this.drawHerb(obj);
-      else if (obj.type === "mushroom") this.drawMushroom(obj);
-      else if (obj.type === "stone") this.drawStone(obj);
-      else if (obj.type === "crystal") this.drawCrystal(obj);
-      else if (obj.type === "ore") this.drawOre(obj);
-      else if (obj.type === "coral") this.drawCoral(obj);
-      else if (obj.type === "fishspot") this.drawFishspot(obj);
-      else if (obj.type === "trailboard") this.drawTrailBoard(obj);
-      else if (obj.type === "shrine") this.drawShrine(obj);
-      else if (obj.type === "spring") this.drawSpring(obj);
-      else if (obj.type === "ruin") this.drawRuin(obj);
-      else if (obj.type === "logjam") this.drawLogjam(obj);
-      else if (obj.type === "beehive") this.drawBeehive(obj);
-      else if (obj.type === "resinTap") this.drawResinTap(obj);
-      else if (obj.type === "wildPatch") this.drawWildPatch(obj);
-      else if (obj.type === "firefly") this.drawFireflyCluster(obj);
-      else if (obj.type === "house") this.drawHouse(obj);
-      else if (obj.type === "mailbox") this.drawMailbox(obj);
-      else if (obj.type === "shop") this.drawShop(obj);
-      else if (obj.type === "sign") this.drawSign(obj);
-      else if (obj.type === "ranch") this.drawRanch(obj);
-      else if (obj.type === "shipping") this.drawShipping(obj);
-      else if (obj.type === "project") this.drawProjectBoard(obj);
-      else if (obj.type === "shell") this.drawShell(obj);
-      else if (obj.type === "bridge") this.drawBridge(obj);
-      else if (obj.type === "warp") this.drawWarp(obj);
-
-      if (obj.type === "sign" && this.getPendingRequests().some((request) => (this.inventory[request.item] || 0) >= request.amount)) {
-        ctx.fillStyle = "#ffd86b";
-        ctx.beginPath();
-        ctx.arc(obj.x + obj.w - 2, obj.y - 6, 7, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      if (obj.type === "project" && this.getOpenProjects().some((project) => this.canCompleteProject(project))) {
-        ctx.fillStyle = "#d7b86d";
-        ctx.beginPath();
-        ctx.arc(obj.x + obj.w - 4, obj.y - 6, 7, 0, Math.PI * 2);
-        ctx.fill();
-      }
-      if (obj.type === "trailboard" && this.canCompleteAreaTask(this.getAreaTask(obj.areaId || this.currentMapId))) {
-        ctx.fillStyle = "#b7e38f";
-        ctx.beginPath();
-        ctx.arc(obj.x + obj.w - 2, obj.y - 6, 7, 0, Math.PI * 2);
-        ctx.fill();
-      }
-
-      const cx = obj.x + obj.w / 2, cy = obj.y + obj.h / 2;
-      if (Math.hypot(cx - this.player.x, cy - this.player.y) < INTERACT_DISTANCE) {
-        const blocked = this.getInteractableBlockReason(obj);
-        const detail = obj.type === "mailbox" ? (this.getUnreadMail().length ? `${this.getUnreadMail().length} 封新信` : "今日已读") : "";
-        this.renderWorldPrompt(cx, obj.y - 18, obj.name || "可互动", blocked ? "锁定" : "E 互动", blocked ? UI.red : this.getSeasonInfo().accent, detail);
-      }
-    });
-  }
-
-  renderWorldPrompt(cx, y, title, action, accent = UI.green, detail = "") {
-    const { ctx } = this;
-    ctx.save();
-    const font = "11px 'Noto Sans SC', sans-serif";
-    ctx.font = font;
-    const titleW = ctx.measureText(title).width;
-    const actionW = ctx.measureText(action).width;
-    const detailW = detail ? ctx.measureText(detail).width : 0;
-    const w = Math.max(86, Math.min(190, Math.max(titleW + actionW + 38, detailW + 24)));
-    const h = detail ? 38 : 28;
-    const x = cx - w / 2;
-    this.drawGroundShadow(cx, y + h + 4, w * 0.34, 4, 0.16);
-    this.fillRoundRect(x, y, w, h, 10, "rgba(28,40,36,0.88)", "rgba(248,241,216,0.20)");
-    this.fillRoundRect(x + 7, y + 7, 14, 14, 7, accent);
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 11px 'Noto Sans SC', sans-serif";
-    ctx.textAlign = "left";
-    ctx.fillText(title, x + 27, y + 18);
-    ctx.fillStyle = "rgba(249,239,209,0.66)";
-    ctx.font = "10px sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText(action, x + w - 10, y + 18);
-    if (detail) {
-      ctx.textAlign = "left";
-      ctx.fillStyle = "rgba(249,239,209,0.70)";
-      ctx.fillText(detail, x + 12, y + 32);
-    }
-    ctx.restore();
-  }
-
-  drawTree(obj) {
-    const { ctx } = this;
-    const cx = obj.x + 32;
-    this.drawGroundShadow(cx, obj.y + 79, 38, 10, 0.24);
-    const trunk = ctx.createLinearGradient(obj.x + 22, obj.y + 30, obj.x + 46, obj.y + 82);
-    trunk.addColorStop(0, "#8b6443");
-    trunk.addColorStop(0.55, "#6b4b33");
-    trunk.addColorStop(1, "#4b3325");
-    this.fillRoundRect(obj.x + 22, obj.y + 30, 22, 52, 7, trunk, "rgba(53,32,20,0.32)");
-    ctx.strokeStyle = "rgba(255,222,161,0.18)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 29, obj.y + 38);
-    ctx.bezierCurveTo(obj.x + 25, obj.y + 52, obj.x + 32, obj.y + 65, obj.x + 28, obj.y + 80);
-    ctx.moveTo(obj.x + 38, obj.y + 38);
-    ctx.bezierCurveTo(obj.x + 42, obj.y + 53, obj.x + 34, obj.y + 63, obj.x + 39, obj.y + 78);
-    ctx.stroke();
-
-    const dormant = obj.collected;
-    const palette = dormant ? ["#a8b391", "#879979", "#63735f"] : ["#89bd72", "#5b995b", "#2f6c3e"];
-    this.drawLeafMass(cx - 15, obj.y + 30, 28, 21, palette, obj.x, dormant ? 0.72 : 1);
-    this.drawLeafMass(cx + 16, obj.y + 31, 29, 22, palette, obj.y, dormant ? 0.72 : 1);
-    this.drawLeafMass(cx, obj.y + 15, 34, 24, palette, obj.x + obj.y, dormant ? 0.70 : 1);
-    this.drawLeafMass(cx + 2, obj.y + 45, 38, 24, palette, obj.y + 7, dormant ? 0.68 : 0.96);
-    ctx.fillStyle = dormant ? "rgba(246,226,166,0.08)" : "rgba(255,241,176,0.18)";
-    ctx.beginPath();
-    ctx.ellipse(cx - 14, obj.y + 12, 13, 5, -0.55, 0, Math.PI * 2);
-    ctx.ellipse(cx + 12, obj.y + 17, 10, 4, 0.35, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawBush(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + 30, obj.y + 42, 26, 7, 0.16);
-    const grad = ctx.createLinearGradient(obj.x, obj.y, obj.x, obj.y + 44);
-    grad.addColorStop(0, obj.collected ? "#9eb78e" : "#6ca464");
-    grad.addColorStop(1, obj.collected ? "#758f6d" : "#4c7f4b");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 30, obj.y + 24, 29, 20, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = obj.collected ? "rgba(246,223,177,0.32)" : "#c96575";
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.arc(obj.x + 12 + i * 9, obj.y + 17 + (i % 2) * 8, 3.2, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  drawFlower(obj) {
-    const { ctx } = this;
-    if (obj.collected) {
-      ctx.fillStyle = "rgba(95,154,98,0.45)";
-      ctx.fillRect(obj.x + 12, obj.y + 18, 8, 10);
-      return;
-    }
-    ctx.strokeStyle = "#5f8d56";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 16, obj.y + 28);
-    ctx.lineTo(obj.x + 16, obj.y + 14);
-    ctx.stroke();
-    ["#d97992", "#e9b7bf", "#f0d3a0"].forEach((color, i) => {
-      ctx.fillStyle = color;
-      ctx.beginPath();
-      ctx.ellipse(obj.x + 16 + Math.cos(i * 2.1) * 7, obj.y + 12 + Math.sin(i * 2.1) * 5, 6, 4, i, 0, Math.PI * 2);
-      ctx.fill();
-    });
-  }
-
-  drawHerb(obj) {
-    const { ctx } = this;
-    ctx.strokeStyle = obj.collected ? "#8fa081" : "#5f9f67";
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 9 + i * 5, obj.y + 28);
-      ctx.quadraticCurveTo(obj.x + 6 + i * 6, obj.y + 15, obj.x + 12 + i * 4, obj.y + 8 + (i % 2) * 4);
-      ctx.stroke();
-    }
-  }
-
-  drawMushroom(obj) {
-    const { ctx } = this;
-    this.fillRoundRect(obj.x + 13, obj.y + 15, 12, 18, 4, obj.collected ? "#c3ad95" : "#f2e7cf");
-    ctx.fillStyle = obj.collected ? "#b79b88" : "#b76758";
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 19, obj.y + 15, 18, 12, 0, Math.PI, 0);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.35)";
-    ctx.beginPath();
-    ctx.arc(obj.x + 13, obj.y + 13, 2, 0, Math.PI * 2);
-    ctx.arc(obj.x + 23, obj.y + 10, 2, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawStone(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + 30, obj.y + 42, 25, 6, 0.15);
-    const grad = ctx.createLinearGradient(obj.x + 6, obj.y + 5, obj.x + 52, obj.y + 42);
-    grad.addColorStop(0, obj.collected ? "#c1c8c1" : "#9aa7a7");
-    grad.addColorStop(0.55, obj.collected ? "#a7b0aa" : "#7d8b8c");
-    grad.addColorStop(1, obj.collected ? "#8c9991" : "#58686c");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 29, obj.y + 26, 28, 19, -0.08, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.14)";
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 19, obj.y + 18, 10, 5, -0.25, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawCrystal(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + 22, obj.y + 42, 18, 5, 0.14);
-    const grad = ctx.createLinearGradient(obj.x, obj.y, obj.x + 40, obj.y + 40);
-    grad.addColorStop(0, obj.collected ? "#b4bec3" : "#d3f2ef");
-    grad.addColorStop(1, obj.collected ? "#899da5" : "#6fb8c6");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 20, obj.y);
-    ctx.lineTo(obj.x + 39, obj.y + 17);
-    ctx.lineTo(obj.x + 29, obj.y + 42);
-    ctx.lineTo(obj.x + 8, obj.y + 35);
-    ctx.lineTo(obj.x + 6, obj.y + 14);
-    ctx.closePath();
-    ctx.fill();
-  }
-
-  drawOre(obj) {
-    const { ctx } = this;
-    this.drawStone({ ...obj, w: 58, h: 44 });
-    if (obj.collected) return;
-    ctx.fillStyle = "#b59b78";
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.arc(obj.x + 18 + i * 10, obj.y + 18 + (i % 2) * 7, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  drawCoral(obj) {
-    const { ctx } = this;
-    ctx.strokeStyle = obj.collected ? "#bba097" : "#d98277";
-    ctx.lineWidth = 5;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 18, obj.y + 30);
-    ctx.lineTo(obj.x + 18, obj.y + 8);
-    ctx.moveTo(obj.x + 18, obj.y + 17);
-    ctx.lineTo(obj.x + 8, obj.y + 8);
-    ctx.moveTo(obj.x + 18, obj.y + 17);
-    ctx.lineTo(obj.x + 29, obj.y + 7);
-    ctx.moveTo(obj.x + 18, obj.y + 25);
-    ctx.lineTo(obj.x + 8, obj.y + 16);
-    ctx.moveTo(obj.x + 18, obj.y + 25);
-    ctx.lineTo(obj.x + 31, obj.y + 16);
-    ctx.stroke();
-    ctx.lineCap = "butt";
-  }
-
-  drawFishspot(obj) {
-    const { ctx } = this;
-    const pulse = 1 + Math.sin(this.lastTime * 0.004) * 0.08;
-    ctx.strokeStyle = "rgba(248,241,216,0.58)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(obj.x + 20, obj.y + 20, 15 * pulse, 0, Math.PI * 2);
-    ctx.stroke();
-    ctx.fillStyle = "rgba(248,241,216,0.9)";
-    ctx.font = "18px sans-serif";
-    ctx.fillText("🎣", obj.x + 9, obj.y + 28);
-  }
-
-  drawTrailBoard(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h, 22, 5, 0.18);
-    this.fillRoundRect(obj.x + 19, obj.y + 26, 8, 34, 3, "#76533a");
-    this.fillRoundRect(obj.x + 5, obj.y + 5, obj.w - 10, 30, 6, "#8d6748", "rgba(255,255,255,0.20)");
-    this.fillRoundRect(obj.x + 10, obj.y + 10, obj.w - 20, 20, 4, "rgba(248,241,216,0.72)");
-    const task = this.getAreaTask(obj.areaId || this.currentMapId);
-    ctx.fillStyle = task?.done ? "#6f8e71" : this.canCompleteAreaTask(task) ? "#d9b96f" : "#456c56";
-    ctx.beginPath();
-    ctx.arc(obj.x + obj.w / 2, obj.y + 20, 5, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawShrine(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 2, 25, 6, 0.18);
-    const used = this.progress.forestShrineDay === this.gameDay;
-    const stone = ctx.createLinearGradient(obj.x, obj.y, obj.x + obj.w, obj.y + obj.h);
-    stone.addColorStop(0, used ? "#9ca99c" : "#b6c0ac");
-    stone.addColorStop(1, used ? "#6f8274" : "#718a72");
-    this.fillRoundRect(obj.x + 7, obj.y + 16, obj.w - 14, 34, 8, stone, "rgba(255,255,255,0.18)");
-    this.fillRoundRect(obj.x + 14, obj.y + 6, obj.w - 28, 15, 6, "#6e8a68");
-    ctx.strokeStyle = used ? "rgba(248,241,216,0.22)" : "rgba(214,242,170,0.65)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.arc(obj.x + obj.w / 2, obj.y + 32, 13 + Math.sin(this.lastTime * 0.003) * 2, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  drawSpring(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 1, 25, 5, 0.14);
-    const used = this.progress.forestSpringDay === this.gameDay;
-    const water = ctx.createRadialGradient(obj.x + 28, obj.y + 20, 3, obj.x + 28, obj.y + 20, 32);
-    water.addColorStop(0, used ? "rgba(170,196,196,0.74)" : "rgba(178,237,230,0.92)");
-    water.addColorStop(1, used ? "rgba(92,122,124,0.62)" : "rgba(71,149,159,0.74)");
-    ctx.fillStyle = water;
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 29, obj.y + 23, 28, 17, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(248,241,216,0.38)";
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 29, obj.y + 23, 20 + Math.sin(this.lastTime * 0.004) * 3, 10, 0, 0, Math.PI * 2);
-    ctx.stroke();
-  }
-
-  drawRuin(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 3, 33, 7, 0.16);
-    this.fillRoundRect(obj.x + 6, obj.y + 22, 62, 24, 6, obj.collected ? "#8a938a" : "#7b8b7d", "rgba(255,255,255,0.14)");
-    this.fillRoundRect(obj.x + 16, obj.y + 8, 12, 36, 4, obj.collected ? "#99a19a" : "#aab4a7");
-    this.fillRoundRect(obj.x + 44, obj.y + 13, 11, 31, 4, obj.collected ? "#8f998f" : "#9faa9d");
-    ctx.strokeStyle = obj.collected ? "rgba(159,196,220,0.25)" : "rgba(154,207,255,0.55)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 28, obj.y + 28);
-    ctx.lineTo(obj.x + 38, obj.y + 22);
-    ctx.lineTo(obj.x + 48, obj.y + 30);
-    ctx.stroke();
-  }
-
-  drawLogjam(obj) {
-    const { ctx } = this;
-    if (obj.collected) {
-      ctx.fillStyle = "rgba(112,83,59,0.28)";
-      ctx.fillRect(obj.x + 10, obj.y + 26, obj.w - 20, 4);
-      return;
-    }
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 1, 37, 5, 0.16);
-    for (let i = 0; i < 3; i++) {
-      this.fillRoundRect(obj.x + 6 + i * 10, obj.y + 8 + i * 7, obj.w - 18, 11, 6, i % 2 ? "#8b6240" : "#9c7048", "rgba(255,255,255,0.12)");
-      ctx.fillStyle = "rgba(70,47,30,0.35)";
-      ctx.beginPath();
-      ctx.arc(obj.x + 13 + i * 10, obj.y + 13 + i * 7, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  drawBeehive(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 1, 15, 4, 0.12);
-    ctx.strokeStyle = "#6b5134";
-    ctx.lineWidth = 3;
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 18, obj.y);
-    ctx.lineTo(obj.x + 18, obj.y + 11);
-    ctx.stroke();
-    const grad = ctx.createLinearGradient(obj.x, obj.y + 8, obj.x, obj.y + obj.h);
-    grad.addColorStop(0, obj.collected ? "#b99562" : "#d9a84d");
-    grad.addColorStop(1, obj.collected ? "#8d714b" : "#ad7131");
-    ctx.fillStyle = grad;
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 18, obj.y + 25, 18, 17, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(89,58,28,0.36)";
-    for (let i = 0; i < 3; i++) {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 5, obj.y + 18 + i * 7);
-      ctx.lineTo(obj.x + 31, obj.y + 18 + i * 7);
-      ctx.stroke();
-    }
-  }
-
-  drawResinTap(obj) {
-    const { ctx } = this;
-    this.fillRoundRect(obj.x + 12, obj.y, 13, 42, 4, "#6e513a");
-    this.fillRoundRect(obj.x + 4, obj.y + 24, 28, 15, 5, obj.collected ? "#8f8a75" : "#b48645", "rgba(255,255,255,0.16)");
-    if (!obj.collected) {
-      ctx.fillStyle = "#d6a15c";
-      ctx.beginPath();
-      ctx.arc(obj.x + 18, obj.y + 21, 4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  drawWildPatch(obj) {
-    const { ctx } = this;
-    ctx.strokeStyle = obj.collected ? "#849477" : "#5f9f67";
-    ctx.lineWidth = 3;
-    for (let i = 0; i < 6; i++) {
-      const sx = obj.x + 6 + i * 6;
-      ctx.beginPath();
-      ctx.moveTo(sx, obj.y + 32);
-      ctx.quadraticCurveTo(sx - 7, obj.y + 17, sx + 2, obj.y + 8 + (i % 2) * 5);
-      ctx.stroke();
-    }
-    ctx.fillStyle = obj.collected ? "rgba(188,210,164,0.24)" : "rgba(196,225,153,0.55)";
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 22, obj.y + 25, 18, 7, 0, 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  drawFireflyCluster(obj) {
-    const { ctx } = this;
-    const hour = this.gameMinutes / 60;
-    const active = hour >= 18 || hour <= 5;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h - 2, 18, 4, 0.10);
-    ctx.strokeStyle = obj.collected ? "#7c8f77" : "#5f8d56";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 12, obj.y + 36);
-    ctx.lineTo(obj.x + 16, obj.y + 16);
-    ctx.moveTo(obj.x + 28, obj.y + 36);
-    ctx.lineTo(obj.x + 31, obj.y + 18);
-    ctx.stroke();
-    const glow = active && !obj.collected ? 0.65 + Math.sin(this.lastTime * 0.006) * 0.18 : 0.18;
-    ctx.fillStyle = `rgba(238,255,172,${glow})`;
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.arc(obj.x + 10 + i * 7, obj.y + 12 + Math.sin(this.lastTime * 0.004 + i) * 7, active ? 3 : 1.8, 0, Math.PI * 2);
-      ctx.fill();
-    }
-  }
-
-  drawHouse(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 4, obj.w * 0.46, 15, 0.22);
-    const wall = ctx.createLinearGradient(obj.x, obj.y + 44, obj.x, obj.y + obj.h);
-    wall.addColorStop(0, "#f3e7ce");
-    wall.addColorStop(0.62, "#d8c19d");
-    wall.addColorStop(1, "#b98f63");
-    this.fillRoundRect(obj.x + 8, obj.y + 50, obj.w - 16, obj.h - 50, 8, wall, "rgba(81,63,46,0.20)");
-    this.fillRoundRect(obj.x + 14, obj.y + obj.h - 17, obj.w - 28, 16, 5, "#80654a", "rgba(255,255,255,0.12)");
-    ctx.strokeStyle = "rgba(95,68,43,0.18)";
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 18, obj.y + 65 + i * 16);
-      ctx.lineTo(obj.x + obj.w - 18, obj.y + 63 + i * 16);
-      ctx.stroke();
-    }
-    const roof = ctx.createLinearGradient(obj.x, obj.y + 4, obj.x, obj.y + 58);
-    roof.addColorStop(0, "#c87860");
-    roof.addColorStop(1, "#8d4c43");
-    ctx.fillStyle = roof;
-    ctx.beginPath();
-    ctx.moveTo(obj.x - 4, obj.y + 52);
-    ctx.lineTo(obj.x + obj.w / 2, obj.y + 10);
-    ctx.lineTo(obj.x + obj.w + 4, obj.y + 52);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "rgba(85,42,34,0.28)";
-    ctx.lineWidth = 2;
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 20 + i * 28, obj.y + 45);
-      ctx.lineTo(obj.x + 46 + i * 18, obj.y + 25 + i * 3);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "rgba(255,230,180,0.22)";
-    ctx.beginPath();
-    ctx.moveTo(obj.x + obj.w / 2, obj.y + 10);
-    ctx.lineTo(obj.x + obj.w + 4, obj.y + 52);
-    ctx.lineTo(obj.x + obj.w - 24, obj.y + 52);
-    ctx.closePath();
-    ctx.fill();
-    this.fillRoundRect(obj.x + 66, obj.y + 94, 38, 56, 5, "#69472f", "rgba(37,23,14,0.32)");
-    this.fillRoundRect(obj.x + 72, obj.y + 101, 9, 8, 3, "rgba(255,214,121,0.60)");
-    this.fillRoundRect(obj.x + 26, obj.y + 78, 32, 25, 5, "#bfd6d0", "rgba(47,64,58,0.20)");
-    this.fillRoundRect(obj.x + 116, obj.y + 78, 32, 25, 5, "#bfd6d0", "rgba(47,64,58,0.20)");
-    ctx.strokeStyle = "rgba(52,73,66,0.28)";
-    [26, 116].forEach((wx) => {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + wx + 16, obj.y + 79);
-      ctx.lineTo(obj.x + wx + 16, obj.y + 102);
-      ctx.moveTo(obj.x + wx + 1, obj.y + 91);
-      ctx.lineTo(obj.x + wx + 31, obj.y + 91);
-      ctx.stroke();
-    });
-  }
-
-  drawShop(obj) {
-    const { ctx } = this;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 3, obj.w * 0.45, 14, 0.20);
-    const wall = ctx.createLinearGradient(obj.x, obj.y + 42, obj.x, obj.y + obj.h);
-    wall.addColorStop(0, "#e8eee8");
-    wall.addColorStop(0.68, "#c8d3cc");
-    wall.addColorStop(1, "#9fb0a8");
-    this.fillRoundRect(obj.x, obj.y + 42, obj.w, obj.h - 42, 8, wall, "rgba(47,64,58,0.18)");
-    ctx.strokeStyle = "rgba(72,88,79,0.16)";
-    for (let i = 0; i < 4; i++) {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 12, obj.y + 61 + i * 18);
-      ctx.lineTo(obj.x + obj.w - 12, obj.y + 62 + i * 18);
-      ctx.stroke();
-    }
-    const awning = ctx.createLinearGradient(obj.x, obj.y + 8, obj.x, obj.y + 54);
-    awning.addColorStop(0, "#7697a5");
-    awning.addColorStop(1, "#46697d");
-    this.fillRoundRect(obj.x + 6, obj.y + 8, obj.w - 12, 45, 8, awning);
-    for (let i = 0; i < 5; i++) {
-      ctx.fillStyle = i % 2 ? "rgba(248,241,216,0.18)" : "rgba(25,45,55,0.18)";
-      ctx.fillRect(obj.x + 14 + i * 27, obj.y + 11, 14, 39);
-    }
-    this.fillRoundRect(obj.x + 32, obj.y + 15, 96, 24, 6, "#f0dfac");
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 13px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("商店", obj.x + obj.w / 2, obj.y + 32);
-    ctx.textAlign = "left";
-    this.fillRoundRect(obj.x + 18, obj.y + 80, 38, 38, 5, "#b8d3d0", "rgba(45,65,60,0.22)");
-    this.fillRoundRect(obj.x + 100, obj.y + 82, 34, 58, 5, "#71503c", "rgba(39,24,17,0.28)");
-    ctx.fillStyle = "rgba(255,224,145,0.48)";
-    ctx.fillRect(obj.x + 24, obj.y + 87, 26, 10);
-  }
-
-  drawSign(obj) {
-    const { ctx } = this;
-    this.fillRoundRect(obj.x + 12, obj.y + 18, 6, 30, 3, "#8a6b47");
-    this.fillRoundRect(obj.x - 2, obj.y, 34, 24, 5, "#c3a56e", "rgba(64,44,28,0.18)");
-    ctx.fillStyle = "rgba(64,44,28,0.5)";
-    ctx.fillRect(obj.x + 6, obj.y + 8, 18, 2);
-    ctx.fillRect(obj.x + 6, obj.y + 14, 14, 2);
-  }
-
-  drawRanch(obj) {
-    const { ctx } = this;
-    const active = this.progress.ranchLevel > 0;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 2, obj.w * 0.42, 13, 0.18);
-    const barnWall = ctx.createLinearGradient(obj.x, obj.y + 24, obj.x, obj.y + obj.h);
-    barnWall.addColorStop(0, active ? "#e0cba8" : "rgba(120,110,96,0.70)");
-    barnWall.addColorStop(1, active ? "#b99b76" : "rgba(82,75,67,0.70)");
-    this.fillRoundRect(obj.x, obj.y + 24, obj.w, obj.h - 24, 10, barnWall, "rgba(66,49,34,0.20)");
-    ctx.strokeStyle = active ? "rgba(83,58,38,0.22)" : "rgba(38,35,31,0.20)";
-    for (let i = 0; i < 5; i++) {
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 10, obj.y + 38 + i * 13);
-      ctx.lineTo(obj.x + obj.w - 10, obj.y + 40 + i * 13);
-      ctx.stroke();
-    }
-    const barnRoof = ctx.createLinearGradient(obj.x, obj.y, obj.x, obj.y + 36);
-    barnRoof.addColorStop(0, active ? "#9d7460" : "#70675c");
-    barnRoof.addColorStop(1, active ? "#735142" : "#585047");
-    ctx.fillStyle = barnRoof;
-    ctx.beginPath();
-    ctx.moveTo(obj.x - 4, obj.y + 30);
-    ctx.lineTo(obj.x + obj.w / 2, obj.y + 2);
-    ctx.lineTo(obj.x + obj.w + 4, obj.y + 30);
-    ctx.closePath();
-    ctx.fill();
-    ctx.strokeStyle = "rgba(63,40,30,0.24)";
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 10, obj.y + 29);
-    ctx.lineTo(obj.x + obj.w - 10, obj.y + 29);
-    ctx.stroke();
-    this.fillRoundRect(obj.x + 14, obj.y + 54, 34, 46, 5, "#76543e", "rgba(40,25,16,0.26)");
-    if (active) {
-      this.fillRoundRect(obj.x + 84, obj.y + 55, 36, 27, 5, "#d8c59d", "rgba(90,64,42,0.22)");
-      ctx.strokeStyle = "rgba(112,76,46,0.30)";
-      ctx.beginPath();
-      ctx.moveTo(obj.x + 84, obj.y + 68);
-      ctx.lineTo(obj.x + 120, obj.y + 68);
-      ctx.stroke();
-    }
-    ctx.fillStyle = "#f6ecd1";
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(active ? `${this.ranch.animals.length}/${this.getRanchCapacity()}` : "待建", obj.x + obj.w / 2 + 26, obj.y + 78);
-    ctx.textAlign = "left";
-  }
-
-  drawShipping(obj) {
-    const { ctx } = this;
-    this.fillRoundRect(obj.x, obj.y + 8, obj.w, obj.h - 8, 8, "#8b6b4b", "rgba(56,36,24,0.24)");
-    this.fillRoundRect(obj.x + 7, obj.y, obj.w - 14, 18, 6, "#a47b55");
-    ctx.strokeStyle = "rgba(248,241,216,0.35)";
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 12, obj.y + 28);
-    ctx.lineTo(obj.x + obj.w - 12, obj.y + 28);
-    ctx.moveTo(obj.x + 12, obj.y + 40);
-    ctx.lineTo(obj.x + obj.w - 12, obj.y + 40);
-    ctx.stroke();
-    ctx.fillStyle = UI.cream;
-    ctx.font = "11px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("出货", obj.x + obj.w / 2, obj.y + 32);
-    ctx.textAlign = "left";
-  }
-
-  drawMailbox(obj) {
-    const { ctx } = this;
-    const unread = this.getUnreadMail().length;
-    this.drawGroundShadow(obj.x + obj.w / 2, obj.y + obj.h + 2, 16, 4, 0.20);
-    this.fillRoundRect(obj.x + 13, obj.y + 18, 7, 30, 3, "#6a4a34", "rgba(43,28,18,0.24)");
-    const box = ctx.createLinearGradient(obj.x, obj.y, obj.x, obj.y + 28);
-    box.addColorStop(0, unread ? "#d9b96f" : "#a56f5d");
-    box.addColorStop(1, unread ? "#a77b45" : "#7d5146");
-    this.fillRoundRect(obj.x, obj.y, obj.w, 28, 7, box, "rgba(255,255,255,0.24)");
-    ctx.fillStyle = "rgba(249,244,231,0.80)";
-    ctx.fillRect(obj.x + 6, obj.y + 10, obj.w - 12, 3);
-    if (unread) {
-      ctx.fillStyle = "#fff1a8";
-      ctx.beginPath();
-      ctx.arc(obj.x + obj.w - 2, obj.y - 3, 6 + Math.sin(this.lastTime * 0.008) * 1.5, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.fillStyle = "#6b4b33";
-      ctx.font = "bold 9px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(String(unread), obj.x + obj.w - 2, obj.y);
-      ctx.textAlign = "left";
-    }
-  }
-
-  drawProjectBoard(obj) {
-    const { ctx } = this;
-    this.fillRoundRect(obj.x + 36, obj.y + 28, 8, obj.h - 22, 3, "#806246");
-    this.fillRoundRect(obj.x, obj.y, obj.w, 48, 8, "#cbb38a", "rgba(56,36,24,0.18)");
-    const open = this.getOpenProjects();
-    const ready = open.some((project) => this.canCompleteProject(project));
-    ctx.fillStyle = ready ? "#6f9b66" : "#7a6552";
-    ctx.font = "bold 12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(ready ? "可提交" : "工程", obj.x + obj.w / 2, obj.y + 22);
-    ctx.fillStyle = "rgba(56,36,24,0.45)";
-    ctx.font = "10px sans-serif";
-    ctx.fillText(`${this.progress.projectsCompleted}/${PROJECTS.length}`, obj.x + obj.w / 2, obj.y + 38);
-    ctx.textAlign = "left";
-  }
-
-  drawShell(obj) {
-    const { ctx } = this;
-    ctx.fillStyle = obj.collected ? "#d8ccb9" : "#e3a26f";
-    ctx.beginPath();
-    ctx.ellipse(obj.x + 14, obj.y + 11, 14, 9, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(255,255,255,0.32)";
-    ctx.beginPath();
-    ctx.moveTo(obj.x + 7, obj.y + 11);
-    ctx.lineTo(obj.x + 21, obj.y + 11);
-    ctx.stroke();
-  }
-
-  drawBridge(obj) {
-    const { ctx } = this;
-    const repaired = this.progress.bridgeRepaired;
-    this.fillRoundRect(obj.x, obj.y, obj.w, obj.h, 8, repaired ? "#a57c55" : "rgba(82,66,53,0.68)", "rgba(45,33,24,0.24)");
-    ctx.fillStyle = repaired ? "#d2b083" : "rgba(214,178,133,0.42)";
-    for (let i = 0; i < 5; i++) this.fillRoundRect(obj.x + 9 + i * 20, obj.y + 8, 12, obj.h - 16, 3, ctx.fillStyle);
-  }
-
-  drawWarp(obj) {
-    const { ctx } = this;
-    const blocked = !!this.getInteractableBlockReason(obj);
-    this.fillRoundRect(obj.x, obj.y, obj.w, obj.h, 12, blocked ? "rgba(82,66,61,0.22)" : "rgba(248,241,216,0.20)", blocked ? "rgba(207,157,139,0.55)" : "rgba(248,241,216,0.78)");
-    ctx.fillStyle = blocked ? "#ead1c6" : "#fff6d5";
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(blocked ? "锁定" : (obj.label || "前往"), obj.x + obj.w / 2, obj.y + obj.h / 2 + 4);
-    ctx.textAlign = "left";
-  }
-
-  renderNpcs() {
-    const { ctx } = this;
-    this.npcs.filter((npc) => npc.mapId === this.currentMapId).forEach((npc) => {
-      const size = npc.size;
-      const favor = this.relationship[npc.id] || 0;
-      const profile = this.getNpcProfile(npc);
-      const near = Math.hypot(npc.x - this.player.x, npc.y - this.player.y) < INTERACT_DISTANCE;
-      const step = Math.sin((npc.x + npc.y + this.lastTime * 0.003) * 0.5) * 1.5;
-      this.drawGroundShadow(npc.x, npc.y + 17, 15, 4, 0.22);
-      ctx.save();
-      ctx.translate(npc.x, npc.y + step);
-      const body = ctx.createLinearGradient(0, -10, 0, 16);
-      body.addColorStop(0, npc.color);
-      body.addColorStop(1, "rgba(35,48,44,0.95)");
-      this.fillRoundRect(-11, -9, 22, 25, 7, body, "rgba(255,255,255,0.20)");
-      ctx.strokeStyle = "#27383a";
-      ctx.lineWidth = 4;
-      ctx.lineCap = "round";
-      ctx.beginPath();
-      ctx.moveTo(-5, 13);
-      ctx.lineTo(-6, 23);
-      ctx.moveTo(5, 13);
-      ctx.lineTo(6, 23);
-      ctx.stroke();
-      this.fillRoundRect(-8, -24, 16, 15, 7, "#e5bd96", "rgba(94,61,41,0.16)");
-      this.fillRoundRect(-13, -31, 26, 11, 5, npc.hatColor, "rgba(255,255,255,0.18)");
-      ctx.fillStyle = "rgba(36,41,38,0.78)";
-      ctx.beginPath();
-      ctx.arc(-3.5, -17, 1.2, 0, Math.PI * 2);
-      ctx.arc(3.5, -17, 1.2, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-      if (near) {
-        ctx.strokeStyle = `${npc.hatColor}aa`;
-        ctx.lineWidth = 2;
-        ctx.beginPath();
-        ctx.ellipse(npc.x, npc.y + 20, 26 + Math.sin(this.lastTime * 0.006) * 2, 8, 0, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-      ctx.font = "11px sans-serif";
-      ctx.textAlign = "center";
-      this.fillRoundRect(npc.x - 44, npc.y - size / 2 - 33, 88, 22, 11, near ? "rgba(248,244,230,0.94)" : "rgba(248,244,230,0.76)", near ? npc.hatColor : "");
-      ctx.fillStyle = "rgba(33,45,40,0.78)";
-      ctx.fillText(`${npc.name} · ${favor}`, npc.x, npc.y - size / 2 - 20);
-      this.drawBar(npc.x - 29, npc.y - size / 2 - 17, 58, 4, favor / 100, npc.hatColor, "rgba(32,52,47,0.10)");
-      ctx.textAlign = "left";
-      if (near) {
-        const gifted = this.dailyActions.gifted[npc.id] === this.gameDay;
-        this.renderWorldPrompt(npc.x, npc.y - size / 2 - 72, profile.role, gifted ? "E 聊天" : "E 聊天 / G 赠礼", npc.hatColor, profile.giftHint);
-      }
-    });
-  }
-
-  getFacingVector() {
-    if (this.player.facing === "left") return { x: -1, y: 0 };
-    if (this.player.facing === "right") return { x: 1, y: 0 };
-    if (this.player.facing === "up") return { x: 0, y: -1 };
-    return { x: 0, y: 1 };
-  }
-
-  getActionIcon(type, item) {
-    const map = {
-      plant: item ? ITEMS[item]?.icon : "🌱",
-      harvest: "🧺",
-      forage: "🧺",
-      gift: item ? ITEMS[item]?.icon : "🎁",
-      talk: "💬",
-      read: "📋",
-      shop: "🪙",
-      buy: item ? ITEMS[item]?.icon : "🛒",
-      sell: "🪙",
-      ship: "📦",
-      deliver: "📦",
-      feed: "🌾",
-      cook: "🍳",
-      craft: item ? ITEMS[item]?.icon : "🔨",
-      write: "✎",
-      sleep: "Z",
-      catch: item ? ITEMS[item]?.icon : "🐟",
-    };
-    return map[type] || "";
-  }
-
-  renderPlayerTool(hand, dir, side, progress) {
-    const { ctx } = this;
-    const action = this.actionAnimation;
-    if (!action) return;
-    const type = action.type;
-    const swing = Math.sin(progress * Math.PI);
-    const itemIcon = this.getActionIcon(type, action.item);
-
-    ctx.save();
-    ctx.lineCap = "round";
-    ctx.lineJoin = "round";
-    if (type === "hoe" || type === "axe" || type === "pickaxe" || type === "build") {
-      const toolColor = type === "axe" ? "#8f5a3f" : type === "pickaxe" ? "#6f7f86" : "#8a6b4c";
-      const tipX = hand.x + dir.x * (18 + swing * 10) + side.x * 5;
-      const tipY = hand.y + dir.y * (18 + swing * 10) + side.y * 5;
-      ctx.strokeStyle = "#7b563d";
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.moveTo(hand.x - dir.x * 6, hand.y - dir.y * 6);
-      ctx.lineTo(tipX, tipY);
-      ctx.stroke();
-      ctx.strokeStyle = toolColor;
-      ctx.lineWidth = 6;
-      ctx.beginPath();
-      ctx.moveTo(tipX - side.x * 9, tipY - side.y * 9);
-      ctx.lineTo(tipX + side.x * 9, tipY + side.y * 9);
-      ctx.stroke();
-    } else if (type === "water") {
-      this.fillRoundRect(hand.x - 5 + dir.x * 6, hand.y - 7 + dir.y * 6, 16, 12, 4, "#6d97af", "rgba(255,255,255,0.30)");
-      ctx.strokeStyle = "#446f86";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(hand.x + dir.x * 17, hand.y + dir.y * 17);
-      ctx.lineTo(hand.x + dir.x * 24, hand.y + dir.y * 24);
-      ctx.stroke();
-    } else if (type === "cast" || type === "reel") {
-      const rodEndX = hand.x + dir.x * 34 + side.x * 10;
-      const rodEndY = hand.y + dir.y * 34 + side.y * 10;
-      ctx.strokeStyle = "#6f4c32";
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      ctx.moveTo(hand.x, hand.y);
-      ctx.lineTo(rodEndX, rodEndY);
-      ctx.stroke();
-      ctx.strokeStyle = "rgba(240,248,236,0.66)";
-      ctx.lineWidth = 1;
-      ctx.beginPath();
-      ctx.moveTo(rodEndX, rodEndY);
-      ctx.quadraticCurveTo(rodEndX + dir.x * 16, rodEndY + 18, rodEndX + dir.x * 28, rodEndY + 34);
-      ctx.stroke();
-    } else if (itemIcon) {
-      ctx.font = type === "talk" ? "20px sans-serif" : "18px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(itemIcon, hand.x + dir.x * (12 + swing * 4), hand.y + dir.y * (12 + swing * 4));
-      ctx.textAlign = "left";
-    }
-    ctx.restore();
-  }
-
-  renderPlayer() {
-    const { ctx } = this;
-    const { x, y, size } = this.player;
-    const dir = this.getFacingVector();
-    const side = { x: -dir.y, y: dir.x };
-    const action = this.actionAnimation;
-    const progress = this.getActionProgress();
-    const actionSwing = action ? Math.sin(progress * Math.PI) : 0;
-    const moving = !action && (this.keys.has("arrowup") || this.keys.has("w") || this.keys.has("arrowdown") || this.keys.has("s") || this.keys.has("arrowleft") || this.keys.has("a") || this.keys.has("arrowright") || this.keys.has("d"));
-    const walk = moving ? Math.sin(this.footstepTimer * 0.18) : 0;
-    const bob = moving ? Math.abs(walk) * 2 : actionSwing * 1.2;
-
-    this.drawGroundShadow(x, y + 16, 16, 5, 0.28);
-
-    ctx.save();
-    ctx.translate(x, y - bob);
-
-    const legSwing = moving ? walk * 4 : 0;
-    ctx.shadowColor = "rgba(12,20,19,0.22)";
-    ctx.shadowBlur = 4;
-    ctx.shadowOffsetY = 2;
-    this.fillRoundRect(-8 + side.x * legSwing * 0.15, 6 + side.y * 1, 7, 15, 4, "#273b46", "rgba(255,255,255,0.08)");
-    this.fillRoundRect(1 - side.x * legSwing * 0.15, 6 - side.y * 1, 7, 15, 4, "#253842", "rgba(255,255,255,0.08)");
-    ctx.shadowBlur = 0;
-    this.fillRoundRect(-10 + side.x * legSwing * 0.15, 19 + side.y * 1, 10, 5, 3, "#1f2d31");
-    this.fillRoundRect(0 - side.x * legSwing * 0.15, 19 - side.y * 1, 10, 5, 3, "#1d2b30");
-
-    const torsoGrad = ctx.createLinearGradient(0, -10, 0, 12);
-    torsoGrad.addColorStop(0, "#5b83a0");
-    torsoGrad.addColorStop(1, "#355a76");
-    this.fillRoundRect(-13, -11, 26, 27, 8, "rgba(24,35,38,0.42)");
-    this.fillRoundRect(-12, -10, 24, 25, 8, torsoGrad, "rgba(255,255,255,0.28)");
-    ctx.strokeStyle = "rgba(239,249,246,0.24)";
-    ctx.lineWidth = 1;
-    ctx.beginPath();
-    ctx.moveTo(0, -8);
-    ctx.lineTo(0, 13);
-    ctx.moveTo(-8, -3);
-    ctx.lineTo(8, -3);
-    ctx.stroke();
-
-    const shoulderY = -4;
-    const reach = action ? 11 + actionSwing * 9 : 7;
-    const armSwing = moving ? walk * 5 : actionSwing * 7;
-    const leftShoulder = { x: -11, y: shoulderY };
-    const rightShoulder = { x: 11, y: shoulderY };
-    const activeHand = {
-      x: rightShoulder.x + dir.x * reach + side.x * (2 + armSwing * 0.2),
-      y: rightShoulder.y + dir.y * reach + side.y * (2 + armSwing * 0.2),
-    };
-    const passiveHand = {
-      x: leftShoulder.x + dir.x * 6 - side.x * (2 + armSwing * 0.2),
-      y: leftShoulder.y + dir.y * 6 - side.y * (2 + armSwing * 0.2),
-    };
-    ctx.strokeStyle = "#efc9a1";
-    ctx.lineWidth = 5;
-    ctx.beginPath();
-    ctx.moveTo(leftShoulder.x, leftShoulder.y);
-    ctx.lineTo(passiveHand.x, passiveHand.y + (moving ? -walk : 0));
-    ctx.moveTo(rightShoulder.x, rightShoulder.y);
-    ctx.lineTo(activeHand.x, activeHand.y);
-    ctx.stroke();
-
-    this.renderPlayerTool({ x: activeHand.x, y: activeHand.y }, dir, side, progress);
-
-    const faceYOffset = this.player.facing === "up" ? -2 : 0;
-    this.fillRoundRect(-10, -26 + faceYOffset, 20, 17, 8, "rgba(80,50,34,0.20)");
-    this.fillRoundRect(-9, -25 + faceYOffset, 18, 15, 7, "#efc9a1", "rgba(116,80,55,0.14)");
-    this.fillRoundRect(-13, -32 + faceYOffset, 26, 10, 5, "#9d5c4d", "rgba(255,255,255,0.12)");
-    this.fillRoundRect(-9, -35 + faceYOffset, 18, 5, 3, "#b86d5b");
-    if (this.player.facing !== "up") {
-      ctx.fillStyle = "#27312e";
-      ctx.beginPath();
-      ctx.arc(-4, -18 + faceYOffset, 1.4, 0, Math.PI * 2);
-      ctx.arc(4, -18 + faceYOffset, 1.4, 0, Math.PI * 2);
-      ctx.fill();
-    }
-
-    ctx.restore();
-  }
-
-  renderActionEffects() {
-    const { ctx } = this;
-    const action = this.actionAnimation;
-    if (!action) return;
-    const progress = this.getActionProgress();
-    const dir = this.getFacingVector();
-    const target = action.target;
-
-    ctx.save();
-    if (action.type === "water" && target) {
-      ctx.strokeStyle = "rgba(126,190,232,0.62)";
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 7; i++) {
-        const t = (progress + i * 0.09) % 1;
-        const sx = this.player.x + dir.x * 18 + (i - 3) * 2;
-        const sy = this.player.y + dir.y * 18 - 8;
-        const ex = sx + (target.x - sx) * t;
-        const ey = sy + (target.y - sy) * t + Math.sin(t * Math.PI) * 8;
-        ctx.beginPath();
-        ctx.moveTo(sx, sy);
-        ctx.quadraticCurveTo((sx + ex) / 2, sy - 10, ex, ey);
-        ctx.stroke();
-      }
-    }
-
-    if ((action.type === "plant" || action.type === "feed") && target) {
-      ctx.fillStyle = action.type === "feed" ? "rgba(215,185,111,0.85)" : "rgba(119,157,107,0.85)";
-      for (let i = 0; i < 6; i++) {
-        const t = Math.min(1, progress * 1.4 - i * 0.08);
-        if (t <= 0) continue;
-        ctx.beginPath();
-        ctx.arc(this.player.x + (target.x - this.player.x) * t + Math.sin(i) * 4, this.player.y + (target.y - this.player.y) * t - Math.sin(t * Math.PI) * 12, 2.5, 0, Math.PI * 2);
-        ctx.fill();
-      }
-    }
-
-    if (["hoe", "axe", "pickaxe", "harvest", "forage", "build"].includes(action.type) && target) {
-      ctx.strokeStyle = action.type === "harvest" || action.type === "forage" ? "rgba(249,239,209,0.56)" : "rgba(255,222,154,0.55)";
-      ctx.lineWidth = 2;
-      const radius = 14 + Math.sin(progress * Math.PI) * 14;
-      ctx.beginPath();
-      ctx.arc(target.x, target.y, radius, -Math.PI * 0.15, Math.PI * 1.15);
-      ctx.stroke();
-    }
-
-    if (["gift", "deliver", "ship", "buy", "sell", "catch", "cook", "craft", "write", "sleep", "talk"].includes(action.type)) {
-      const icon = this.getActionIcon(action.type, action.item);
-      const y = this.player.y - 42 - Math.sin(progress * Math.PI) * 12;
-      ctx.globalAlpha = Math.max(0, 1 - progress * 0.35);
-      ctx.font = "20px sans-serif";
-      ctx.textAlign = "center";
-      ctx.fillText(icon, this.player.x, y);
-      ctx.textAlign = "left";
-    }
-    ctx.restore();
-  }
-
-  renderParticles() {
-    const { ctx } = this;
-    this.particles.forEach((p) => {
-      ctx.save();
-      ctx.globalAlpha = p.alpha;
-      ctx.fillStyle = p.color;
-      ctx.beginPath();
-      ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.restore();
-    });
-  }
-
-  renderNightOverlay() {
-    const hour = this.gameMinutes / 60;
-    let alpha = 0;
-    if (hour >= 20) alpha = Math.min(0.58, (hour - 20) / 4 * 0.58);
-    else if (hour < 6) alpha = 0.58;
-    else if (hour < 7) alpha = Math.max(0, 0.58 - (hour - 6) * 0.58);
-    if (alpha <= 0) return;
-    this.ctx.fillStyle = `rgba(0,0,40,${alpha})`;
-    this.ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
-  }
-
-  renderWeatherEffects() {
-    const { ctx, canvas } = this;
-    if (this.weather === "rain") {
-      ctx.save();
-      ctx.strokeStyle = "rgba(185,220,255,0.45)";
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 34; i++) {
-        const x = (i * 31 + this.lastTime * 0.22) % (canvas.width + 40);
-        const y = (i * 17 + this.lastTime * 0.36) % (canvas.height + 30);
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.lineTo(x - 10, y + 18);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    if (this.weather === "windy") {
-      ctx.save();
-      ctx.strokeStyle = "rgba(222,255,200,0.35)";
-      ctx.lineWidth = 1.5;
-      for (let i = 0; i < 12; i++) {
-        const x = (i * 70 + this.lastTime * 0.08) % (canvas.width + 120) - 60;
-        const y = 70 + (i % 4) * 86;
-        ctx.beginPath();
-        ctx.moveTo(x, y);
-        ctx.bezierCurveTo(x + 18, y - 10, x + 50, y + 10, x + 74, y);
-        ctx.stroke();
-      }
-      ctx.restore();
-    }
-    if (this.weather === "mist") {
-      ctx.fillStyle = "rgba(230,240,245,0.14)";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-  }
-
-  renderWorldLighting() {
-    const { ctx, canvas } = this;
-    const light = this.getLightState();
-    ctx.save();
-    if (light.warm > 0.05) {
-      const grad = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
-      grad.addColorStop(0, `rgba(255,221,151,${0.10 * light.warm})`);
-      grad.addColorStop(0.45, `rgba(255,182,112,${0.045 * light.warm})`);
-      grad.addColorStop(1, "rgba(255,255,255,0)");
-      ctx.fillStyle = grad;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-      ctx.strokeStyle = `rgba(255,231,174,${0.12 * light.warm})`;
-      ctx.lineWidth = 18;
-      for (let i = 0; i < 5; i++) {
-        const x = -120 + i * 210 + Math.sin(this.lastTime * 0.0005 + i) * 20;
-        ctx.beginPath();
-        ctx.moveTo(x, 0);
-        ctx.lineTo(x + 240, canvas.height);
-        ctx.stroke();
-      }
-    }
-    if (light.night) {
-      const glow = ctx.createRadialGradient(canvas.width * 0.52, canvas.height * 0.48, canvas.width * 0.18, canvas.width * 0.52, canvas.height * 0.48, canvas.width * 0.74);
-      glow.addColorStop(0, "rgba(90,124,150,0.08)");
-      glow.addColorStop(1, "rgba(2,9,24,0.24)");
-      ctx.fillStyle = glow;
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
-    }
-    ctx.restore();
-  }
-
-  drawHudPanel(x, y, w, h, accent) {
-    const { ctx } = this;
-    ctx.fillStyle = "rgba(16,24,20,0.8)";
-    ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = accent;
-    ctx.fillRect(x, y, w, 4);
-    ctx.strokeStyle = "rgba(255,255,255,0.14)";
-    ctx.strokeRect(x, y, w, h);
-  }
-
-  renderMiniMap(x, y, w, h) {
-    const { ctx } = this;
-    const mapW = this.tileMap[0]?.length || MAP_W;
-    const mapH = this.tileMap.length || MAP_H;
-    const cell = Math.min((w - 18) / mapW, (h - 18) / mapH);
-    const drawW = mapW * cell;
-    const drawH = mapH * cell;
-    const ox = x + (w - drawW) / 2;
-    const oy = y + (h - drawH) / 2;
-
-    ctx.fillStyle = "rgba(255,255,255,0.05)";
-    ctx.fillRect(ox - 4, oy - 4, drawW + 8, drawH + 8);
-
-    for (let ty = 0; ty < mapH; ty++) {
-      for (let tx = 0; tx < mapW; tx++) {
-        const tile = this.tileMap[ty][tx];
-        ctx.fillStyle = TILE_COLORS[tile] || "#7ec850";
-        ctx.fillRect(ox + tx * cell, oy + ty * cell, Math.ceil(cell), Math.ceil(cell));
-      }
-    }
-
-    this.interactables.filter((obj) => obj.type === "warp").forEach((obj) => {
-      const blocked = !!this.getInteractableBlockReason(obj);
-      ctx.fillStyle = blocked ? "#d58e70" : "#fff3a8";
-      ctx.fillRect(ox + (obj.x / TILE_SIZE) * cell, oy + (obj.y / TILE_SIZE) * cell, Math.max(3, cell * 1.1), Math.max(3, cell * 1.1));
-    });
-
-    ctx.fillStyle = "#ffffff";
-    ctx.beginPath();
-    ctx.arc(ox + (this.player.x / TILE_SIZE) * cell, oy + (this.player.y / TILE_SIZE) * cell, Math.max(3, cell * 0.9), 0, Math.PI * 2);
-    ctx.fill();
-  }
-
-  renderHud() {
-    const { ctx, canvas } = this;
-    const hour = Math.floor(this.gameMinutes / 60);
-    const min = Math.floor(this.gameMinutes % 60);
-    const timeStr = `${String(hour).padStart(2, "0")}:${String(min).padStart(2, "0")}`;
-    const seedKeys = this.getOwnedSeedKeys();
-    const activeSeed = seedKeys.length ? seedKeys[Math.min(this.selectedSeedIndex, seedKeys.length - 1)] : null;
-    const weather = this.getWeatherConfig();
-    const forecast = WEATHER[this.tomorrowWeather] || WEATHER.sunny;
-    const energyRatio = this.maxEnergy > 0 ? this.energy / this.maxEnergy : 0;
-    const world = this.getCurrentWorld();
-    const season = this.getSeasonInfo();
-    const festival = this.getFestivalInfo();
-    const accent = season?.accent || world?.accent || UI.green;
-    const exits = this.interactables.filter((obj) => obj.type === "warp").slice(0, 3);
-
-    const topGrad = ctx.createLinearGradient(14, 12, 14, 82);
-    topGrad.addColorStop(0, "rgba(33,49,45,0.94)");
-    topGrad.addColorStop(1, "rgba(20,31,29,0.90)");
-    this.drawSoftPanel(14, 12, canvas.width - 28, 72, { fill: topGrad, stroke: "rgba(249,239,209,0.18)", accent, blur: 20, offsetY: 8, radius: 14 });
-
-    this.fillRoundRect(34, 25, 40, 40, 12, "rgba(249,239,209,0.12)", "rgba(249,239,209,0.16)");
-    ctx.fillStyle = accent;
-    ctx.font = "bold 18px 'Noto Sans SC', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(world?.short || "地", 54, 52);
-    ctx.textAlign = "left";
-
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 16px 'Noto Sans SC', sans-serif";
-    ctx.fillText(this.getCurrentMapName(), 86, 37);
-    ctx.fillStyle = "rgba(249,239,209,0.68)";
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`${season.name}${this.getSeasonDay()}日 · 第${this.gameDay}天 · ${timeStr}`, 86, 59);
-
-    this.fillRoundRect(258, 25, 176, 40, 10, "rgba(249,239,209,0.08)", "rgba(249,239,209,0.10)");
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 13px sans-serif";
-    ctx.fillText(`${weather.icon} ${weather.name}`, 274, 42);
-    ctx.fillStyle = "rgba(249,239,209,0.62)";
-    ctx.font = "11px sans-serif";
-    ctx.fillText(`明日 ${forecast.icon}${forecast.name}${festival ? ` · ${festival.name}` : ""}`, 274, 59);
-
-    this.fillRoundRect(452, 25, 166, 40, 10, "rgba(249,239,209,0.08)", "rgba(249,239,209,0.10)");
-    this.drawBar(468, 36, 104, 9, energyRatio, energyRatio > 0.35 ? "#8fbf73" : "#c98754", "rgba(249,239,209,0.14)");
-    ctx.fillStyle = "rgba(249,239,209,0.72)";
-    ctx.font = "11px sans-serif";
-    ctx.fillText(`体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 468, 59);
-
-    this.fillRoundRect(638, 25, 184, 40, 10, "rgba(249,239,209,0.08)", "rgba(249,239,209,0.10)");
-    ctx.fillStyle = UI.gold;
-    ctx.font = "bold 14px sans-serif";
-    ctx.fillText(`${this.gold} 金`, 654, 42);
-    ctx.fillStyle = "rgba(249,239,209,0.62)";
-    ctx.font = "11px sans-serif";
-    ctx.fillText(`镇${this.progress.townRank} 屋${this.progress.houseLevel} 农${this.progress.farmLevel} 牧${this.progress.ranchLevel} 工${this.progress.workshopLevel}`, 654, 59);
-
-    ctx.fillStyle = activeSeed ? UI.cream : "rgba(249,239,209,0.58)";
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText(activeSeed ? `${ITEMS[activeSeed].icon} ${ITEMS[activeSeed].name} x${this.inventory[activeSeed]}` : "无种子", canvas.width - 30, 39);
-    ctx.fillStyle = "rgba(249,239,209,0.58)";
-    ctx.fillText(`工具${this.progress.toolLevel} 鱼竿${this.progress.rodLevel} · I/J`, canvas.width - 30, 60);
-    ctx.textAlign = "left";
-
-    this.drawSoftPanel(canvas.width - 184, 96, 170, 120, { fill: "rgba(23,34,32,0.74)", stroke: "rgba(249,239,209,0.14)", accent, blur: 16, offsetY: 6, radius: 12 });
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 12px sans-serif";
-    ctx.fillText("小地图", canvas.width - 160, 117);
-    this.renderMiniMap(canvas.width - 176, 124, 154, 66);
-    ctx.fillStyle = "rgba(248,241,216,0.78)";
-    ctx.font = "11px sans-serif";
-    exits.forEach((warp, index) => {
-      const blocked = this.getInteractableBlockReason(warp);
-      const label = `${blocked ? "🔒" : "→"} ${this.worlds[warp.targetMap]?.name || warp.targetMap}`;
-      ctx.fillText(label, canvas.width - 160, 198 + index * 12);
-    });
-  }
-
-  renderQuestTracker() {
-    const { ctx, canvas } = this;
-    const active = this.quests.find(q => !q.done);
-    const request = this.getPendingRequests()[0];
-    const areaTask = this.currentMapId !== "town" ? this.getAreaTask(this.currentMapId) : null;
-    const unreadMail = this.getUnreadMail().length;
-    const panelH = areaTask ? 140 : unreadMail ? 116 : 98;
-    const x = 14, y = canvas.height - panelH - 14;
-    this.drawSoftPanel(x, y, 378, panelH, { fill: "rgba(24,35,32,0.76)", stroke: "rgba(249,239,209,0.14)", accent: this.getSeasonInfo().accent, blur: 18, offsetY: 6, radius: 14 });
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 13px sans-serif";
-    ctx.fillText("今日节奏", x + 24, y + 25);
-    ctx.fillStyle = "rgba(249,239,209,0.66)";
-    ctx.font = "12px sans-serif";
-    if (active) {
-      ctx.fillText(`目标 · ${active.title}`, x + 24, y + 49);
-      ctx.fillText(active.desc, x + 24, y + 68);
-    }
-    ctx.fillStyle = "rgba(249,239,209,0.88)";
-    if (request) {
-      const item = ITEMS[request.item];
-      ctx.fillText(`委托 · ${this.getNpcName(request.requester)}要 ${item.icon} ${item.name}x${request.amount}，${request.gold}金`, x + 24, y + 87);
-    } else {
-      ctx.fillText("委托 · 今天都完成了", x + 24, y + 87);
-    }
-    if (areaTask) {
-      ctx.fillStyle = this.canCompleteAreaTask(areaTask) ? "#d9e99d" : "rgba(249,239,209,0.78)";
-      const status = areaTask.done ? "已完成" : this.formatAreaTaskProgress(areaTask);
-      ctx.fillText(`区域 · ${areaTask.title}：${status}`, x + 24, y + 108);
-    }
-    if (unreadMail) {
-      ctx.fillStyle = "#efe4a6";
-      ctx.fillText(`邮箱 · ${unreadMail} 封新信，回小屋旁读取`, x + 24, y + (areaTask ? 128 : 108));
-    }
-  }
-
-  renderSkillPanel() {
-    const { ctx, canvas } = this;
-    const x = canvas.width - 338;
-    const y = canvas.height - 96;
-    this.drawSoftPanel(x, y, 324, 82, { fill: "rgba(22,32,30,0.78)", stroke: "rgba(249,239,209,0.14)", accent: this.getSeasonInfo().accent, blur: 18, offsetY: 6, radius: 14 });
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 12px sans-serif";
-    ctx.fillText("技能", x + 20, y + 24);
-    Object.keys(SKILL_INFO).forEach((key, i) => {
-      const info = SKILL_INFO[key];
-      const skill = this.skills[key];
-      const col = i % 3;
-      const row = Math.floor(i / 3);
-      const rowX = x + 20 + col * 100;
-      const rowY = y + 46 + row * 20;
-      const need = this.getSkillXpNeed(skill.level);
-      const ratio = need > 0 ? skill.xp / need : 0;
-      ctx.fillStyle = "rgba(248,241,216,0.88)";
-      ctx.font = "11px sans-serif";
-      ctx.fillText(`${info.icon} ${info.label} ${skill.level}`, rowX, rowY);
-      this.drawBar(rowX, rowY + 4, 78, 4, ratio, info.color, "rgba(255,255,255,0.16)");
-    });
-  }
-
-  renderMessage() {
-    const { ctx, canvas } = this;
-    if (!this.interactionMessage) return;
-    const maxW = canvas.width - 72;
-    const text = this.interactionMessage;
-    const font = "14px 'Noto Sans SC', sans-serif";
-    const lines = this.wrapText(text, maxW - 42, font);
-    const renderLines = lines.slice(0, 3);
-    const w = Math.min(maxW, Math.max(280, ...renderLines.map((line) => ctx.measureText(line).width + 50)));
-    const h = 18 + renderLines.length * 20;
-    const x = (canvas.width - w) / 2;
-    const y = canvas.height - h - 14;
-    this.drawSoftPanel(x, y, w, h, { fill: "rgba(31,42,38,0.86)", stroke: "rgba(248,241,216,0.22)", blur: 16, offsetY: 5, radius: 14 });
-    ctx.fillStyle = UI.cream;
-    ctx.font = font;
-    ctx.textAlign = "center";
-    renderLines.forEach((line, index) => ctx.fillText(line, canvas.width / 2, y + 22 + index * 20));
-    ctx.textAlign = "left";
-  }
-
-  renderTitle() {
-    const { ctx, canvas } = this;
-    const grad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    grad.addColorStop(0, "#c9d8d0");
-    grad.addColorStop(0.55, "#dbe3c8");
-    grad.addColorStop(1, "#e6d1b3");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    ctx.save();
-    ctx.translate(0, 18);
-    this.drawSoftPanel(94, 52, canvas.width - 188, 202, { fill: "rgba(248,244,230,0.78)", accent: "#7cae75", radius: 18, blur: 24, offsetY: 12 });
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 46px 'Noto Sans SC', 'PingFang SC', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("晨露小镇", canvas.width / 2, 118);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "16px sans-serif";
-    ctx.fillText("种植、牧场、加工坊、委托、钓鱼与四季日历", canvas.width / 2, 154);
-    ctx.font = "13px sans-serif";
-    ctx.fillText("一个更完整的慢生活经营原型，信息收进日志，画面留给小镇", canvas.width / 2, 184);
-
-    const cards = [
-      ["🌾", "经营农场", "解锁九种作物与农场扩建"],
-      ["🐔", "照料牧场", "喂养动物，收集蛋奶羊毛"],
-      ["🥣", "加工手作", "把原料做成高价商品"],
-    ];
-    cards.forEach((card, i) => {
-      const x = 122 + i * 184;
-      this.fillRoundRect(x, 286, 158, 82, 12, "rgba(248,244,230,0.62)", "rgba(255,255,255,0.42)");
-      ctx.fillStyle = UI.ink;
-      ctx.font = "22px sans-serif";
-      ctx.fillText(card[0], x + 79, 315);
-      ctx.font = "bold 13px sans-serif";
-      ctx.fillText(card[1], x + 79, 338);
-      ctx.fillStyle = UI.inkSoft;
-      ctx.font = "11px sans-serif";
-      ctx.fillText(card[2], x + 79, 358);
-    });
-
-    if (Math.floor(this.lastTime / 500) % 2 === 0) {
-      ctx.font = "bold 18px sans-serif";
-      ctx.fillStyle = UI.cream;
-      this.fillRoundRect(canvas.width / 2 - 92, 406, 184, 38, 18, "rgba(31,42,38,0.82)");
-      ctx.fillStyle = UI.cream;
-      ctx.fillText("按 Enter 开始", canvas.width / 2, 431);
-    }
-    ctx.restore();
-    ctx.textAlign = "left";
-  }
-
-  renderDialogue() {
-    const { ctx, canvas } = this;
-    const npc = this.dialogueTarget;
-    const profile = npc ? this.getNpcProfile(npc) : this.getNpcProfile({ id: "", likes: [], color: UI.green, hatColor: UI.gold });
-    const meta = this.dialogueMeta || (npc ? this.getDialogueMeta(npc, profile, this.gameMinutes / 60, this.relationship[npc.id] || 0) : null);
-    const rawText = this.dialoguePages[this.dialoguePage] || "";
-    const text = this.getVisibleDialogueText(rawText);
-    const full = this.isDialoguePageFullyRevealed(rawText);
-    const w = Math.min(canvas.width - 48, 900);
-    const h = Math.min(218, Math.max(178, canvas.height * 0.36));
-    const x = (canvas.width - w) / 2;
-    const y = canvas.height - h - 22;
-    const accent = npc?.hatColor || this.getSeasonInfo().accent;
-
-    ctx.fillStyle = "rgba(14,22,20,0.42)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    this.renderDialogueBackdrop(x + 12, Math.max(18, y - 130), w - 24, 112, npc, profile, meta);
-
-    const panelGrad = ctx.createLinearGradient(x, y, x, y + h);
-    panelGrad.addColorStop(0, "rgba(252,248,236,0.98)");
-    panelGrad.addColorStop(1, "rgba(235,225,204,0.98)");
-    this.drawSoftPanel(x, y, w, h, { fill: panelGrad, stroke: "rgba(255,255,255,0.68)", accent, radius: 18, blur: 26, offsetY: 10 });
-
-    const portraitW = 138;
-    this.drawNpcPortrait(npc, profile, x + 24, y + 26, portraitW, h - 52, full ? 1 : 0.92);
-
-    const textX = x + portraitW + 48;
-    const textW = w - portraitW - 78;
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 20px 'Noto Sans SC', 'PingFang SC', sans-serif";
-    ctx.fillText(npc?.name || "居民", textX, y + 37);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "12px 'Noto Sans SC', sans-serif";
-    ctx.fillText(`${meta?.role || "小镇居民"} · ${meta?.mood || "交谈"} · ${meta?.location || this.getCurrentMapName()}`, textX, y + 58);
-    this.drawBar(textX, y + 72, 132, 8, (meta?.favor || 0) / 100, accent, "rgba(32,52,47,0.12)");
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "11px sans-serif";
-    ctx.fillText(`好感 ${meta?.favor || 0}/100`, textX + 142, y + 80);
-
-    const chipY = y + 94;
-    this.drawDialogueChip(textX, chipY, "礼物", meta?.giftHint || profile.giftHint, accent);
-    this.drawDialogueChip(textX + 260, chipY, "委托", meta?.requestText || "暂无个人委托", UI.gold);
-
-    ctx.fillStyle = UI.ink;
-    ctx.font = "16px 'Noto Sans SC', 'PingFang SC', sans-serif";
-    const lines = this.wrapText(text, textW, ctx.font).slice(0, 4);
-    lines.forEach((line, i) => ctx.fillText(line, textX, y + 138 + i * 24));
-    if (!full) {
-      ctx.fillStyle = accent;
-      ctx.fillRect(textX + ctx.measureText(lines[lines.length - 1] || "").width + 4, y + 125 + (lines.length - 1) * 24, 8, 2);
-    }
-
-    const dotX = x + 34;
-    const dotY = y + h - 20;
-    for (let i = 0; i < this.dialoguePages.length; i++) {
-      ctx.fillStyle = i === this.dialoguePage ? accent : "rgba(31,42,38,0.18)";
-      ctx.beginPath();
-      ctx.arc(dotX + i * 12, dotY, i === this.dialoguePage ? 4 : 3, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "right";
-    ctx.fillText(full ? (this.dialoguePage >= this.dialoguePages.length - 1 ? "E 结束 · Esc 离开" : "E 继续 · G 赠礼") : "E 快进", x + w - 24, y + h - 17);
-    ctx.textAlign = "left";
-  }
-
-  renderDialogueBackdrop(x, y, w, h, npc, profile, meta) {
-    const { ctx } = this;
-    const light = this.getLightState();
-    const grad = ctx.createLinearGradient(x, y, x + w, y + h);
-    const bg = profile?.portrait?.bg || ["#d8e2c7", "#819b78"];
-    grad.addColorStop(0, bg[0]);
-    grad.addColorStop(0.58, bg[1]);
-    grad.addColorStop(1, light.night ? "#273a43" : "#efe1bd");
-    this.drawSoftPanel(x, y, w, h, { fill: grad, stroke: "rgba(255,255,255,0.25)", radius: 18, blur: 18, offsetY: 8, gloss: false });
-
-    ctx.save();
-    ctx.globalAlpha = 0.38;
-    ctx.fillStyle = light.night ? "rgba(19,36,43,0.72)" : "rgba(255,252,224,0.34)";
-    ctx.beginPath();
-    ctx.ellipse(x + w * 0.78, y + 28, 70, 18, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = "rgba(30,50,42,0.30)";
-    for (let i = 0; i < 5; i++) {
-      const px = x + 36 + i * 92;
-      const py = y + h - 18 - Math.sin((this.lastTime * 0.002) + i) * 3;
-      ctx.beginPath();
-      ctx.ellipse(px, py, 44, 10, 0, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    ctx.restore();
-
-    ctx.fillStyle = "rgba(25,36,33,0.72)";
-    ctx.font = "bold 12px sans-serif";
-    ctx.fillText(`${meta?.location || this.getCurrentMapName()} · ${this.formatTime()} · ${this.getWeatherConfig().name}`, x + 22, y + 28);
-    ctx.fillStyle = "rgba(25,36,33,0.56)";
-    ctx.font = "12px sans-serif";
-    ctx.fillText(meta?.motto || profile?.motto || "把今天过好。", x + 22, y + 52);
-    if (npc) {
-      ctx.fillStyle = "rgba(25,36,33,0.46)";
-      ctx.fillText(`${npc.name} 的日常路线：${meta?.role || "小镇居民"} / ${meta?.mood || "交谈"}`, x + 22, y + 78);
-    }
-  }
-
-  drawDialogueChip(x, y, label, value, color) {
-    const { ctx } = this;
-    const text = `${label} · ${value}`;
-    const font = "11px 'Noto Sans SC', sans-serif";
-    ctx.font = font;
-    const w = Math.min(244, ctx.measureText(text).width + 22);
-    this.fillRoundRect(x, y, w, 24, 12, "rgba(32,52,47,0.07)", "rgba(32,52,47,0.08)");
-    this.fillRoundRect(x + 7, y + 7, 10, 10, 5, color);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.fillText(text, x + 22, y + 16);
-  }
-
-  drawNpcPortrait(npc, profile, x, y, w, h, alpha = 1) {
-    const { ctx } = this;
-    const portrait = profile.portrait;
-    const bg = ctx.createLinearGradient(x, y, x, y + h);
-    bg.addColorStop(0, portrait.bg[0]);
-    bg.addColorStop(1, portrait.bg[1]);
-    ctx.save();
-    ctx.globalAlpha = alpha;
-    this.fillRoundRect(x, y, w, h, 18, bg, "rgba(255,255,255,0.45)");
-    ctx.save();
-    this.roundedRect(x, y, w, h, 18);
-    ctx.clip();
-    const bob = Math.sin(this.lastTime * 0.004) * 2;
-    ctx.translate(x + w / 2, y + h * 0.56 + bob);
-    this.drawGroundShadow(0, h * 0.38, 46, 8, 0.20);
-    const coat = ctx.createLinearGradient(0, -4, 0, h * 0.36);
-    coat.addColorStop(0, portrait.coat);
-    coat.addColorStop(1, "rgba(35,48,44,0.95)");
-    this.fillRoundRect(-32, 12, 64, 76, 22, coat, "rgba(255,255,255,0.16)");
-    ctx.strokeStyle = "rgba(248,241,216,0.34)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(-9, 18);
-    ctx.lineTo(-14, 82);
-    ctx.moveTo(9, 18);
-    ctx.lineTo(14, 82);
-    ctx.stroke();
-    this.fillRoundRect(-28, -42, 56, 58, 24, portrait.skin, "rgba(83,53,39,0.18)");
-    this.fillRoundRect(-34, -54, 68, 24, 12, portrait.hair, "rgba(255,255,255,0.10)");
-    this.fillRoundRect(-40, -60, 80, 18, 9, portrait.accent, "rgba(255,255,255,0.20)");
-    ctx.fillStyle = "rgba(31,42,38,0.82)";
-    ctx.beginPath();
-    ctx.arc(-11, -18, 2.2, 0, Math.PI * 2);
-    ctx.arc(11, -18, 2.2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = "rgba(31,42,38,0.58)";
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    const smile = (this.relationship[npc?.id] || 0) >= 40 ? 8 : 4;
-    ctx.arc(0, -4, smile, 0.12 * Math.PI, 0.88 * Math.PI);
-    ctx.stroke();
-    ctx.restore();
-    ctx.fillStyle = "rgba(25,36,33,0.76)";
-    this.fillRoundRect(x + 12, y + h - 36, w - 24, 24, 12, "rgba(249,244,231,0.72)");
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(profile.role, x + w / 2, y + h - 20);
-    ctx.textAlign = "left";
-    ctx.restore();
-  }
-
-  renderShop() {
-    const { ctx, canvas } = this;
-    const buyList = this.getShopBuyList();
-    const sellList = Object.keys(this.inventory).filter(k => ITEMS[k]?.sellPrice > 0);
-    const upgradeList = this.getUpgradeList();
-    const list = this.shopMode === "buy" ? buyList : this.shopMode === "sell" ? sellList : upgradeList;
-
-    const panelW = 628, panelH = 382;
-    const px = (canvas.width - panelW) / 2;
-    const py = (canvas.height - panelH) / 2;
-    this.drawSoftPanel(px, py, panelW, panelH, { fill: "rgba(248,244,230,0.96)", accent: this.getSeasonInfo().accent, radius: 18, blur: 24, offsetY: 10 });
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 20px 'Noto Sans SC', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("生活商店", canvas.width / 2, py + 34);
-
-    ["buy", "sell", "upgrade"].forEach((m, i) => {
-      const active = this.shopMode === m;
-      this.fillRoundRect(px + 22 + i * 118, py + 54, 106, 28, 14, active ? UI.ink : "rgba(32,52,47,0.08)", active ? "" : "rgba(32,52,47,0.12)");
-      ctx.fillStyle = active ? UI.cream : UI.inkSoft;
-      ctx.font = "13px sans-serif";
-      ctx.fillText(m === "buy" ? "购买" : m === "sell" ? "出售" : "投资", px + 75 + i * 118, py + 73);
-    });
-
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 14px sans-serif";
-    ctx.fillText(`${this.gold} 金`, px + panelW - 72, py + 34);
-    ctx.textAlign = "left";
-
-    const visible = 6;
-    const start = Math.max(0, Math.min(Math.max(0, list.length - visible), this.shopSelection - Math.floor(visible / 2)));
-    list.slice(start, start + visible).forEach((entry, offset) => {
-      const i = start + offset;
-      const y = py + 112 + offset * 34;
-      const selected = i === this.shopSelection;
-      if (selected) {
-        this.fillRoundRect(px + 22, y - 20, panelW - 44, 30, 10, "rgba(118,164,106,0.18)");
-      }
-      if (this.shopMode === "upgrade") {
-        const u = entry;
-        ctx.fillStyle = UI.ink;
-        ctx.font = "13px sans-serif";
-        ctx.fillText(`${u.name}｜${u.desc}`, px + 20, y);
-        const c = u.cost;
-        const costText = Object.entries(c).filter(([, amount]) => amount > 0).map(([key, amount]) => key === "gold" ? `${amount}金` : `${ITEMS[key]?.name || key}${amount}`).join(" ");
-        ctx.fillStyle = UI.inkSoft;
-        ctx.fillText(`费用: ${costText}`, px + 378, y);
-      } else {
-        const key = entry;
-        ctx.fillStyle = UI.ink;
-        ctx.font = "13px sans-serif";
-        ctx.fillText(`${ITEMS[key].icon} ${ITEMS[key].name}`, px + 34, y);
-        ctx.fillStyle = UI.inkSoft;
-        ctx.fillText(ITEMS[key].desc, px + 184, y);
-        const price = this.shopMode === "buy" ? ITEMS[key].buyPrice : this.getSellPrice(key);
-        ctx.fillStyle = UI.ink;
-        ctx.textAlign = "right";
-        ctx.fillText(`${price}金  持有:${this.inventory[key] || 0}`, px + panelW - 34, y);
-        ctx.textAlign = "left";
-      }
-    });
-
-    const selectedEntry = list[this.shopSelection];
-    if (selectedEntry) {
-      const detailY = py + panelH - 78;
-      this.fillRoundRect(px + 22, detailY, panelW - 44, 46, 12, "rgba(32,52,47,0.06)", "rgba(32,52,47,0.10)");
-      ctx.fillStyle = UI.ink;
-      ctx.font = "bold 12px sans-serif";
-      if (this.shopMode === "upgrade") {
-        const u = selectedEntry;
-        ctx.fillText(`当前选择：${u.name}`, px + 38, detailY + 18);
-        ctx.fillStyle = UI.inkSoft;
-        ctx.font = "11px sans-serif";
-        ctx.fillText(u.desc, px + 38, detailY + 36);
-      } else {
-        const item = ITEMS[selectedEntry];
-        const price = this.shopMode === "buy" ? item.buyPrice : this.getSellPrice(selectedEntry);
-        ctx.fillText(`当前选择：${item.icon} ${item.name}`, px + 38, detailY + 18);
-        ctx.fillStyle = UI.inkSoft;
-        ctx.font = "11px sans-serif";
-        ctx.fillText(`${item.desc} · ${this.shopMode === "buy" ? "购买" : "出售"}价 ${price} 金 · 持有 ${this.inventory[selectedEntry] || 0}`, px + 38, detailY + 36);
-      }
-    }
-
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "13px sans-serif";
-    ctx.textAlign = "center";
-    const pageText = list.length > visible ? `  ${start + 1}-${Math.min(list.length, start + visible)}/${list.length}` : "";
-    ctx.fillText(`↑↓ 选择  E确认  Tab分页  ESC离开${pageText}`, canvas.width / 2, py + panelH - 20);
-    ctx.textAlign = "left";
-  }
-
-  renderInventory() {
-    const { ctx, canvas } = this;
-    const panelW = Math.min(canvas.width - 60, 720), panelH = Math.min(canvas.height - 64, 430);
-    const px = (canvas.width - panelW) / 2;
-    const py = (canvas.height - panelH) / 2;
-    this.drawSoftPanel(px, py, panelW, panelH, { fill: "rgba(248,244,230,0.96)", accent: this.getSeasonInfo().accent, radius: 18, blur: 24, offsetY: 10 });
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 20px 'Noto Sans SC', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("背包与资产", canvas.width / 2, py + 34);
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "12px sans-serif";
-    ctx.fillText(`${this.getSeasonInfo().name} · ${this.getRanchSummary()} · 工坊Lv${this.progress.workshopLevel}`, canvas.width / 2, py + 58);
-    ctx.textAlign = "left";
-
-    const entries = Object.entries(this.inventory).sort((a, b) => (ITEMS[a[0]]?.name || a[0]).localeCompare(ITEMS[b[0]]?.name || b[0], "zh-CN"));
-    const totalValue = entries.reduce((sum, [key, count]) => sum + this.getSellPrice(key) * count, 0);
-    const sellableCount = entries.filter(([key]) => ITEMS[key]?.sellPrice > 0 && !NON_SHIPPABLE_ITEMS.has(key)).reduce((sum, [, count]) => sum + count, 0);
-    const seedCount = entries.filter(([key]) => key.startsWith("seed_")).reduce((sum, [, count]) => sum + count, 0);
-    const craftReady = WORKSHOP_RECIPES.filter((recipe) => Object.entries(recipe.ingredients).every(([key, amount]) => (this.inventory[key] || 0) >= amount)).length;
-    const cards = [
-      ["资产估值", `${totalValue} 金`, "按当前售价估算"],
-      ["可出货", `${sellableCount} 件`, "材料会自动保留"],
-      ["种子库存", `${seedCount} 粒`, "Q 切换当前播种"],
-      ["品质收获", `${this.progress.qualityHarvests || 0} 件`, "高照料作物更值钱"],
-    ];
-    cards.forEach((card, i) => {
-      const cardW = (panelW - 64) / 4;
-      const x = px + 22 + i * (cardW + 6);
-      this.fillRoundRect(x, py + 76, cardW, 56, 12, "rgba(32,52,47,0.06)", "rgba(32,52,47,0.10)");
-      ctx.fillStyle = UI.inkSoft;
-      ctx.font = "11px sans-serif";
-      ctx.fillText(card[0], x + 10, py + 96);
-      ctx.fillStyle = UI.ink;
-      ctx.font = "bold 15px sans-serif";
-      ctx.fillText(card[1], x + 10, py + 116);
-      ctx.fillStyle = UI.inkSoft;
-      ctx.font = "10px sans-serif";
-      ctx.fillText(card[2], x + 10, py + 128);
-    });
-
-    const visibleEntries = entries.slice(0, 18);
-    visibleEntries.forEach(([key, count], i) => {
-      const col = i % 6, row = Math.floor(i / 6);
-      const cellW = (panelW - 64) / 6;
-      const bx = px + 22 + col * cellW, by = py + 150 + row * 58;
-      const sellPrice = this.getSellPrice(key);
-      this.fillRoundRect(bx, by, cellW - 8, 50, 10, sellPrice ? "rgba(118,164,106,0.08)" : "rgba(32,52,47,0.05)", "rgba(32,52,47,0.10)");
-      ctx.fillStyle = UI.ink;
-      ctx.font = "12px sans-serif";
-      ctx.fillText(`${ITEMS[key]?.icon || "?"} ${ITEMS[key]?.name || key}`, bx + 6, by + 20);
-      ctx.fillStyle = UI.inkSoft;
-      ctx.fillText(`x${count}${sellPrice ? ` · ${sellPrice}金` : ""}`, bx + 6, by + 38);
-    });
-
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "13px sans-serif";
-    const overflowText = entries.length > visibleEntries.length ? `  另有 ${entries.length - visibleEntries.length} 项暂未展开。` : "";
-    ctx.textAlign = "center";
-    ctx.fillText(`优先出货高价作物与鱼；原料可留给料理、工程和加工坊。${overflowText}`, canvas.width / 2, py + panelH - 20);
-    ctx.textAlign = "left";
-  }
-
-  renderJournal() {
-    const { ctx, canvas } = this;
-    ctx.fillStyle = "rgba(20,31,28,0.42)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const panelW = 640, panelH = 382;
-    const px = (canvas.width - panelW) / 2;
-    const py = (canvas.height - panelH) / 2;
-    this.drawSoftPanel(px, py, panelW, panelH, { fill: "rgba(248,244,230,0.96)", accent: this.getSeasonInfo().accent, radius: 18, blur: 24, offsetY: 10 });
-
-    const tabs = ["日历", "关系", "图鉴", "工程", "经营"];
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 20px 'Noto Sans SC', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("生活日志", canvas.width / 2, py + 34);
-    tabs.forEach((tab, i) => {
-      const active = i === this.journalTab;
-      this.fillRoundRect(px + 24 + i * 108, py + 54, 90, 28, 14, active ? UI.ink : "rgba(32,52,47,0.08)");
-      ctx.fillStyle = active ? UI.cream : UI.inkSoft;
-      ctx.font = "13px sans-serif";
-      ctx.fillText(tab, px + 69 + i * 108, py + 73);
-    });
-    ctx.textAlign = "left";
-
-    const contentX = px + 38;
-    let y = py + 112;
-    if (this.journalTab === 0) {
-      const season = this.getSeasonInfo();
-      const festival = this.getFestivalInfo();
-      ctx.fillStyle = UI.ink;
-      ctx.font = "bold 17px sans-serif";
-      ctx.fillText(`${season.name} · ${this.getSeasonDay()}日`, contentX, y);
-      ctx.fillStyle = UI.inkSoft;
-      ctx.font = "13px sans-serif";
-      ctx.fillText(season.desc, contentX, y + 26);
-      ctx.fillText(festival ? `今日节日：${festival.name} · ${festival.desc}` : `下一节日：${FESTIVALS.find((f) => f.day > this.getSeasonDay())?.name || FESTIVALS[0].name}`, contentX, y + 52);
-      y += 88;
-      FESTIVALS.forEach((event) => {
-        const active = event.day === this.getSeasonDay();
-        this.fillRoundRect(contentX, y - 17, 548, 28, 9, active ? "rgba(118,164,106,0.18)" : "rgba(32,52,47,0.05)");
-        ctx.fillStyle = active ? UI.ink : UI.inkSoft;
-        ctx.fillText(`${event.day}日 · ${event.name}：${event.desc}`, contentX + 14, y + 2);
-        y += 34;
-      });
-    } else if (this.journalTab === 1) {
-      NPCS.forEach((npc, i) => {
-        const favor = this.relationship[npc.id] || 0;
-        const profile = this.getNpcProfile(npc);
-        const rowX = contentX + (i % 2) * 280;
-        const rowY = y + Math.floor(i / 2) * 64;
-        this.fillRoundRect(rowX, rowY - 20, 260, 52, 12, "rgba(32,52,47,0.06)");
-        this.fillRoundRect(rowX + 10, rowY - 10, 22, 22, 11, npc.hatColor, "rgba(255,255,255,0.35)");
-        ctx.fillStyle = UI.ink;
-        ctx.font = "bold 13px sans-serif";
-        ctx.fillText(npc.name, rowX + 42, rowY - 2);
-        ctx.fillStyle = UI.inkSoft;
-        ctx.font = "10px sans-serif";
-        ctx.fillText(profile.role, rowX + 42, rowY + 14);
-        this.drawBar(rowX + 112, rowY - 10, 92, 7, favor / 100, npc.hatColor, "rgba(32,52,47,0.12)");
-        ctx.fillStyle = UI.inkSoft;
-        ctx.font = "11px sans-serif";
-        ctx.fillText(`${favor}/100`, rowX + 212, rowY - 2);
-        ctx.font = "10px sans-serif";
-        ctx.fillText(profile.giftHint.replace("喜欢", "喜好"), rowX + 42, rowY + 29);
-      });
-    } else if (this.journalTab === 2) {
-      const cropCount = Object.values(CROPS).filter((crop) => this.collections.items[crop.harvest]).length;
-      const fishKeys = ["fish", "nightFish", "silverFish", "goldKoi"];
-      const fishCount = fishKeys.filter((key) => this.collections.items[key]).length;
-      const artisanKeys = ["mayonnaise", "cheese", "jam", "cloth", "honey", "forestWax"];
-      const artisanCount = artisanKeys.filter((key) => this.collections.items[key]).length;
-      const resourceKeys = ["wood", "stone", "herb", "mushroom", "fern", "resin", "wildHoney", "fireflyJar", "relicShard", "crystal", "ore", "coral"];
-      const resourceCount = resourceKeys.filter((key) => this.collections.items[key]).length;
-      const rows = [
-        ["作物", cropCount, Object.keys(CROPS).length, "解锁更多种子并完成收获"],
-        ["鱼类", fishCount, fishKeys.length, "不同天气、时间、区域会出现不同鱼"],
-        ["加工品", artisanCount, artisanKeys.length, "建造加工坊后制作高价商品"],
-        ["资源", resourceCount, resourceKeys.length, "探索雾林、月湾和高地"],
-      ];
-      rows.forEach((row) => {
-        this.fillRoundRect(contentX, y - 18, 548, 46, 12, "rgba(32,52,47,0.06)");
-        ctx.fillStyle = UI.ink;
-        ctx.font = "bold 14px sans-serif";
-        ctx.fillText(`${row[0]} ${row[1]}/${row[2]}`, contentX + 16, y);
-        this.drawBar(contentX + 132, y - 9, 186, 8, row[1] / row[2], this.getSeasonInfo().accent, "rgba(32,52,47,0.12)");
-        ctx.fillStyle = UI.inkSoft;
-        ctx.font = "12px sans-serif";
-        ctx.fillText(row[3], contentX + 336, y);
-        y += 58;
-      });
-    } else if (this.journalTab === 3) {
-      const projects = PROJECTS;
-      projects.forEach((project) => {
-        const done = this.getCompletedProjectIds().includes(project.id);
-        const ready = !done && this.canCompleteProject(project);
-        this.fillRoundRect(contentX, y - 16, 548, 32, 9, done ? "rgba(118,164,106,0.16)" : ready ? "rgba(215,184,109,0.18)" : "rgba(32,52,47,0.06)");
-        ctx.fillStyle = UI.ink;
-        ctx.font = "bold 12px sans-serif";
-        ctx.fillText(`${done ? "完成" : ready ? "可交" : "进行"} · ${project.name}`, contentX + 14, y);
-        ctx.fillStyle = UI.inkSoft;
-        ctx.font = "10px sans-serif";
-        ctx.fillText(done ? project.desc : this.formatRequirements(project.requirements), contentX + 150, y);
-        y += 38;
-      });
-    } else {
-      const entries = [
-        `金币：${this.gold}，累计赚取：${this.progress.totalEarned}`,
-        `农场 Lv${this.progress.farmLevel}，小屋 Lv${this.progress.houseLevel}，镇级 ${this.progress.townRank}`,
-        `牧场 Lv${this.progress.ranchLevel}：${this.getRanchSummary()}`,
-        `工具 Lv${this.progress.toolLevel}，鱼竿 Lv${this.progress.rodLevel}，水渠 Lv${this.progress.irrigationLevel}`,
-        `出货 ${this.progress.shippingCount} 件 / ${this.progress.shippingValue} 金，加工 ${this.progress.artisanMade} 件`,
-        `完成委托 ${this.progress.requestsCompleted}，区域委托 ${this.progress.areaTasksCompleted || 0}，小镇工程 ${this.progress.projectsCompleted}/${PROJECTS.length}`,
-        `雾林声望 ${this.progress.forestRenown || 0}，遗迹碎片 ${this.progress.forestRelics || 0}，祭台祝福 ${this.progress.forestShrineBlessings || 0}`,
-      ];
-      const compact = entries.length > 6;
-      entries.forEach((line) => {
-        this.fillRoundRect(contentX, y - 16, 548, compact ? 32 : 38, 10, "rgba(32,52,47,0.06)");
-        ctx.fillStyle = UI.ink;
-        ctx.font = compact ? "12px sans-serif" : "13px sans-serif";
-        ctx.fillText(line, contentX + 16, y + 1);
-        y += compact ? 36 : 48;
-      });
-    }
-
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "13px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Tab / ←→ 切换页面，J 或 ESC 返回", canvas.width / 2, py + panelH - 20);
-    ctx.textAlign = "left";
-  }
-
-  renderFishing() {
-    const { ctx, canvas } = this;
-    ctx.fillStyle = "rgba(20,34,40,0.44)";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    const panelW = 252, panelH = 348;
-    const px = canvas.width / 2 - panelW / 2;
-    const py = canvas.height / 2 - panelH / 2;
-    this.drawSoftPanel(px, py, panelW, panelH, { fill: "rgba(238,245,244,0.94)", accent: UI.blue, radius: 18, blur: 24, offsetY: 10 });
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 18px 'Noto Sans SC', sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("钓鱼", canvas.width / 2, py + 32);
-
-    if (this.fishingState === "casting" || this.fishingState === "biting") {
-      ctx.fillStyle = this.fishingState === "biting" ? UI.red : UI.inkSoft;
-      ctx.font = "14px sans-serif";
-      ctx.fillText(this.fishingState === "casting" ? "等待鱼上钩…" : "鱼咬钩了！", canvas.width / 2, py + 172);
-      ctx.strokeStyle = "rgba(110,169,196,0.28)";
-      for (let i = 0; i < 4; i++) {
-        ctx.beginPath();
-        ctx.arc(canvas.width / 2, py + 170, 32 + i * 20 + Math.sin(this.lastTime * 0.003 + i) * 3, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-    if (this.fishingState === "reeling") {
-      const trackX = px + 54, trackY = py + 62, trackW = 34, trackH = 226;
-      this.fillRoundRect(trackX, trackY, trackW, trackH, 15, "rgba(110,169,196,0.18)", "rgba(110,169,196,0.35)");
-      ctx.fillStyle = UI.blue;
-      ctx.beginPath();
-      ctx.arc(trackX + trackW / 2, py + 50 + (this.fishingFishY / 320) * trackH, 14, 0, Math.PI * 2);
-      ctx.fill();
-      const barY = py + 50 + (this.fishingBarY / 320) * trackH;
-      this.fillRoundRect(trackX + trackW + 12, barY, 24, (50 / 320) * trackH, 10, "rgba(118,164,106,0.62)");
-      this.fillRoundRect(px + 142, py + 62, 34, 226, 15, "rgba(32,52,47,0.10)", "rgba(32,52,47,0.16)");
-      this.fillRoundRect(px + 142, py + 62 + (1 - this.fishingProgress / 100) * 226, 34, Math.max(8, (this.fishingProgress / 100) * 226), 15, this.fishingProgress > 60 ? UI.green : UI.gold);
-    }
-    if (this.fishingState === "result" && this.fishingResult) {
-      ctx.fillStyle = UI.gold;
-      ctx.font = "36px serif";
-      ctx.fillText(this.fishingResult.icon, canvas.width / 2, py + 160);
-      ctx.fillStyle = UI.ink;
-      ctx.font = "bold 18px sans-serif";
-      ctx.fillText(`钓到 ${this.fishingResult.name}`, canvas.width / 2, py + 200);
-      ctx.fillStyle = UI.inkSoft;
-      ctx.fillText(`基础价值: ${this.fishingResult.value}`, canvas.width / 2, py + 226);
-    }
-    ctx.fillStyle = UI.inkSoft;
-    ctx.font = "13px sans-serif";
-    ctx.fillText("空格 / E 操作", canvas.width / 2, py + panelH - 20);
-    ctx.textAlign = "left";
-  }
-
-  renderIndoor() {
-    const { ctx, canvas } = this;
-    const warmGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    warmGrad.addColorStop(0, "#ead9bd");
-    warmGrad.addColorStop(1, "#b9936a");
-    ctx.fillStyle = warmGrad;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    for (let y = 0; y < 8; y++) {
-      for (let x = 0; x < 10; x++) {
-        ctx.fillStyle = (x + y) % 2 === 0 ? "rgba(174,126,78,0.24)" : "rgba(124,82,52,0.18)";
-        ctx.fillRect(x * 80, y * 56 + 10, 80, 56);
-      }
-    }
-
-    this.fillRoundRect(64, 42, 96, 68, 10, "rgba(226,238,232,0.55)", "rgba(255,255,255,0.25)");
-    this.fillRoundRect(638, 54, 86, 62, 10, "rgba(226,238,232,0.48)", "rgba(255,255,255,0.22)");
-    ctx.fillStyle = "rgba(70,42,18,0.12)";
-    ctx.fillRect(0, 340, canvas.width, 140);
-
-    const weather = this.getWeatherConfig();
-    const forecast = WEATHER[this.tomorrowWeather] || WEATHER.sunny;
-    const actions = this.getHouseActions();
-
-    this.drawSoftPanel(34, 34, 294, 344, { fill: "rgba(248,244,230,0.90)", accent: this.getSeasonInfo().accent, radius: 18, blur: 20, offsetY: 8 });
-    ctx.fillStyle = UI.ink;
-    ctx.font = "bold 22px 'Noto Sans SC', sans-serif";
-    ctx.fillText(`小屋 Lv${this.progress.houseLevel}`, 58, 70);
-    ctx.font = "13px sans-serif";
-    ctx.fillStyle = UI.inkSoft;
-    ctx.fillText(`${this.getSeasonInfo().name}${this.getSeasonDay()}日 · 第${this.gameDay}天`, 58, 96);
-    this.drawBar(58, 116, 205, 10, this.energy / this.maxEnergy, this.energy / this.maxEnergy > 0.35 ? UI.green : "#c98754");
-    ctx.fillText(`体力 ${Math.round(this.energy)}/${this.maxEnergy}`, 58, 144);
-    ctx.fillText(`${weather.icon} 今天：${weather.name}`, 58, 174);
-    ctx.fillText(`明天：${forecast.icon} ${forecast.name}`, 58, 198);
-    ctx.fillText(this.getFestivalInfo() ? `节日：${this.getFestivalInfo().name}` : this.isMarketDay() ? "今天是集市日" : "公告牌已刷新委托", 58, 222);
-    ctx.fillText(this.currentBuff ? `料理：${this.currentBuff.label}` : "料理：无增益", 58, 246);
-    ctx.fillText(`牧场：${this.getRanchSummary()}`, 58, 276);
-    ctx.fillText(`工坊Lv${this.progress.workshopLevel} · 工具${this.progress.toolLevel} · 水渠${this.progress.irrigationLevel}`, 58, 300);
-    const unread = this.getUnreadMail().length;
-    ctx.fillStyle = unread ? UI.ink : UI.inkSoft;
-    ctx.fillText(unread ? `邮箱：${unread} 封新信` : "邮箱：今日已读", 58, 324);
-    if (this.lastDayReport) {
-      ctx.fillStyle = UI.inkSoft;
-      ctx.fillText(`昨日评级 ${this.lastDayReport.grade} · 出货${this.lastDayReport.shippedValue}金 · 品质${this.lastDayReport.qualityHarvests}`, 58, 348);
-    }
-
-    this.drawSoftPanel(360, 34, 406, 324, { fill: "rgba(31,42,38,0.76)", accent: this.getSeasonInfo().accent, radius: 18, blur: 20, offsetY: 8 });
-    ctx.fillStyle = UI.cream;
-    ctx.font = "bold 21px 'Noto Sans SC', sans-serif";
-    ctx.fillText("室内安排", 386, 70);
-
-    const visible = 5;
-    const start = Math.max(0, Math.min(Math.max(0, actions.length - visible), this.houseSelection - Math.floor(visible / 2)));
-    actions.slice(start, start + visible).forEach((action, offset) => {
-      const i = start + offset;
-      const y = 112 + offset * 51;
-      const selected = i === this.houseSelection;
-      this.fillRoundRect(382, y - 24, 358, 42, 10, selected ? "rgba(248,241,216,0.18)" : "rgba(248,241,216,0.06)", selected ? "rgba(248,241,216,0.22)" : "");
-      ctx.fillStyle = selected ? UI.cream : "rgba(248,241,216,0.82)";
-      ctx.font = "bold 14px sans-serif";
-      ctx.fillText(action.label, 396, y - 3);
-      ctx.font = "11px sans-serif";
-      ctx.fillStyle = "rgba(248,241,216,0.66)";
-      if (action.type === "recipe" || action.type === "artisan") {
-        const ingredients = Object.entries(action.recipe.ingredients).map(([key, count]) => `${ITEMS[key].name}x${count}`).join(" / ");
-        const canMake = Object.entries(action.recipe.ingredients).every(([key, count]) => (this.inventory[key] || 0) >= count);
-        ctx.fillText(ingredients, 396, y + 15);
-        ctx.fillStyle = canMake ? "#b7d99e" : "#d99f8c";
-        ctx.textAlign = "right";
-        ctx.fillText(canMake ? "可制作" : "缺材料", 724, y - 3);
-        ctx.textAlign = "left";
-      } else {
-        ctx.fillText(action.desc, 396, y + 15);
-      }
-    });
-
-    if (this.lastDayReport) {
-      this.fillRoundRect(382, 366, 358, 52, 12, "rgba(248,241,216,0.08)", "rgba(248,241,216,0.14)");
-      ctx.fillStyle = UI.cream;
-      ctx.font = "bold 13px sans-serif";
-      ctx.fillText(`昨日结算 · ${this.lastDayReport.grade} 评级`, 396, 386);
-      ctx.fillStyle = "rgba(248,241,216,0.68)";
-      ctx.font = "11px sans-serif";
-      ctx.fillText(`收${this.lastDayReport.harvested} / 采${this.lastDayReport.foraged} / 钓${this.lastDayReport.fishCaught} / 委${this.lastDayReport.requests} / 出货${this.lastDayReport.shippedValue}金`, 396, 406);
-      if (this.lastDayReport.qualityGold) {
-        ctx.fillStyle = "#d9cf8f";
-        ctx.fillText(`品质奖励 +${this.lastDayReport.qualityGold}金`, 620, 386);
-      }
-    }
-
-    this.fillRoundRect(140, 440, 520, 44, 16, "rgba(31,42,38,0.72)");
-    ctx.fillStyle = UI.cream;
-    ctx.font = "13px sans-serif";
-    ctx.textAlign = "center";
-    const pageText = actions.length > visible ? `  ${start + 1}-${Math.min(actions.length, start + visible)}/${actions.length}` : "";
-    ctx.fillText(`W/S 或 ↑↓ 选择，E/Enter 执行，ESC 离开小屋${pageText}`, canvas.width / 2, 467);
-    ctx.textAlign = "left";
-    this.renderIndoorActionAnimation();
-  }
-
-  renderIndoorActionAnimation() {
-    const { ctx, canvas } = this;
-    const action = this.actionAnimation;
-    if (!action) return;
-    const progress = this.getActionProgress();
-    const x = canvas.width / 2;
-    const y = 318;
-    const icon = this.getActionIcon(action.type, action.item);
-    ctx.save();
-    this.drawGroundShadow(x, y + 44, 38, 8, 0.22);
-    const body = ctx.createLinearGradient(x, y - 16, x, y + 38);
-    body.addColorStop(0, "#5b83a0");
-    body.addColorStop(1, "#355a76");
-    this.fillRoundRect(x - 17, y - 12, 34, 42, 11, body, "rgba(255,255,255,0.25)");
-    this.fillRoundRect(x - 12, y - 34, 24, 22, 9, "#efc9a1", "rgba(116,80,55,0.14)");
-    this.fillRoundRect(x - 17, y - 42, 34, 12, 6, "#9d5c4d");
-    const stir = Math.sin(progress * Math.PI * 4);
-    ctx.strokeStyle = "#efc9a1";
-    ctx.lineWidth = 5;
-    ctx.lineCap = "round";
-    ctx.beginPath();
-    ctx.moveTo(x - 15, y - 2);
-    ctx.lineTo(x - 36, y + 14 + stir * 4);
-    ctx.moveTo(x + 15, y - 2);
-    ctx.lineTo(x + 34, y + 10 - stir * 4);
-    ctx.stroke();
-    this.fillRoundRect(x - 44, y + 18, 88, 18, 8, "rgba(79,54,38,0.72)");
-    ctx.font = "28px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText(icon, x, y + 16 - Math.sin(progress * Math.PI) * 12);
-    if (action.type === "cook" || action.type === "craft") {
-      ctx.strokeStyle = action.type === "cook" ? "rgba(255,229,172,0.60)" : "rgba(157,202,218,0.55)";
-      ctx.lineWidth = 2;
-      for (let i = 0; i < 3; i++) {
-        ctx.beginPath();
-        ctx.arc(x, y + 12, 18 + i * 10 + Math.sin(progress * Math.PI * 2 + i) * 3, 0, Math.PI * 2);
-        ctx.stroke();
-      }
-    }
-    ctx.restore();
+    if (line) ctx.fillText(line, x, yy);
+    return yy + lineHeight;
   }
 }

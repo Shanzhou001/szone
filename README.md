@@ -1,105 +1,72 @@
-# 晨露小镇（Cozy Town）
+# 星禾镇物语
 
-一个基于 **HTML5 Canvas + JavaScript** 的 2D 生活模拟游戏原型，支持 **Electron 桌面运行（Windows）** 与自动化发布。
+一个基于 **HTML5 Canvas + JavaScript** 的 2D 温馨生活模拟游戏原型，可在浏览器预览，也可通过 Electron 打包为桌面应用。
 
----
+## 新版内容
 
-## Features
+- 成熟分区 UI：顶部状态栏、左侧世界视窗、右侧管理面板、底部工具栏，任务不再遮挡地图。
+- 四季、天气、节日、每日时间与夜间出货结算。
+- 农场系统：翻地、播种、浇水、成长、再生作物、季节限制与收获。
+- 小镇生活：居民对话、赠礼、好感、每日公告委托。
+- 经营系统：商店、工具升级、钓竿升级、牧场动物、干草消耗、动物产物。
+- 探索系统：森林采集、海滩贝壳、山地矿石、捕虫、钓鱼小游戏。
+- 长线目标：镇务工程、博物馆捐赠、图鉴收集、小屋装饰、小镇评价。
+- 成长系统：七类技能、等级奖励、成就奖励、邮箱回礼与每日生活提示。
+- 更多内容：新增胡萝卜、蓝莓、水稻、山药、雪豆、雨鲶、蓝鳍鱼、冰溪鳟、夏蝉、雪蛾、月贝珠、腌菜、米粉、年糕、果酒等物品链。
+- 本地存档：使用 `localStorage` 保存进度。
 
-- 🌿 多区域探索（晨露镇、雾林、月湾、高地）
-- 🌾 农场种植、地块扩建与九种作物
-- 🐔 牧场动物、喂养、成熟产物与亲密度
-- 🥣 小屋料理、加工坊手作商品与矿石熔锭
-- 🗣️ NPC 对话、赠礼、每日委托与关系成长
-- 🎣 钓鱼小游戏、天气与夜钓收益
-- 📦 出货箱批量出售、工具/鱼竿升级与灌溉水渠
-- 🏗️ 镇务工程捐献目标与长期解锁
-- 📅 四季、节日、集市日、收藏图鉴与生活日志
-- 💾 本地存档（localStorage）
+## 运行
 
----
+浏览器预览：
 
-## Tech Stack
-
-- **Runtime:** Browser / Electron
-- **Rendering:** HTML5 Canvas 2D
-- **Language:** Vanilla JavaScript (ESM)
-- **Packaging:** electron-builder
-- **CI/CD:** GitHub Actions + GitHub Releases
-
----
-
-## Project Structure
-
-```text
-.
-├── electron/
-│   ├── main.js
-│   └── preload.js
-├── src/
-│   ├── game.js
-│   └── main.js
-├── index.html
-├── styles.css
-└── package.json
+```bash
+python -m http.server 5173 --bind 127.0.0.1
 ```
 
----
+然后打开：
 
-## Quick Start
+```text
+http://127.0.0.1:5173/index.html
+```
 
-> Node.js 20+ (18+ 可运行但不保证一致性)
+Electron 运行：
 
 ```bash
 npm install
 npm run dev
 ```
 
-可选：
+## 操作
+
+- `Enter` 开始、确认、读取存档
+- `WASD` / `方向键` 移动
+- `Shift` 小跑
+- `E` 交互、进入建筑、对话、提交
+- `Space` 使用当前工具；钓鱼时控制钓条
+- `1-8` 直接选择工具
+- `R` 切换工具
+- `Q` 切换种子
+- `Tab` 切换右侧管理面板或菜单分页
+- `I` 打开背包
+- `J` 打开生活日志
+- `F5` 保存
+- `Esc` 返回
+
+## 打包
 
 ```bash
-npm start
-```
-
----
-
-## Controls
-
-- `Enter` 开始游戏
-- `WASD / 方向键` 移动
-- `E` 互动 / 对话 / 提交工程 / 使用出货箱
-- `Q` 切换当前种子
-- `G` 给附近居民赠礼
-- `I` 背包
-- `J` 生活日志
-- `Space` 钓鱼操作
-- `Tab` 商店买卖切换
-- `F5` 存档
-- `Esc` 关闭当前面板
-
----
-
-## Build (Windows)
-
-```bash
-npm run pack       # 生成 unpacked
-npm run dist:win   # 生成 portable + nsis
+npm run pack
+npm run dist:win
 ```
 
 输出目录：`release/`
 
----
+## 技术栈
 
-## Release
-
-推送版本 tag（`v*`）后，GitHub Actions 自动构建并发布到 Releases。
-
-```bash
-git tag v0.1.0
-git push origin v0.1.0
-```
-
----
+- HTML5 Canvas 2D
+- Vanilla JavaScript ESM
+- Electron
+- electron-builder
 
 ## License
 
